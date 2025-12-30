@@ -379,4 +379,4 @@ Game data is stored in SQLite at `data/games.db` (created automatically). Each s
 
 ## License
 
-MIT
+[MIT](LICENSE)
