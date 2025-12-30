@@ -401,3 +401,28 @@ export interface CheckResult {
   criticalFailure: boolean;
   margin: number;
 }
+
+// Resource types (for tracking currency, reputation, counters, etc.)
+export interface Resource {
+  id: string;
+  sessionId: string;
+  ownerId: string | null;  // null for session-level resources
+  ownerType: "session" | "character";
+  name: string;
+  description: string;
+  category: string | null;
+  value: number;
+  minValue: number | null;
+  maxValue: number | null;
+  createdAt: string;
+}
+
+export interface ResourceChange {
+  id: string;
+  resourceId: string;
+  previousValue: number;
+  newValue: number;
+  delta: number;
+  reason: string | null;
+  timestamp: string;
+}

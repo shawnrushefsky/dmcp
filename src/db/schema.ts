@@ -140,6 +140,38 @@ export function initializeSchema(): void {
     )
   `);
 
+  // Resources table (for tracking currency, reputation, counters, etc.)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS resources (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL,
+      owner_id TEXT,
+      owner_type TEXT NOT NULL CHECK (owner_type IN ('session', 'character')),
+      name TEXT NOT NULL,
+      description TEXT,
+      category TEXT,
+      value REAL NOT NULL DEFAULT 0,
+      min_value REAL,
+      max_value REAL,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Resource history table (tracks all changes)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS resource_history (
+      id TEXT PRIMARY KEY,
+      resource_id TEXT NOT NULL,
+      previous_value REAL NOT NULL,
+      new_value REAL NOT NULL,
+      delta REAL NOT NULL,
+      reason TEXT,
+      timestamp TEXT NOT NULL,
+      FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE
+    )
+  `);
+
   // Create indexes for common queries
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_characters_session ON characters(session_id);
@@ -153,5 +185,9 @@ export function initializeSchema(): void {
     CREATE INDEX IF NOT EXISTS idx_narrative_timestamp ON narrative_events(timestamp);
     CREATE INDEX IF NOT EXISTS idx_combats_session ON combats(session_id);
     CREATE INDEX IF NOT EXISTS idx_combats_status ON combats(status);
+    CREATE INDEX IF NOT EXISTS idx_resources_session ON resources(session_id);
+    CREATE INDEX IF NOT EXISTS idx_resources_owner ON resources(owner_id, owner_type);
+    CREATE INDEX IF NOT EXISTS idx_resources_category ON resources(category);
+    CREATE INDEX IF NOT EXISTS idx_resource_history_resource ON resource_history(resource_id);
   `);
 }
