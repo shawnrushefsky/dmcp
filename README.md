@@ -187,7 +187,7 @@ To test the server interactively:
 npx @modelcontextprotocol/inspector node dist/index.js
 ```
 
-## Available Tools (48 total)
+## Available Tools (51 total)
 
 ### Session Management
 | Tool | Description |
@@ -279,6 +279,9 @@ npx @modelcontextprotocol/inspector node dist/index.js
 | `log_event` | Record story event |
 | `get_history` | Recent events |
 | `get_summary` | Story summary |
+| `get_export_styles` | List available narrative styles |
+| `export_story` | Export game overview with chapter summaries |
+| `get_chapter_for_export` | Get single chapter for subagent writing |
 
 ### Player Interaction
 | Tool | Description |
@@ -373,6 +376,27 @@ create_character({
 ```
 
 The `imageGen` field can be attached to characters, locations, and items. The structured format can be adapted to any image generation tool - the DM agent can generate tool-specific prompts as needed.
+
+### Story Export Workflow
+
+Export your game as a narrative book using subagents for each chapter:
+
+```javascript
+// 1. Get available styles
+get_export_styles()
+// Returns: literary-fiction, pulp-adventure, epic-fantasy, noir, horror, etc.
+
+// 2. Player chooses style, get the export overview
+export_story({ sessionId: "...", style: "epic-fantasy" })
+// Returns: session info, characters, locations, chapter summaries, workflow instructions
+
+// 3. For each chapter, fetch full data and spawn a subagent
+get_chapter_for_export({ sessionId: "...", chapterNumber: 1, style: "epic-fantasy" })
+// Returns: events, context, and a ready-to-use subagentPrompt
+
+// 4. Each subagent writes its chapter as narrative prose
+// 5. Combine chapters into final book
+```
 
 ## Data Storage
 

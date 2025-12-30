@@ -1621,6 +1621,140 @@ server.tool(
   }
 );
 
+server.tool(
+  "get_export_styles",
+  "Get available narrative styles for story export",
+  {},
+  async () => {
+    const styles = [
+      { id: "literary-fiction", name: "Literary Fiction", description: "Sophisticated prose with deep character introspection" },
+      { id: "pulp-adventure", name: "Pulp Adventure", description: "Fast-paced action with bold heroes and cliffhangers" },
+      { id: "epic-fantasy", name: "Epic Fantasy", description: "Grand, sweeping narrative with mythic undertones" },
+      { id: "noir", name: "Noir", description: "Hardboiled prose with moral ambiguity" },
+      { id: "horror", name: "Horror", description: "Atmospheric dread and tension" },
+      { id: "comedic", name: "Comedic", description: "Witty and humorous with clever dialogue" },
+      { id: "young-adult", name: "Young Adult", description: "Accessible and engaging with relatable characters" },
+      { id: "screenplay", name: "Screenplay", description: "Formatted as a film script" },
+      { id: "journal", name: "Journal/Diary", description: "Personal entries from protagonist's perspective" },
+      { id: "chronicle", name: "Chronicle", description: "Historical documentation with a sense of legacy" },
+    ];
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          styles,
+          instruction: "Present these style options to the player and let them choose how their story should be written.",
+        }, null, 2),
+      }],
+    };
+  }
+);
+
+server.tool(
+  "export_story",
+  "Export the game history as structured data for reconstruction into a narrative book. Use get_chapter_for_export to fetch individual chapters for writing.",
+  {
+    sessionId: z.string().describe("The session ID"),
+    style: z.string().describe("Narrative style (e.g., 'literary-fiction', 'pulp-adventure', 'epic-fantasy', 'noir', or custom)"),
+  },
+  async ({ sessionId, style }) => {
+    const exportData = narrativeTools.exportStoryData(sessionId, style);
+    if (!exportData) {
+      return {
+        content: [{ type: "text", text: "Session not found" }],
+        isError: true,
+      };
+    }
+
+    // Create chapter summaries for the overview (without full event data)
+    const chapterSummaries = exportData.chapters.map((ch, idx) => ({
+      chapterNumber: idx + 1,
+      title: ch.title,
+      eventCount: ch.events.length,
+      eventTypes: [...new Set(ch.events.map(e => e.eventType))],
+      timeSpan: ch.events.length > 0 ? {
+        start: ch.events[0].timestamp,
+        end: ch.events[ch.events.length - 1].timestamp,
+      } : null,
+    }));
+
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          session: exportData.session,
+          characters: exportData.characters,
+          locations: exportData.locations,
+          quests: exportData.quests,
+          chapterSummaries,
+          totalChapters: exportData.chapters.length,
+          totalEvents: exportData.totalEvents,
+          exportStyle: exportData.exportStyle,
+          instruction: exportData.instruction,
+          meta: {
+            exportedAt: new Date().toISOString(),
+            workflow: [
+              "1. Review the session, characters, locations, and quests for context",
+              "2. For each chapter, use get_chapter_for_export to fetch the full event data",
+              "3. Spawn a subagent for each chapter with the style instruction and chapter data",
+              "4. Each subagent writes its chapter as narrative prose",
+              "5. Combine chapters into the final book with front matter",
+            ],
+          },
+        }, null, 2),
+      }],
+    };
+  }
+);
+
+server.tool(
+  "get_chapter_for_export",
+  "Get a single chapter's full event data for writing. Use this to fetch chapters one at a time for subagent processing.",
+  {
+    sessionId: z.string().describe("The session ID"),
+    chapterNumber: z.number().describe("Chapter number (1-indexed)"),
+    style: z.string().describe("Narrative style for the instruction"),
+  },
+  async ({ sessionId, chapterNumber, style }) => {
+    const exportData = narrativeTools.exportStoryData(sessionId, style);
+    if (!exportData) {
+      return {
+        content: [{ type: "text", text: "Session not found" }],
+        isError: true,
+      };
+    }
+
+    const chapterIndex = chapterNumber - 1;
+    if (chapterIndex < 0 || chapterIndex >= exportData.chapters.length) {
+      return {
+        content: [{ type: "text", text: `Chapter ${chapterNumber} not found. Total chapters: ${exportData.chapters.length}` }],
+        isError: true,
+      };
+    }
+
+    const chapter = exportData.chapters[chapterIndex];
+
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          chapterNumber,
+          totalChapters: exportData.chapters.length,
+          title: chapter.title,
+          events: chapter.events,
+          context: {
+            sessionName: exportData.session.name,
+            setting: exportData.session.setting,
+            style: exportData.exportStyle,
+          },
+          instruction: exportData.instruction,
+          subagentPrompt: `You are writing Chapter ${chapterNumber} of "${exportData.session.name}". ${exportData.instruction} Transform the following events into engaging narrative prose. Maintain consistency with the ${exportData.session.setting} setting.`,
+        }, null, 2),
+      }],
+    };
+  }
+);
+
 // ============================================================================
 // PLAYER INTERACTION TOOLS
 // ============================================================================
