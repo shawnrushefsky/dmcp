@@ -116,6 +116,59 @@ export function updateSessionLocation(
   return result.changes > 0;
 }
 
+export interface GameMenuResult {
+  hasExistingGames: boolean;
+  sessions: Array<{
+    id: string;
+    name: string;
+    setting: string;
+    style: string;
+    lastPlayed: string;
+    characterCount: number;
+    locationCount: number;
+  }>;
+  instruction: string;
+}
+
+export function getGameMenu(): GameMenuResult {
+  const db = getDatabase();
+  const sessions = listSessions();
+
+  if (sessions.length === 0) {
+    return {
+      hasExistingGames: false,
+      sessions: [],
+      instruction: "No existing games found. Start the new game interview process directly using get_interview_template.",
+    };
+  }
+
+  // Get additional info for each session
+  const sessionsWithInfo = sessions.map((session) => {
+    const charCount = db
+      .prepare(`SELECT COUNT(*) as count FROM characters WHERE session_id = ?`)
+      .get(session.id) as { count: number };
+    const locCount = db
+      .prepare(`SELECT COUNT(*) as count FROM locations WHERE session_id = ?`)
+      .get(session.id) as { count: number };
+
+    return {
+      id: session.id,
+      name: session.name,
+      setting: session.setting,
+      style: session.style,
+      lastPlayed: session.updatedAt,
+      characterCount: charCount.count,
+      locationCount: locCount.count,
+    };
+  });
+
+  return {
+    hasExistingGames: true,
+    sessions: sessionsWithInfo,
+    instruction: "Present these existing games as choices (most recent first), with an option to start a new game. Use present_choices or ask the player which game to continue.",
+  };
+}
+
 export function getSessionState(sessionId: string): {
   session: Session;
   characterCount: number;

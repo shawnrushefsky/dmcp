@@ -140,6 +140,18 @@ const server = new McpServer({
 // ============================================================================
 
 server.tool(
+  "get_game_menu",
+  "CALL THIS FIRST when player wants to play. Returns existing games (most recent first) or instructs to start new game if none exist.",
+  {},
+  async () => {
+    const menu = sessionTools.getGameMenu();
+    return {
+      content: [{ type: "text", text: JSON.stringify(menu, null, 2) }],
+    };
+  }
+);
+
+server.tool(
   "create_session",
   "Create a new game session with a setting and style",
   {

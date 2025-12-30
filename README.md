@@ -187,11 +187,12 @@ To test the server interactively:
 npx @modelcontextprotocol/inspector node dist/index.js
 ```
 
-## Available Tools (47 total)
+## Available Tools (48 total)
 
 ### Session Management
 | Tool | Description |
 |------|-------------|
+| `get_game_menu` | **Call first** - returns existing games or starts new |
 | `create_session` | Start a new game with setting/style |
 | `load_session` | Resume an existing game |
 | `list_sessions` | Show all saved games |
