@@ -10,6 +10,7 @@ An MCP (Model Context Protocol) server that enables AI agents to act as dynamic 
   - [Setup by Platform](#setup-by-platform)
     - [Claude Desktop](#claude-desktop)
     - [Claude Code (CLI)](#claude-code-cli)
+    - [ChatGPT Desktop](#chatgpt-desktop)
     - [Cursor](#cursor)
     - [Windsurf](#windsurf)
     - [Cline (VS Code Extension)](#cline-vs-code-extension)
@@ -126,6 +127,44 @@ Restart Claude Desktop after saving.
 ```
 
 Start a new Claude Code session to load the server.
+
+---
+
+### ChatGPT Desktop
+
+ChatGPT desktop app supports MCP servers. Add to your configuration:
+
+**macOS**: `~/.chatgpt/mcp.json`
+
+```json
+{
+  "servers": {
+    "dmcp": {
+      "command": "node",
+      "args": ["/absolute/path/to/dmcp/dist/index.js"]
+    }
+  }
+}
+```
+
+Or use Docker:
+
+```json
+{
+  "servers": {
+    "dmcp": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "-v", "dmcp-data:/app/data",
+        "ghcr.io/shawnrushefsky/dmcp:latest"
+      ]
+    }
+  }
+}
+```
+
+Restart ChatGPT after saving.
 
 ---
 
