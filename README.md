@@ -2,6 +2,42 @@
 
 An MCP (Model Context Protocol) server that enables AI agents to act as dynamic dungeon masters for text-based RPGs. Supports any setting or style with dynamically generated rule systems.
 
+- [DMCP - Dungeon Master MCP Service](#dmcp---dungeon-master-mcp-service)
+  - [Features](#features)
+  - [Installation](#installation)
+    - [From Source](#from-source)
+    - [Docker](#docker)
+  - [Setup by Platform](#setup-by-platform)
+    - [Claude Desktop](#claude-desktop)
+    - [Claude Code (CLI)](#claude-code-cli)
+    - [Cursor](#cursor)
+    - [Windsurf](#windsurf)
+    - [Cline (VS Code Extension)](#cline-vs-code-extension)
+    - [Generic MCP Client](#generic-mcp-client)
+    - [Docker Configuration](#docker-configuration)
+    - [Testing with MCP Inspector](#testing-with-mcp-inspector)
+  - [Available Tools (51 total)](#available-tools-51-total)
+    - [Session Management](#session-management)
+    - [Game Setup Interview](#game-setup-interview)
+    - [Rules System](#rules-system)
+    - [World Management](#world-management)
+    - [Character Management](#character-management)
+    - [Dice \& Checks](#dice--checks)
+    - [Combat](#combat)
+    - [Inventory](#inventory)
+    - [Quests](#quests)
+    - [Narrative](#narrative)
+    - [Player Interaction](#player-interaction)
+  - [Example Usage](#example-usage)
+    - [Starting a New Game](#starting-a-new-game)
+    - [NPC with Voice](#npc-with-voice)
+    - [Player Choices](#player-choices)
+    - [Character with Image Generation](#character-with-image-generation)
+    - [Story Export Workflow](#story-export-workflow)
+  - [Data Storage](#data-storage)
+  - [License](#license)
+
+
 ## Features
 
 - **Dynamic Rule Systems** - Agent designs rules appropriate to the setting (fantasy, sci-fi, horror, etc.)
