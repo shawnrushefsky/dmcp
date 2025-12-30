@@ -47,7 +47,14 @@ export function initializeSchema(): void {
   try {
     db.exec(`ALTER TABLE characters ADD COLUMN voice TEXT`);
   } catch {
-    // Column already exists, ignore
+    // Column already exists
+  }
+
+  // Add image_gen column to characters
+  try {
+    db.exec(`ALTER TABLE characters ADD COLUMN image_gen TEXT`);
+  } catch {
+    // Column already exists
   }
 
   // Locations table
@@ -58,9 +65,17 @@ export function initializeSchema(): void {
       name TEXT NOT NULL,
       description TEXT NOT NULL,
       properties TEXT NOT NULL DEFAULT '{}',
+      image_gen TEXT,
       FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
     )
   `);
+
+  // Add image_gen column to locations
+  try {
+    db.exec(`ALTER TABLE locations ADD COLUMN image_gen TEXT`);
+  } catch {
+    // Column already exists
+  }
 
   // Items table
   db.exec(`
@@ -71,9 +86,17 @@ export function initializeSchema(): void {
       owner_type TEXT NOT NULL CHECK (owner_type IN ('character', 'location')),
       name TEXT NOT NULL,
       properties TEXT NOT NULL DEFAULT '{}',
+      image_gen TEXT,
       FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
     )
   `);
+
+  // Add image_gen column to items
+  try {
+    db.exec(`ALTER TABLE items ADD COLUMN image_gen TEXT`);
+  } catch {
+    // Column already exists
+  }
 
   // Quests table
   db.exec(`

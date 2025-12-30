@@ -7,6 +7,7 @@ An MCP (Model Context Protocol) server that enables AI agents to act as dynamic 
 - **Dynamic Rule Systems** - Agent designs rules appropriate to the setting (fantasy, sci-fi, horror, etc.)
 - **Full Game State Management** - Sessions, characters, locations, items, quests, combat
 - **Voice Descriptions** - NPC voice characteristics for TTS/voice mode integration
+- **Image Generation Metadata** - Structured visual descriptions for characters, locations, and items adaptable to any image generation tool (DALL-E, SDXL, ComfyUI, Midjourney, Flux)
 - **Player Choice System** - Structured choices with multi-select and free-form input
 - **Narrative Logging** - Event history for story continuity
 - **Dice & Checks** - Flexible dice rolling and skill resolution
@@ -147,7 +148,7 @@ To test the server interactively:
 npx @modelcontextprotocol/inspector node dist/index.js
 ```
 
-## Available Tools (44 total)
+## Available Tools (47 total)
 
 ### Session Management
 | Tool | Description |
@@ -157,6 +158,13 @@ npx @modelcontextprotocol/inspector node dist/index.js
 | `list_sessions` | Show all saved games |
 | `get_session_state` | Full game state overview |
 | `delete_session` | Remove a saved game |
+
+### Game Setup Interview
+| Tool | Description |
+|------|-------------|
+| `get_interview_template` | Get comprehensive game setup questionnaire |
+| `save_game_preferences` | Store player's game preferences |
+| `get_game_preferences` | Retrieve saved preferences |
 
 ### Rules System
 | Tool | Description |
@@ -284,6 +292,47 @@ present_choices({
   context: {urgency: "medium"}
 })
 ```
+
+### Character with Image Generation
+
+```javascript
+create_character({
+  name: "Razor",
+  isPlayer: false,
+  imageGen: {
+    subject: {
+      type: "character",
+      primaryDescription: "A cyberpunk street samurai with chrome implants",
+      physicalTraits: {
+        gender: "female",
+        bodyType: "athletic",
+        hairColor: "neon pink",
+        eyeColor: "chrome optics with red glow",
+        distinguishingMarks: ["chrome arm", "facial tattoos"]
+      },
+      attire: {
+        description: "armored leather jacket with holographic accents",
+        colors: ["black", "neon blue"],
+        accessories: ["monofilament blade sheath"]
+      },
+      pose: "leaning against wall",
+      expression: "calculating smirk"
+    },
+    style: {
+      artisticStyle: "digital painting",
+      genre: "cyberpunk",
+      mood: "gritty",
+      colorScheme: "neon-noir"
+    },
+    composition: {
+      framing: "portrait",
+      background: "rainy neon cityscape"
+    }
+  }
+})
+```
+
+The `imageGen` field can be attached to characters, locations, and items. The structured format can be adapted to any image generation tool - the DM agent can generate tool-specific prompts as needed.
 
 ## Data Storage
 

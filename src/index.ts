@@ -20,6 +20,115 @@ import * as narrativeTools from "./tools/narrative.js";
 // Initialize database
 initializeSchema();
 
+// Reusable Zod schemas for image generation
+const subjectDescriptionSchema = z.object({
+  type: z.enum(["character", "location", "item", "scene"]),
+  primaryDescription: z.string(),
+  physicalTraits: z.object({
+    age: z.string().optional(),
+    gender: z.string().optional(),
+    bodyType: z.string().optional(),
+    height: z.string().optional(),
+    skinTone: z.string().optional(),
+    hairColor: z.string().optional(),
+    hairStyle: z.string().optional(),
+    eyeColor: z.string().optional(),
+    facialFeatures: z.string().optional(),
+    distinguishingMarks: z.array(z.string()).optional(),
+  }).optional(),
+  attire: z.object({
+    description: z.string(),
+    colors: z.array(z.string()).optional(),
+    materials: z.array(z.string()).optional(),
+    accessories: z.array(z.string()).optional(),
+  }).optional(),
+  environment: z.object({
+    setting: z.string(),
+    timeOfDay: z.string().optional(),
+    weather: z.string().optional(),
+    lighting: z.string().optional(),
+    architecture: z.string().optional(),
+    vegetation: z.string().optional(),
+    notableFeatures: z.array(z.string()).optional(),
+  }).optional(),
+  objectDetails: z.object({
+    material: z.string().optional(),
+    size: z.string().optional(),
+    condition: z.string().optional(),
+    glowOrEffects: z.string().optional(),
+  }).optional(),
+  pose: z.string().optional(),
+  expression: z.string().optional(),
+  action: z.string().optional(),
+});
+
+const styleDescriptionSchema = z.object({
+  artisticStyle: z.string(),
+  genre: z.string(),
+  mood: z.string(),
+  colorScheme: z.string().optional(),
+  influences: z.array(z.string()).optional(),
+  qualityTags: z.array(z.string()).optional(),
+  negativeElements: z.array(z.string()).optional(),
+});
+
+const compositionDescriptionSchema = z.object({
+  framing: z.string(),
+  cameraAngle: z.string().optional(),
+  aspectRatio: z.string().optional(),
+  focusPoint: z.string().optional(),
+  background: z.string().optional(),
+  depth: z.string().optional(),
+});
+
+const comfyUIPromptSchema = z.object({
+  positive: z.string(),
+  negative: z.string(),
+  checkpoint: z.string().optional(),
+  loras: z.array(z.object({
+    name: z.string(),
+    weight: z.number(),
+  })).optional(),
+  samplerSettings: z.object({
+    sampler: z.string().optional(),
+    scheduler: z.string().optional(),
+    steps: z.number().optional(),
+    cfg: z.number().optional(),
+  }).optional(),
+});
+
+const generatedImageSchema = z.object({
+  id: z.string(),
+  tool: z.string(),
+  prompt: z.string(),
+  url: z.string().optional(),
+  base64: z.string().optional(),
+  seed: z.number().optional(),
+  timestamp: z.string(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
+const imageGenSchema = z.object({
+  subject: subjectDescriptionSchema,
+  style: styleDescriptionSchema,
+  composition: compositionDescriptionSchema,
+  prompts: z.object({
+    generic: z.string().optional(),
+    sdxl: z.string().optional(),
+    dalle: z.string().optional(),
+    midjourney: z.string().optional(),
+    flux: z.string().optional(),
+    comfyui: comfyUIPromptSchema.optional(),
+  }).optional(),
+  generations: z.array(generatedImageSchema).optional(),
+  consistency: z.object({
+    characterRef: z.string().optional(),
+    seedImage: z.string().optional(),
+    colorPalette: z.array(z.string()).optional(),
+    styleRef: z.string().optional(),
+  }).optional(),
+}).describe("Image generation metadata for visual representation");
+
 // Create MCP server
 const server = new McpServer({
   name: "dmcp",
@@ -669,9 +778,10 @@ server.tool(
       features: z.array(z.string()).optional(),
       atmosphere: z.string().optional(),
     }).optional().describe("Additional location properties"),
+    imageGen: imageGenSchema.optional().describe("Image generation metadata for location art"),
   },
-  async ({ sessionId, name, description, properties }) => {
-    const location = worldTools.createLocation({ sessionId, name, description, properties });
+  async ({ sessionId, name, description, properties, imageGen }) => {
+    const location = worldTools.createLocation({ sessionId, name, description, properties, imageGen });
     return {
       content: [{ type: "text", text: JSON.stringify(location, null, 2) }],
     };
@@ -706,9 +816,10 @@ server.tool(
     name: z.string().optional().describe("New name"),
     description: z.string().optional().describe("New description"),
     properties: z.record(z.string(), z.unknown()).optional().describe("Property updates"),
+    imageGen: imageGenSchema.nullable().optional().describe("Image generation metadata (null to remove)"),
   },
-  async ({ locationId, name, description, properties }) => {
-    const location = worldTools.updateLocation(locationId, { name, description, properties });
+  async ({ locationId, name, description, properties, imageGen }) => {
+    const location = worldTools.updateLocation(locationId, { name, description, properties, imageGen });
     if (!location) {
       return {
         content: [{ type: "text", text: "Location not found" }],
@@ -792,6 +903,7 @@ server.tool(
       quirks: z.array(z.string()).optional().describe("Speech quirks (e.g., 'stutters when nervous')"),
       description: z.string().optional().describe("Free-form voice description for more nuance"),
     }).optional().describe("Voice characteristics for TTS/voice mode"),
+    imageGen: imageGenSchema.optional().describe("Image generation metadata for character portraits"),
   },
   async (params) => {
     const character = characterTools.createCharacter(params);
@@ -840,6 +952,7 @@ server.tool(
       quirks: z.array(z.string()).optional().describe("Speech quirks"),
       description: z.string().optional().describe("Free-form voice description"),
     }).nullable().optional().describe("Voice characteristics (null to remove)"),
+    imageGen: imageGenSchema.nullable().optional().describe("Image generation metadata (null to remove)"),
   },
   async ({ characterId, ...updates }) => {
     const character = characterTools.updateCharacter(characterId, updates);
@@ -1204,6 +1317,7 @@ server.tool(
       value: z.number().optional(),
       effects: z.array(z.string()).optional(),
     }).optional().describe("Item properties"),
+    imageGen: imageGenSchema.optional().describe("Image generation metadata for item art"),
   },
   async (params) => {
     const item = inventoryTools.createItem(params);
@@ -1240,9 +1354,10 @@ server.tool(
     itemId: z.string().describe("The item ID"),
     name: z.string().optional().describe("New name"),
     properties: z.record(z.string(), z.unknown()).optional().describe("Property updates"),
+    imageGen: imageGenSchema.nullable().optional().describe("Image generation metadata (null to remove)"),
   },
-  async ({ itemId, name, properties }) => {
-    const item = inventoryTools.updateItem(itemId, { name, properties });
+  async ({ itemId, name, properties, imageGen }) => {
+    const item = inventoryTools.updateItem(itemId, { name, properties, imageGen });
     if (!item) {
       return {
         content: [{ type: "text", text: "Item not found" }],

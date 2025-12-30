@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
-import type { Item, ItemProperties } from "../types/index.js";
+import type { Item, ItemProperties, ImageGeneration } from "../types/index.js";
 
 export function createItem(params: {
   sessionId: string;
@@ -8,6 +8,7 @@ export function createItem(params: {
   ownerType: "character" | "location";
   name: string;
   properties?: Partial<ItemProperties>;
+  imageGen?: ImageGeneration;
 }): Item {
   const db = getDatabase();
   const id = uuidv4();
@@ -19,8 +20,8 @@ export function createItem(params: {
   };
 
   const stmt = db.prepare(`
-    INSERT INTO items (id, session_id, owner_id, owner_type, name, properties)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO items (id, session_id, owner_id, owner_type, name, properties, image_gen)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
 
   stmt.run(
@@ -29,7 +30,8 @@ export function createItem(params: {
     params.ownerId,
     params.ownerType,
     params.name,
-    JSON.stringify(properties)
+    JSON.stringify(properties),
+    params.imageGen ? JSON.stringify(params.imageGen) : null
   );
 
   return {
@@ -39,6 +41,7 @@ export function createItem(params: {
     ownerType: params.ownerType,
     name: params.name,
     properties,
+    imageGen: params.imageGen || null,
   };
 }
 
@@ -56,6 +59,7 @@ export function getItem(id: string): Item | null {
     ownerType: row.owner_type as "character" | "location",
     name: row.name as string,
     properties: JSON.parse(row.properties as string),
+    imageGen: row.image_gen ? JSON.parse(row.image_gen as string) : null,
   };
 }
 
@@ -64,6 +68,7 @@ export function updateItem(
   updates: {
     name?: string;
     properties?: Partial<ItemProperties>;
+    imageGen?: ImageGeneration | null;
   }
 ): Item | null {
   const db = getDatabase();
@@ -74,17 +79,25 @@ export function updateItem(
   const newProperties = updates.properties
     ? { ...current.properties, ...updates.properties }
     : current.properties;
+  const newImageGen =
+    updates.imageGen !== undefined ? updates.imageGen : current.imageGen;
 
   const stmt = db.prepare(`
-    UPDATE items SET name = ?, properties = ? WHERE id = ?
+    UPDATE items SET name = ?, properties = ?, image_gen = ? WHERE id = ?
   `);
 
-  stmt.run(newName, JSON.stringify(newProperties), id);
+  stmt.run(
+    newName,
+    JSON.stringify(newProperties),
+    newImageGen ? JSON.stringify(newImageGen) : null,
+    id
+  );
 
   return {
     ...current,
     name: newName,
     properties: newProperties,
+    imageGen: newImageGen,
   };
 }
 
@@ -134,6 +147,7 @@ export function getInventory(
     ownerType: row.owner_type as "character" | "location",
     name: row.name as string,
     properties: JSON.parse(row.properties as string),
+    imageGen: row.image_gen ? JSON.parse(row.image_gen as string) : null,
   }));
 }
 
@@ -156,6 +170,7 @@ export function findItemByName(
     ownerType: row.owner_type as "character" | "location",
     name: row.name as string,
     properties: JSON.parse(row.properties as string),
+    imageGen: row.image_gen ? JSON.parse(row.image_gen as string) : null,
   };
 }
 
@@ -171,5 +186,6 @@ export function listSessionItems(sessionId: string): Item[] {
     ownerType: row.owner_type as "character" | "location",
     name: row.name as string,
     properties: JSON.parse(row.properties as string),
+    imageGen: row.image_gen ? JSON.parse(row.image_gen as string) : null,
   }));
 }

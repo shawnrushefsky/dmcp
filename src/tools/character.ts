@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
-import type { Character, CharacterStatus, VoiceDescription } from "../types/index.js";
+import type { Character, CharacterStatus, VoiceDescription, ImageGeneration } from "../types/index.js";
 
 export function createCharacter(params: {
   sessionId: string;
@@ -12,6 +12,7 @@ export function createCharacter(params: {
   locationId?: string;
   notes?: string;
   voice?: VoiceDescription;
+  imageGen?: ImageGeneration;
 }): Character {
   const db = getDatabase();
   const id = uuidv4();
@@ -27,8 +28,8 @@ export function createCharacter(params: {
   };
 
   const stmt = db.prepare(`
-    INSERT INTO characters (id, session_id, name, is_player, attributes, skills, status, location_id, notes, voice, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO characters (id, session_id, name, is_player, attributes, skills, status, location_id, notes, voice, image_gen, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   stmt.run(
@@ -42,6 +43,7 @@ export function createCharacter(params: {
     params.locationId || null,
     params.notes || "",
     params.voice ? JSON.stringify(params.voice) : null,
+    params.imageGen ? JSON.stringify(params.imageGen) : null,
     now
   );
 
@@ -56,6 +58,7 @@ export function createCharacter(params: {
     locationId: params.locationId || null,
     notes: params.notes || "",
     voice: params.voice || null,
+    imageGen: params.imageGen || null,
     createdAt: now,
   };
 }
@@ -78,6 +81,7 @@ export function getCharacter(id: string): Character | null {
     locationId: row.location_id as string | null,
     notes: row.notes as string,
     voice: row.voice ? JSON.parse(row.voice as string) : null,
+    imageGen: row.image_gen ? JSON.parse(row.image_gen as string) : null,
     createdAt: row.created_at as string,
   };
 }
@@ -92,6 +96,7 @@ export function updateCharacter(
     locationId?: string | null;
     notes?: string;
     voice?: VoiceDescription | null;
+    imageGen?: ImageGeneration | null;
   }
 ): Character | null {
   const db = getDatabase();
@@ -113,10 +118,12 @@ export function updateCharacter(
   const newNotes = updates.notes ?? current.notes;
   const newVoice =
     updates.voice !== undefined ? updates.voice : current.voice;
+  const newImageGen =
+    updates.imageGen !== undefined ? updates.imageGen : current.imageGen;
 
   const stmt = db.prepare(`
     UPDATE characters
-    SET name = ?, attributes = ?, skills = ?, status = ?, location_id = ?, notes = ?, voice = ?
+    SET name = ?, attributes = ?, skills = ?, status = ?, location_id = ?, notes = ?, voice = ?, image_gen = ?
     WHERE id = ?
   `);
 
@@ -128,6 +135,7 @@ export function updateCharacter(
     newLocationId,
     newNotes,
     newVoice ? JSON.stringify(newVoice) : null,
+    newImageGen ? JSON.stringify(newImageGen) : null,
     id
   );
 
@@ -140,6 +148,7 @@ export function updateCharacter(
     locationId: newLocationId,
     notes: newNotes,
     voice: newVoice,
+    imageGen: newImageGen,
   };
 }
 
@@ -185,6 +194,7 @@ export function listCharacters(
     locationId: row.location_id as string | null,
     notes: row.notes as string,
     voice: row.voice ? JSON.parse(row.voice as string) : null,
+    imageGen: row.image_gen ? JSON.parse(row.image_gen as string) : null,
     createdAt: row.created_at as string,
   }));
 }

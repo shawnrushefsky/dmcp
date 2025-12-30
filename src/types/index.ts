@@ -71,6 +71,129 @@ export interface InterviewQuestion {
   delegateLabel?: string;
 }
 
+// Image generation types
+export interface ImageGeneration {
+  // Structured visual description (tool-agnostic)
+  subject: SubjectDescription;
+  style: StyleDescription;
+  composition: CompositionDescription;
+
+  // Generated prompt cache for different tools
+  prompts?: {
+    generic?: string;        // Plain English description
+    sdxl?: string;           // Stable Diffusion XL optimized
+    dalle?: string;          // DALL-E optimized
+    midjourney?: string;     // Midjourney style
+    flux?: string;           // Flux model optimized
+    comfyui?: ComfyUIPrompt; // ComfyUI workflow-ready
+  };
+
+  // Generated images history
+  generations?: GeneratedImage[];
+
+  // Reference/consistency anchors
+  consistency?: {
+    characterRef?: string;   // Reference to another character for style matching
+    seedImage?: string;      // Base64 or URL for img2img
+    colorPalette?: string[]; // Hex colors to maintain
+    styleRef?: string;       // Reference image for style
+  };
+}
+
+export interface SubjectDescription {
+  type: "character" | "location" | "item" | "scene";
+  primaryDescription: string;  // Core visual description
+
+  // Character-specific
+  physicalTraits?: {
+    age?: string;
+    gender?: string;
+    bodyType?: string;
+    height?: string;
+    skinTone?: string;
+    hairColor?: string;
+    hairStyle?: string;
+    eyeColor?: string;
+    facialFeatures?: string;
+    distinguishingMarks?: string[];  // Scars, tattoos, etc.
+  };
+
+  // Clothing/equipment
+  attire?: {
+    description: string;
+    colors?: string[];
+    materials?: string[];
+    accessories?: string[];
+  };
+
+  // Location-specific
+  environment?: {
+    setting: string;         // Indoor, outdoor, underground, etc.
+    timeOfDay?: string;
+    weather?: string;
+    lighting?: string;
+    architecture?: string;
+    vegetation?: string;
+    notableFeatures?: string[];
+  };
+
+  // Item-specific
+  objectDetails?: {
+    material?: string;
+    size?: string;
+    condition?: string;
+    glowOrEffects?: string;
+  };
+
+  // Pose/action (for characters)
+  pose?: string;
+  expression?: string;
+  action?: string;
+}
+
+export interface StyleDescription {
+  artisticStyle: string;       // "digital painting", "oil painting", "anime", "photorealistic"
+  genre: string;               // Should match game genre
+  mood: string;                // "dark", "epic", "whimsical", "gritty"
+  colorScheme?: string;        // "warm", "cold", "muted", "vibrant", "monochromatic"
+  influences?: string[];       // Artist or game/movie references
+  qualityTags?: string[];      // "highly detailed", "8k", "masterpiece"
+  negativeElements?: string[]; // Things to avoid in generation
+}
+
+export interface CompositionDescription {
+  framing: string;             // "portrait", "full body", "wide shot", "close-up"
+  cameraAngle?: string;        // "eye level", "low angle", "bird's eye"
+  aspectRatio?: string;        // "1:1", "16:9", "2:3", "portrait", "landscape"
+  focusPoint?: string;         // What should be the visual focus
+  background?: string;         // "blurred", "detailed", "simple", "transparent"
+  depth?: string;              // "shallow DOF", "deep focus"
+}
+
+export interface ComfyUIPrompt {
+  positive: string;
+  negative: string;
+  checkpoint?: string;         // Recommended model
+  loras?: { name: string; weight: number }[];
+  samplerSettings?: {
+    sampler?: string;
+    scheduler?: string;
+    steps?: number;
+    cfg?: number;
+  };
+}
+
+export interface GeneratedImage {
+  id: string;
+  tool: string;                // "dalle", "sdxl", "midjourney", "comfyui", etc.
+  prompt: string;              // The actual prompt used
+  url?: string;                // If hosted
+  base64?: string;             // If stored locally
+  seed?: number;               // For reproducibility
+  timestamp: string;
+  metadata?: Record<string, unknown>;
+}
+
 // Rule system types
 export interface RuleSystem {
   name: string;
@@ -147,6 +270,7 @@ export interface Character {
   locationId: string | null;
   notes: string;
   voice: VoiceDescription | null;
+  imageGen: ImageGeneration | null;
   createdAt: string;
 }
 
@@ -175,6 +299,7 @@ export interface Location {
   name: string;
   description: string;
   properties: LocationProperties;
+  imageGen: ImageGeneration | null;
 }
 
 export interface LocationProperties {
@@ -200,6 +325,7 @@ export interface Item {
   ownerType: "character" | "location";
   name: string;
   properties: ItemProperties;
+  imageGen: ImageGeneration | null;
 }
 
 export interface ItemProperties {

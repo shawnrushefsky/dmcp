@@ -1,12 +1,13 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
-import type { Location, LocationProperties, Exit } from "../types/index.js";
+import type { Location, LocationProperties, Exit, ImageGeneration } from "../types/index.js";
 
 export function createLocation(params: {
   sessionId: string;
   name: string;
   description: string;
   properties?: Partial<LocationProperties>;
+  imageGen?: ImageGeneration;
 }): Location {
   const db = getDatabase();
   const id = uuidv4();
@@ -19,8 +20,8 @@ export function createLocation(params: {
   };
 
   const stmt = db.prepare(`
-    INSERT INTO locations (id, session_id, name, description, properties)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO locations (id, session_id, name, description, properties, image_gen)
+    VALUES (?, ?, ?, ?, ?, ?)
   `);
 
   stmt.run(
@@ -28,7 +29,8 @@ export function createLocation(params: {
     params.sessionId,
     params.name,
     params.description,
-    JSON.stringify(properties)
+    JSON.stringify(properties),
+    params.imageGen ? JSON.stringify(params.imageGen) : null
   );
 
   return {
@@ -37,6 +39,7 @@ export function createLocation(params: {
     name: params.name,
     description: params.description,
     properties,
+    imageGen: params.imageGen || null,
   };
 }
 
@@ -53,6 +56,7 @@ export function getLocation(id: string): Location | null {
     name: row.name as string,
     description: row.description as string,
     properties: JSON.parse(row.properties as string),
+    imageGen: row.image_gen ? JSON.parse(row.image_gen as string) : null,
   };
 }
 
@@ -62,6 +66,7 @@ export function updateLocation(
     name?: string;
     description?: string;
     properties?: Partial<LocationProperties>;
+    imageGen?: ImageGeneration | null;
   }
 ): Location | null {
   const db = getDatabase();
@@ -73,18 +78,27 @@ export function updateLocation(
   const newProperties = updates.properties
     ? { ...current.properties, ...updates.properties }
     : current.properties;
+  const newImageGen =
+    updates.imageGen !== undefined ? updates.imageGen : current.imageGen;
 
   const stmt = db.prepare(`
-    UPDATE locations SET name = ?, description = ?, properties = ? WHERE id = ?
+    UPDATE locations SET name = ?, description = ?, properties = ?, image_gen = ? WHERE id = ?
   `);
 
-  stmt.run(newName, newDescription, JSON.stringify(newProperties), id);
+  stmt.run(
+    newName,
+    newDescription,
+    JSON.stringify(newProperties),
+    newImageGen ? JSON.stringify(newImageGen) : null,
+    id
+  );
 
   return {
     ...current,
     name: newName,
     description: newDescription,
     properties: newProperties,
+    imageGen: newImageGen,
   };
 }
 
@@ -99,6 +113,7 @@ export function listLocations(sessionId: string): Location[] {
     name: row.name as string,
     description: row.description as string,
     properties: JSON.parse(row.properties as string),
+    imageGen: row.image_gen ? JSON.parse(row.image_gen as string) : null,
   }));
 }
 
