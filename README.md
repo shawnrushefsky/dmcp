@@ -129,6 +129,18 @@ Restart Claude Desktop after saving.
 
 Start a new Claude Code session to load the server.
 
+**Auto-approve all DMCP tools** (optional) - Add to `.claude/settings.json`:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "mcp__dmcp__*"
+    ]
+  }
+}
+```
+
 ---
 
 ### ChatGPT Desktop
