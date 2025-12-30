@@ -18,7 +18,7 @@ An MCP (Model Context Protocol) server that enables AI agents to act as dynamic 
     - [Docker Configuration](#docker-configuration)
     - [Testing with MCP Inspector](#testing-with-mcp-inspector)
     - [AI Self-Configuration Prompt](#ai-self-configuration-prompt)
-  - [Available Tools (51 total)](#available-tools-51-total)
+  - [Available Tools (52 total)](#available-tools-52-total)
     - [Session Management](#session-management)
     - [Game Setup Interview](#game-setup-interview)
     - [Rules System](#rules-system)
@@ -49,6 +49,7 @@ An MCP (Model Context Protocol) server that enables AI agents to act as dynamic 
 - **Player Choice System** - Structured choices with multi-select and free-form input
 - **Narrative Logging** - Event history for story continuity
 - **Dice & Checks** - Flexible dice rolling and skill resolution
+- **ASCII Map Rendering** - Visual world maps with player location tracking
 
 ## Installation
 
@@ -317,7 +318,7 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 
 </details>
 
-## Available Tools (51 total)
+## Available Tools (52 total)
 
 ### Session Management
 | Tool | Description |
@@ -351,6 +352,7 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `update_location` | Modify a location |
 | `list_locations` | All locations in session |
 | `connect_locations` | Create paths between locations |
+| `render_map` | ASCII map of world (full or local radius) |
 
 ### Character Management
 | Tool | Description |
