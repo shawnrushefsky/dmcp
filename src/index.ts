@@ -1164,6 +1164,36 @@ server.tool(
   }
 );
 
+server.tool(
+  "render_character_sheet",
+  "Render an ASCII character sheet showing stats, health bar, attributes, skills, inventory, and conditions in a visual format",
+  {
+    characterId: z.string().describe("The character ID"),
+  },
+  async ({ characterId }) => {
+    const sheetData = characterTools.renderCharacterSheet(characterId);
+    if (!sheetData) {
+      return {
+        content: [{ type: "text", text: "Character not found" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          ascii: sheetData.ascii,
+          characterId: sheetData.character.id,
+          name: sheetData.character.name,
+          locationName: sheetData.locationName,
+          inventoryCount: sheetData.inventory.length,
+          instruction: "Display the ASCII character sheet to the player. Use this to give players a visual overview of their character status.",
+        }, null, 2),
+      }],
+    };
+  }
+);
+
 // ============================================================================
 // DICE & CHECK TOOLS
 // ============================================================================

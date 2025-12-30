@@ -18,7 +18,7 @@ An MCP (Model Context Protocol) server that enables AI agents to act as dynamic 
     - [Docker Configuration](#docker-configuration)
     - [Testing with MCP Inspector](#testing-with-mcp-inspector)
     - [AI Self-Configuration Prompt](#ai-self-configuration-prompt)
-  - [Available Tools (52 total)](#available-tools-52-total)
+  - [Available Tools (53 total)](#available-tools-53-total)
     - [Session Management](#session-management)
     - [Game Setup Interview](#game-setup-interview)
     - [Rules System](#rules-system)
@@ -318,7 +318,7 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 
 </details>
 
-## Available Tools (52 total)
+## Available Tools (53 total)
 
 ### Session Management
 | Tool | Description |
@@ -366,6 +366,7 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `heal_character` | Restore health |
 | `add_condition` | Apply status effect |
 | `remove_condition` | Remove status effect |
+| `render_character_sheet` | ASCII character sheet with stats & inventory |
 
 ### Dice & Checks
 | Tool | Description |
