@@ -128,6 +128,7 @@ export interface GameMenuResult {
     locationCount: number;
   }>;
   instruction: string;
+  visualizationTip: string;
 }
 
 export function getGameMenu(): GameMenuResult {
@@ -139,6 +140,7 @@ export function getGameMenu(): GameMenuResult {
       hasExistingGames: false,
       sessions: [],
       instruction: "No existing games found. Start the new game interview process directly using get_interview_template.",
+      visualizationTip: "Enhance the experience with visuals: use render_map for world maps, and create ASCII art for character portraits, items, scene illustrations, and combat layouts when image generation isn't available.",
     };
   }
 
@@ -166,6 +168,7 @@ export function getGameMenu(): GameMenuResult {
     hasExistingGames: true,
     sessions: sessionsWithInfo,
     instruction: "Present these existing games as choices (most recent first), with an option to start a new game. Use present_choices or ask the player which game to continue.",
+    visualizationTip: "Enhance the experience with visuals: use render_map for world maps, and create ASCII art for character portraits, items, scene illustrations, and combat layouts when image generation isn't available.",
   };
 }
 

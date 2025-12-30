@@ -214,7 +214,16 @@ server.tool(
       };
     }
     return {
-      content: [{ type: "text", text: JSON.stringify(state, null, 2) }],
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          ...state,
+          tips: {
+            visualization: "Use render_map to show the world. If no image generation is available, use ASCII art liberally for character portraits, items, scene illustrations, and combat layouts to enhance immersion.",
+            mapRecommendation: state.locationCount > 0 ? "Consider showing a map with render_map" : null,
+          },
+        }, null, 2),
+      }],
     };
   }
 );
@@ -1051,9 +1060,22 @@ server.tool(
   },
   async ({ characterId, locationId }) => {
     const success = characterTools.moveCharacter(characterId, locationId);
+    if (!success) {
+      return {
+        content: [{ type: "text", text: "Failed to move character" }],
+        isError: true,
+      };
+    }
     return {
-      content: [{ type: "text", text: success ? "Character moved" : "Failed to move character" }],
-      isError: !success,
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          success: true,
+          characterId,
+          newLocationId: locationId,
+          tip: "Consider using render_map to show the player their new position, or describe the new location with ASCII art for atmosphere.",
+        }, null, 2),
+      }],
     };
   }
 );

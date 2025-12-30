@@ -57,3 +57,18 @@ SQLite database at `data/games.db`. Schema auto-initializes and migrates on star
 1. Add tool implementation in appropriate `src/tools/*.ts` file
 2. Add MCP tool definition in `src/index.ts` with Zod schema
 3. Run `npm run build` to verify
+
+## DM Agent Best Practices
+
+### Visual Storytelling with ASCII Art
+
+When image generation tools are not available, DM agents should proactively use ASCII art to enhance the experience:
+
+- **Maps** - Use `render_map` tool regularly, especially after location changes
+- **Character portraits** - Simple ASCII faces or silhouettes for important NPCs
+- **Items** - ASCII drawings of weapons, artifacts, treasure
+- **Scene illustrations** - Atmospheric art for key moments (tavern interior, dungeon entrance, etc.)
+- **Combat layouts** - Tactical grids showing positions
+- **UI elements** - Health bars, inventory displays, quest trackers
+
+ASCII art creates visual anchors that make the game more immersive and memorable. Use it liberally - players appreciate the effort even with simple art.
