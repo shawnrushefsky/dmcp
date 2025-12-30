@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "dmcp": {
+      "command": "node",
+      "args": ["dist/index.js"]
+    }
+  }
+}
