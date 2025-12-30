@@ -17,6 +17,7 @@ An MCP (Model Context Protocol) server that enables AI agents to act as dynamic 
     - [Generic MCP Client](#generic-mcp-client)
     - [Docker Configuration](#docker-configuration)
     - [Testing with MCP Inspector](#testing-with-mcp-inspector)
+    - [AI Self-Configuration Prompt](#ai-self-configuration-prompt)
   - [Available Tools (51 total)](#available-tools-51-total)
     - [Session Management](#session-management)
     - [Game Setup Interview](#game-setup-interview)
@@ -261,6 +262,48 @@ To test the server interactively:
 ```bash
 npx @modelcontextprotocol/inspector node dist/index.js
 ```
+
+---
+
+### AI Self-Configuration Prompt
+
+Copy and paste this prompt to any MCP-compatible AI assistant to have it guide you through setup:
+
+<details>
+<summary>Click to expand the setup prompt</summary>
+
+```
+I want to set up DMCP (Dungeon Master MCP) so we can play text-based RPGs together. DMCP is an MCP server that lets you act as a dungeon master with full game state management.
+
+Repository: https://github.com/shawnrushefsky/dmcp
+Docker image: ghcr.io/shawnrushefsky/dmcp:latest
+
+Please help me configure this MCP server for my system. Here's what I need you to do:
+
+1. First, determine what AI tool/platform I'm using (Claude Desktop, Claude Code, ChatGPT, Cursor, etc.) and my operating system.
+
+2. Then guide me through the setup:
+   - For Docker setup (recommended): Help me verify Docker is installed and configure the MCP server using the Docker image
+   - For source setup: Help me clone the repo, run npm install && npm run build, and configure
+
+3. The configuration should use these settings:
+   - Docker: command "docker" with args ["run", "-i", "--rm", "-v", "dmcp-data:/app/data", "ghcr.io/shawnrushefsky/dmcp:latest"]
+   - Source: command "node" with args pointing to the dist/index.js file
+
+4. After configuration, tell me to restart my AI application, then we can start playing!
+
+Configuration file locations:
+- Claude Desktop (macOS): ~/Library/Application Support/Claude/claude_desktop_config.json
+- Claude Desktop (Windows): %APPDATA%\Claude\claude_desktop_config.json
+- Claude Code: .mcp.json in project root or ~/.claude/claude_desktop_config.json
+- ChatGPT Desktop: ~/.chatgpt/mcp.json
+- Cursor: Settings → MCP Servers
+- Windsurf: ~/.windsurf/config.json
+
+Once DMCP is configured, you'll have access to tools for managing game sessions, characters, locations, items, quests, combat, dice rolls, and narrative events. You can run any style of RPG - fantasy, sci-fi, horror, or anything the player wants.
+```
+
+</details>
 
 ## Available Tools (51 total)
 
