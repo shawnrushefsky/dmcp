@@ -1,22 +1,31 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
-import type { Session, RuleSystem } from "../types/index.js";
+import type { Session, RuleSystem, GamePreferences } from "../types/index.js";
 
 export function createSession(params: {
   name: string;
   setting: string;
   style: string;
+  preferences?: GamePreferences;
 }): Session {
   const db = getDatabase();
   const id = uuidv4();
   const now = new Date().toISOString();
 
   const stmt = db.prepare(`
-    INSERT INTO sessions (id, name, setting, style, rules, current_location_id, created_at, updated_at)
-    VALUES (?, ?, ?, ?, NULL, NULL, ?, ?)
+    INSERT INTO sessions (id, name, setting, style, rules, preferences, current_location_id, created_at, updated_at)
+    VALUES (?, ?, ?, ?, NULL, ?, NULL, ?, ?)
   `);
 
-  stmt.run(id, params.name, params.setting, params.style, now, now);
+  stmt.run(
+    id,
+    params.name,
+    params.setting,
+    params.style,
+    params.preferences ? JSON.stringify(params.preferences) : null,
+    now,
+    now
+  );
 
   return {
     id,
@@ -24,6 +33,7 @@ export function createSession(params: {
     setting: params.setting,
     style: params.style,
     rules: null,
+    preferences: params.preferences || null,
     currentLocationId: null,
     createdAt: now,
     updatedAt: now,
@@ -43,6 +53,7 @@ export function loadSession(id: string): Session | null {
     setting: row.setting as string,
     style: row.style as string,
     rules: row.rules ? JSON.parse(row.rules as string) : null,
+    preferences: row.preferences ? JSON.parse(row.preferences as string) : null,
     currentLocationId: row.current_location_id as string | null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
@@ -60,10 +71,29 @@ export function listSessions(): Session[] {
     setting: row.setting as string,
     style: row.style as string,
     rules: row.rules ? JSON.parse(row.rules as string) : null,
+    preferences: row.preferences ? JSON.parse(row.preferences as string) : null,
     currentLocationId: row.current_location_id as string | null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   }));
+}
+
+export function updateSessionPreferences(
+  sessionId: string,
+  preferences: GamePreferences
+): boolean {
+  const db = getDatabase();
+  const now = new Date().toISOString();
+  const stmt = db.prepare(`
+    UPDATE sessions SET preferences = ?, updated_at = ? WHERE id = ?
+  `);
+  const result = stmt.run(JSON.stringify(preferences), now, sessionId);
+  return result.changes > 0;
+}
+
+export function getSessionPreferences(sessionId: string): GamePreferences | null {
+  const session = loadSession(sessionId);
+  return session?.preferences || null;
 }
 
 export function deleteSession(id: string): boolean {

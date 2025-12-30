@@ -5,9 +5,70 @@ export interface Session {
   setting: string;
   style: string;
   rules: RuleSystem | null;
+  preferences: GamePreferences | null;
   currentLocationId: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface GamePreferences {
+  // Core game identity
+  genre: PreferenceValue<string>;
+  tone: PreferenceValue<string>;
+  setting: PreferenceValue<string>;
+
+  // Mechanical preferences
+  complexity: PreferenceValue<string>;
+  combatFrequency: PreferenceValue<string>;
+  combatStyle: PreferenceValue<string>;
+  lethality: PreferenceValue<string>;
+
+  // Narrative preferences
+  narrativeStyle: PreferenceValue<string>;
+  playerAgency: PreferenceValue<string>;
+  npcDepth: PreferenceValue<string>;
+  romanceContent: PreferenceValue<string>;
+
+  // World building
+  worldFamiliarity: PreferenceValue<string>;
+  magicOrTechLevel: PreferenceValue<string>;
+  politicalComplexity: PreferenceValue<string>;
+
+  // Session preferences
+  sessionLength: PreferenceValue<string>;
+  pacingPreference: PreferenceValue<string>;
+
+  // Content boundaries
+  contentToAvoid: string[];
+  contentToInclude: string[];
+
+  // Inspiration
+  inspirations: string[];
+
+  // Character preferences
+  characterCreation: PreferenceValue<string>;
+  startingPowerLevel: PreferenceValue<string>;
+
+  // Custom notes
+  additionalNotes: string;
+}
+
+export interface PreferenceValue<T> {
+  value: T | null;
+  delegatedToDM: boolean;
+  notes?: string;
+}
+
+// Helper type for interview questions
+export interface InterviewQuestion {
+  id: keyof GamePreferences;
+  category: string;
+  question: string;
+  description: string;
+  options?: { value: string; label: string; description: string }[];
+  allowFreeform: boolean;
+  allowDelegate: boolean;
+  delegateLabel?: string;
 }
 
 // Rule system types

@@ -11,11 +11,19 @@ export function initializeSchema(): void {
       setting TEXT NOT NULL,
       style TEXT NOT NULL,
       rules TEXT,
+      preferences TEXT,
       current_location_id TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     )
   `);
+
+  // Add preferences column if it doesn't exist (migration)
+  try {
+    db.exec(`ALTER TABLE sessions ADD COLUMN preferences TEXT`);
+  } catch {
+    // Column already exists
+  }
 
   // Characters table
   db.exec(`
