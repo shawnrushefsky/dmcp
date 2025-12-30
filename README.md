@@ -14,11 +14,27 @@ An MCP (Model Context Protocol) server that enables AI agents to act as dynamic 
 
 ## Installation
 
+### From Source
+
 ```bash
 git clone https://github.com/shawnrushefsky/dmcp.git
 cd dmcp
 npm install
 npm run build
+```
+
+### Docker
+
+Pull the image from GitHub Container Registry:
+
+```bash
+docker pull ghcr.io/shawnrushefsky/dmcp:latest
+```
+
+Or build locally:
+
+```bash
+docker build -t dmcp .
 ```
 
 ## Setup by Platform
@@ -137,6 +153,29 @@ For any MCP-compatible client, configure:
 - **Command**: `node`
 - **Arguments**: `["/absolute/path/to/dmcp/dist/index.js"]`
 - **Transport**: stdio
+
+---
+
+### Docker Configuration
+
+For Docker-based MCP clients, use the ghcr.io image:
+
+```json
+{
+  "mcpServers": {
+    "dmcp": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "-v", "dmcp-data:/app/data",
+        "ghcr.io/shawnrushefsky/dmcp:latest"
+      ]
+    }
+  }
+}
+```
+
+The `-v dmcp-data:/app/data` flag persists game data across container restarts.
 
 ---
 

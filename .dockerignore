@@ -1,0 +1,10 @@
+node_modules
+dist
+data
+*.db
+.git
+.gitignore
+.mcp.json
+README.md
+claude.md
+*.log
