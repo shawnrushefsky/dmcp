@@ -22,6 +22,11 @@ import * as timerTools from "./tools/timers.js";
 import * as tableTools from "./tools/tables.js";
 import * as secretTools from "./tools/secrets.js";
 import * as relationshipTools from "./tools/relationship.js";
+import * as tagTools from "./tools/tags.js";
+import * as statusTools from "./tools/status.js";
+import * as factionTools from "./tools/faction.js";
+import * as abilityTools from "./tools/ability.js";
+import * as noteTools from "./tools/notes.js";
 
 // Initialize database
 initializeSchema();
@@ -2961,6 +2966,860 @@ server.tool(
     const history = relationshipTools.getRelationshipHistory(relationshipId, limit);
     return {
       content: [{ type: "text", text: JSON.stringify(history, null, 2) }],
+    };
+  }
+);
+
+// ============================================================================
+// TAG TOOLS
+// ============================================================================
+
+server.tool(
+  "add_tag",
+  "Add a tag to any entity (character, location, item, quest, etc.)",
+  {
+    sessionId: z.string().describe("The session ID"),
+    entityId: z.string().describe("The entity ID to tag"),
+    entityType: z.string().describe("Type of entity (e.g., 'character', 'location', 'item', 'quest')"),
+    tag: z.string().describe("The tag to add"),
+    color: z.string().optional().describe("Optional color hint for the tag"),
+    notes: z.string().optional().describe("Optional notes about this tag"),
+  },
+  async (params) => {
+    const tag = tagTools.addTag(params);
+    return {
+      content: [{ type: "text", text: JSON.stringify(tag, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "remove_tag",
+  "Remove a tag from an entity",
+  {
+    sessionId: z.string().describe("The session ID"),
+    entityId: z.string().describe("The entity ID"),
+    entityType: z.string().describe("Type of entity"),
+    tag: z.string().describe("The tag to remove"),
+  },
+  async (params) => {
+    const success = tagTools.removeTag(params);
+    return {
+      content: [{ type: "text", text: success ? "Tag removed" : "Tag not found" }],
+      isError: !success,
+    };
+  }
+);
+
+server.tool(
+  "list_tags",
+  "List all unique tags in a session with counts",
+  {
+    sessionId: z.string().describe("The session ID"),
+  },
+  async ({ sessionId }) => {
+    const tags = tagTools.listTags(sessionId);
+    return {
+      content: [{ type: "text", text: JSON.stringify(tags, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "get_entity_tags",
+  "Get all tags for a specific entity",
+  {
+    entityId: z.string().describe("The entity ID"),
+    entityType: z.string().describe("Type of entity"),
+  },
+  async ({ entityId, entityType }) => {
+    const tags = tagTools.getEntityTags(entityId, entityType);
+    return {
+      content: [{ type: "text", text: JSON.stringify(tags, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "find_by_tag",
+  "Find all entities with a specific tag",
+  {
+    sessionId: z.string().describe("The session ID"),
+    tag: z.string().describe("The tag to search for"),
+    entityType: z.string().optional().describe("Filter by entity type"),
+  },
+  async ({ sessionId, tag, entityType }) => {
+    const entities = tagTools.findByTag(sessionId, tag, entityType);
+    return {
+      content: [{ type: "text", text: JSON.stringify(entities, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "rename_tag",
+  "Rename a tag across all entities in a session",
+  {
+    sessionId: z.string().describe("The session ID"),
+    oldTag: z.string().describe("The current tag name"),
+    newTag: z.string().describe("The new tag name"),
+  },
+  async ({ sessionId, oldTag, newTag }) => {
+    const count = tagTools.renameTag(sessionId, oldTag, newTag);
+    return {
+      content: [{ type: "text", text: `Renamed ${count} tag(s)` }],
+    };
+  }
+);
+
+// ============================================================================
+// STATUS EFFECT TOOLS
+// ============================================================================
+
+server.tool(
+  "apply_status_effect",
+  "Apply a status effect to a character (handles stacking automatically)",
+  {
+    sessionId: z.string().describe("The session ID"),
+    targetId: z.string().describe("Character ID to apply effect to"),
+    name: z.string().describe("Effect name (e.g., 'Poisoned', 'Blessed', 'Stunned')"),
+    description: z.string().optional().describe("Description of the effect"),
+    effectType: z.enum(["buff", "debuff", "neutral"]).optional().describe("Effect category"),
+    duration: z.number().optional().describe("Duration in rounds (null for permanent)"),
+    stacks: z.number().optional().describe("Initial stack count (default: 1)"),
+    maxStacks: z.number().optional().describe("Maximum stacks allowed"),
+    effects: z.record(z.number()).optional().describe("Stat modifiers (e.g., {strength: -2, speed: +1})"),
+    sourceId: z.string().optional().describe("ID of the source (character, ability, item)"),
+    sourceType: z.string().optional().describe("Type of the source"),
+  },
+  async (params) => {
+    const effect = statusTools.applyStatusEffect(params);
+    return {
+      content: [{ type: "text", text: JSON.stringify(effect, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "get_status_effect",
+  "Get a status effect by ID",
+  {
+    effectId: z.string().describe("The effect ID"),
+  },
+  async ({ effectId }) => {
+    const effect = statusTools.getStatusEffect(effectId);
+    if (!effect) {
+      return {
+        content: [{ type: "text", text: "Effect not found" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(effect, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "remove_status_effect",
+  "Remove a specific status effect",
+  {
+    effectId: z.string().describe("The effect ID"),
+  },
+  async ({ effectId }) => {
+    const success = statusTools.removeStatusEffect(effectId);
+    return {
+      content: [{ type: "text", text: success ? "Effect removed" : "Effect not found" }],
+      isError: !success,
+    };
+  }
+);
+
+server.tool(
+  "list_status_effects",
+  "List all status effects on a character",
+  {
+    targetId: z.string().describe("Character ID"),
+    effectType: z.enum(["buff", "debuff", "neutral"]).optional().describe("Filter by effect type"),
+  },
+  async ({ targetId, effectType }) => {
+    const effects = statusTools.listStatusEffects(targetId, effectType ? { effectType } : undefined);
+    return {
+      content: [{ type: "text", text: JSON.stringify(effects, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "tick_status_durations",
+  "Reduce duration of all status effects (call at end of round). Returns expired and remaining effects.",
+  {
+    sessionId: z.string().describe("The session ID"),
+    amount: z.number().optional().describe("Rounds to tick (default: 1)"),
+  },
+  async ({ sessionId, amount }) => {
+    const result = statusTools.tickDurations(sessionId, amount);
+    return {
+      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "modify_effect_stacks",
+  "Add or remove stacks from a status effect",
+  {
+    effectId: z.string().describe("The effect ID"),
+    delta: z.number().describe("Change in stacks (positive or negative)"),
+  },
+  async ({ effectId, delta }) => {
+    const effect = statusTools.modifyStacks(effectId, delta);
+    if (!effect) {
+      return {
+        content: [{ type: "text", text: "Effect not found" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(effect, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "clear_status_effects",
+  "Remove all status effects from a character (or filter by type/name)",
+  {
+    targetId: z.string().describe("Character ID"),
+    effectType: z.enum(["buff", "debuff", "neutral"]).optional().describe("Only clear this type"),
+    name: z.string().optional().describe("Only clear effects with this name"),
+  },
+  async ({ targetId, effectType, name }) => {
+    const count = statusTools.clearEffects(targetId, { effectType, name });
+    return {
+      content: [{ type: "text", text: `Cleared ${count} effect(s)` }],
+    };
+  }
+);
+
+server.tool(
+  "get_effective_modifiers",
+  "Get the total stat modifiers from all status effects on a character",
+  {
+    targetId: z.string().describe("Character ID"),
+  },
+  async ({ targetId }) => {
+    const modifiers = statusTools.getEffectiveModifiers(targetId);
+    return {
+      content: [{ type: "text", text: JSON.stringify(modifiers, null, 2) }],
+    };
+  }
+);
+
+// ============================================================================
+// FACTION TOOLS
+// ============================================================================
+
+server.tool(
+  "create_faction",
+  "Create a new faction/organization",
+  {
+    sessionId: z.string().describe("The session ID"),
+    name: z.string().describe("Faction name"),
+    description: z.string().optional().describe("Faction description"),
+    leaderId: z.string().optional().describe("Character ID of the leader"),
+    headquartersId: z.string().optional().describe("Location ID of headquarters"),
+    resources: z.record(z.number()).optional().describe("Initial resources (e.g., {gold: 1000, soldiers: 50})"),
+    goals: z.array(z.string()).optional().describe("Faction goals"),
+    traits: z.array(z.string()).optional().describe("Faction traits (e.g., ['secretive', 'militant'])"),
+    status: z.enum(["active", "disbanded", "hidden"]).optional().describe("Faction status"),
+  },
+  async (params) => {
+    const faction = factionTools.createFaction(params);
+    return {
+      content: [{ type: "text", text: JSON.stringify(faction, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "get_faction",
+  "Get a faction by ID",
+  {
+    factionId: z.string().describe("The faction ID"),
+  },
+  async ({ factionId }) => {
+    const faction = factionTools.getFaction(factionId);
+    if (!faction) {
+      return {
+        content: [{ type: "text", text: "Faction not found" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(faction, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "update_faction",
+  "Update a faction's details",
+  {
+    factionId: z.string().describe("The faction ID"),
+    name: z.string().optional().describe("New name"),
+    description: z.string().optional().describe("New description"),
+    leaderId: z.string().nullable().optional().describe("New leader ID (null to remove)"),
+    headquartersId: z.string().nullable().optional().describe("New headquarters ID (null to remove)"),
+    traits: z.array(z.string()).optional().describe("Replace traits"),
+    status: z.enum(["active", "disbanded", "hidden"]).optional().describe("New status"),
+  },
+  async ({ factionId, ...updates }) => {
+    const faction = factionTools.updateFaction(factionId, updates);
+    if (!faction) {
+      return {
+        content: [{ type: "text", text: "Faction not found" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(faction, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "delete_faction",
+  "Delete a faction",
+  {
+    factionId: z.string().describe("The faction ID"),
+  },
+  async ({ factionId }) => {
+    const success = factionTools.deleteFaction(factionId);
+    return {
+      content: [{ type: "text", text: success ? "Faction deleted" : "Faction not found" }],
+      isError: !success,
+    };
+  }
+);
+
+server.tool(
+  "list_factions",
+  "List factions in a session",
+  {
+    sessionId: z.string().describe("The session ID"),
+    status: z.enum(["active", "disbanded", "hidden"]).optional().describe("Filter by status"),
+  },
+  async ({ sessionId, status }) => {
+    const factions = factionTools.listFactions(sessionId, status ? { status } : undefined);
+    return {
+      content: [{ type: "text", text: JSON.stringify(factions, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "modify_faction_resource",
+  "Add or subtract from a faction resource",
+  {
+    factionId: z.string().describe("The faction ID"),
+    resource: z.string().describe("Resource name (e.g., 'gold', 'soldiers')"),
+    delta: z.number().describe("Amount to add (positive) or subtract (negative)"),
+  },
+  async (params) => {
+    const faction = factionTools.modifyFactionResource(params);
+    if (!faction) {
+      return {
+        content: [{ type: "text", text: "Faction not found" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(faction, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "set_faction_resource",
+  "Set a faction resource to a specific value",
+  {
+    factionId: z.string().describe("The faction ID"),
+    resource: z.string().describe("Resource name"),
+    value: z.number().describe("New value (0 or less removes the resource)"),
+  },
+  async (params) => {
+    const faction = factionTools.setFactionResource(params);
+    if (!faction) {
+      return {
+        content: [{ type: "text", text: "Faction not found" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(faction, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "add_faction_goal",
+  "Add a goal to a faction",
+  {
+    factionId: z.string().describe("The faction ID"),
+    goal: z.string().describe("The goal to add"),
+  },
+  async ({ factionId, goal }) => {
+    const faction = factionTools.addFactionGoal(factionId, goal);
+    if (!faction) {
+      return {
+        content: [{ type: "text", text: "Faction not found" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(faction, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "complete_faction_goal",
+  "Mark a faction goal as complete (removes it)",
+  {
+    factionId: z.string().describe("The faction ID"),
+    goalIndex: z.number().describe("Index of the goal to complete (0-based)"),
+  },
+  async ({ factionId, goalIndex }) => {
+    const faction = factionTools.completeFactionGoal(factionId, goalIndex);
+    if (!faction) {
+      return {
+        content: [{ type: "text", text: "Faction not found or invalid goal index" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(faction, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "add_faction_trait",
+  "Add a trait to a faction",
+  {
+    factionId: z.string().describe("The faction ID"),
+    trait: z.string().describe("The trait to add"),
+  },
+  async ({ factionId, trait }) => {
+    const faction = factionTools.addFactionTrait(factionId, trait);
+    if (!faction) {
+      return {
+        content: [{ type: "text", text: "Faction not found" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(faction, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "remove_faction_trait",
+  "Remove a trait from a faction",
+  {
+    factionId: z.string().describe("The faction ID"),
+    trait: z.string().describe("The trait to remove"),
+  },
+  async ({ factionId, trait }) => {
+    const faction = factionTools.removeFactionTrait(factionId, trait);
+    if (!faction) {
+      return {
+        content: [{ type: "text", text: "Faction not found" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(faction, null, 2) }],
+    };
+  }
+);
+
+// ============================================================================
+// ABILITY TOOLS
+// ============================================================================
+
+server.tool(
+  "create_ability",
+  "Create an ability template or character-owned ability",
+  {
+    sessionId: z.string().describe("The session ID"),
+    ownerType: z.enum(["template", "character"]).describe("'template' for reusable, 'character' for owned"),
+    ownerId: z.string().optional().describe("Character ID if ownerType is 'character'"),
+    name: z.string().describe("Ability name"),
+    description: z.string().optional().describe("Ability description"),
+    category: z.string().optional().describe("Category (e.g., 'spell', 'skill', 'power')"),
+    cost: z.record(z.number()).optional().describe("Resource costs (e.g., {mana: 10, stamina: 5})"),
+    cooldown: z.number().optional().describe("Cooldown in rounds"),
+    effects: z.array(z.string()).optional().describe("Effect descriptions"),
+    requirements: z.record(z.number()).optional().describe("Requirements (e.g., {level: 5, strength: 10})"),
+    tags: z.array(z.string()).optional().describe("Tags for categorization"),
+  },
+  async (params) => {
+    const ability = abilityTools.createAbility(params);
+    return {
+      content: [{ type: "text", text: JSON.stringify(ability, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "get_ability",
+  "Get an ability by ID",
+  {
+    abilityId: z.string().describe("The ability ID"),
+  },
+  async ({ abilityId }) => {
+    const ability = abilityTools.getAbility(abilityId);
+    if (!ability) {
+      return {
+        content: [{ type: "text", text: "Ability not found" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(ability, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "update_ability",
+  "Update an ability's details",
+  {
+    abilityId: z.string().describe("The ability ID"),
+    name: z.string().optional().describe("New name"),
+    description: z.string().optional().describe("New description"),
+    category: z.string().nullable().optional().describe("New category"),
+    cost: z.record(z.number()).optional().describe("New cost"),
+    cooldown: z.number().nullable().optional().describe("New cooldown"),
+    effects: z.array(z.string()).optional().describe("New effects"),
+    requirements: z.record(z.number()).optional().describe("New requirements"),
+    tags: z.array(z.string()).optional().describe("New tags"),
+  },
+  async ({ abilityId, ...updates }) => {
+    const ability = abilityTools.updateAbility(abilityId, updates);
+    if (!ability) {
+      return {
+        content: [{ type: "text", text: "Ability not found" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(ability, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "delete_ability",
+  "Delete an ability",
+  {
+    abilityId: z.string().describe("The ability ID"),
+  },
+  async ({ abilityId }) => {
+    const success = abilityTools.deleteAbility(abilityId);
+    return {
+      content: [{ type: "text", text: success ? "Ability deleted" : "Ability not found" }],
+      isError: !success,
+    };
+  }
+);
+
+server.tool(
+  "list_abilities",
+  "List abilities with optional filters",
+  {
+    sessionId: z.string().describe("The session ID"),
+    ownerType: z.enum(["template", "character"]).optional().describe("Filter by owner type"),
+    ownerId: z.string().optional().describe("Filter by owner ID"),
+    category: z.string().optional().describe("Filter by category"),
+  },
+  async ({ sessionId, ...filter }) => {
+    const abilities = abilityTools.listAbilities(sessionId, filter);
+    return {
+      content: [{ type: "text", text: JSON.stringify(abilities, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "learn_ability",
+  "Copy a template ability to a character",
+  {
+    templateId: z.string().describe("The template ability ID"),
+    characterId: z.string().describe("The character ID to learn the ability"),
+  },
+  async ({ templateId, characterId }) => {
+    const ability = abilityTools.learnAbility(templateId, characterId);
+    if (!ability) {
+      return {
+        content: [{ type: "text", text: "Template not found or is not a template" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(ability, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "use_ability",
+  "Use an ability (checks cooldown, sets new cooldown)",
+  {
+    abilityId: z.string().describe("The ability ID"),
+    characterId: z.string().describe("The character using the ability"),
+  },
+  async ({ abilityId, characterId }) => {
+    const result = abilityTools.useAbility(abilityId, characterId);
+    return {
+      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      isError: !result.success,
+    };
+  }
+);
+
+server.tool(
+  "tick_ability_cooldowns",
+  "Reduce all ability cooldowns (call at end of round)",
+  {
+    sessionId: z.string().describe("The session ID"),
+    amount: z.number().optional().describe("Rounds to tick (default: 1)"),
+  },
+  async ({ sessionId, amount }) => {
+    const updated = abilityTools.tickCooldowns(sessionId, amount);
+    return {
+      content: [{ type: "text", text: JSON.stringify({ updatedCount: updated.length, abilities: updated }, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "check_ability_requirements",
+  "Check if a character meets an ability's requirements",
+  {
+    abilityId: z.string().describe("The ability ID"),
+    characterId: z.string().describe("The character ID"),
+  },
+  async ({ abilityId, characterId }) => {
+    const result = abilityTools.checkRequirements(abilityId, characterId);
+    if (!result) {
+      return {
+        content: [{ type: "text", text: "Ability or character not found" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+    };
+  }
+);
+
+// ============================================================================
+// NOTE TOOLS
+// ============================================================================
+
+server.tool(
+  "create_note",
+  "Create a session note",
+  {
+    sessionId: z.string().describe("The session ID"),
+    title: z.string().describe("Note title"),
+    content: z.string().describe("Note content (supports markdown)"),
+    category: z.string().optional().describe("Category (e.g., 'plot', 'npc', 'location', 'idea', 'recap')"),
+    relatedEntityId: z.string().optional().describe("ID of related entity"),
+    relatedEntityType: z.string().optional().describe("Type of related entity"),
+    tags: z.array(z.string()).optional().describe("Tags for the note"),
+    pinned: z.boolean().optional().describe("Pin this note"),
+  },
+  async (params) => {
+    const note = noteTools.createNote(params);
+    return {
+      content: [{ type: "text", text: JSON.stringify(note, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "get_note",
+  "Get a note by ID",
+  {
+    noteId: z.string().describe("The note ID"),
+  },
+  async ({ noteId }) => {
+    const note = noteTools.getNote(noteId);
+    if (!note) {
+      return {
+        content: [{ type: "text", text: "Note not found" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(note, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "update_note",
+  "Update a note's content",
+  {
+    noteId: z.string().describe("The note ID"),
+    title: z.string().optional().describe("New title"),
+    content: z.string().optional().describe("New content"),
+    category: z.string().nullable().optional().describe("New category"),
+    relatedEntityId: z.string().nullable().optional().describe("New related entity ID"),
+    relatedEntityType: z.string().nullable().optional().describe("New related entity type"),
+    tags: z.array(z.string()).optional().describe("Replace tags"),
+  },
+  async ({ noteId, ...updates }) => {
+    const note = noteTools.updateNote(noteId, updates);
+    if (!note) {
+      return {
+        content: [{ type: "text", text: "Note not found" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(note, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "delete_note",
+  "Delete a note",
+  {
+    noteId: z.string().describe("The note ID"),
+  },
+  async ({ noteId }) => {
+    const success = noteTools.deleteNote(noteId);
+    return {
+      content: [{ type: "text", text: success ? "Note deleted" : "Note not found" }],
+      isError: !success,
+    };
+  }
+);
+
+server.tool(
+  "list_notes",
+  "List notes with optional filters",
+  {
+    sessionId: z.string().describe("The session ID"),
+    category: z.string().optional().describe("Filter by category"),
+    pinned: z.boolean().optional().describe("Filter by pinned status"),
+    tag: z.string().optional().describe("Filter by tag"),
+    relatedEntityId: z.string().optional().describe("Filter by related entity"),
+  },
+  async ({ sessionId, ...filter }) => {
+    const notes = noteTools.listNotes(sessionId, filter);
+    return {
+      content: [{ type: "text", text: JSON.stringify(notes, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "search_notes",
+  "Search notes by title or content",
+  {
+    sessionId: z.string().describe("The session ID"),
+    query: z.string().describe("Search query"),
+  },
+  async ({ sessionId, query }) => {
+    const notes = noteTools.searchNotes(sessionId, query);
+    return {
+      content: [{ type: "text", text: JSON.stringify(notes, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "pin_note",
+  "Toggle a note's pinned status",
+  {
+    noteId: z.string().describe("The note ID"),
+    pinned: z.boolean().describe("Pin or unpin"),
+  },
+  async ({ noteId, pinned }) => {
+    const note = noteTools.pinNote(noteId, pinned);
+    if (!note) {
+      return {
+        content: [{ type: "text", text: "Note not found" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(note, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "add_note_tag",
+  "Add a tag to a note",
+  {
+    noteId: z.string().describe("The note ID"),
+    tag: z.string().describe("Tag to add"),
+  },
+  async ({ noteId, tag }) => {
+    const note = noteTools.addNoteTag(noteId, tag);
+    if (!note) {
+      return {
+        content: [{ type: "text", text: "Note not found" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(note, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "remove_note_tag",
+  "Remove a tag from a note",
+  {
+    noteId: z.string().describe("The note ID"),
+    tag: z.string().describe("Tag to remove"),
+  },
+  async ({ noteId, tag }) => {
+    const note = noteTools.removeNoteTag(noteId, tag);
+    if (!note) {
+      return {
+        content: [{ type: "text", text: "Note not found" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(note, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "generate_recap",
+  "Auto-generate a session recap note from recent narrative events",
+  {
+    sessionId: z.string().describe("The session ID"),
+    eventLimit: z.number().optional().describe("Maximum events to include (default: 20)"),
+  },
+  async ({ sessionId, eventLimit }) => {
+    const note = noteTools.generateRecap(sessionId, eventLimit);
+    return {
+      content: [{ type: "text", text: JSON.stringify(note, null, 2) }],
     };
   }
 );

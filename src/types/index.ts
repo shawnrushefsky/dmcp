@@ -547,3 +547,81 @@ export interface RelationshipChange {
   reason: string | null;
   timestamp: string;
 }
+
+// Faction types
+export interface Faction {
+  id: string;
+  sessionId: string;
+  name: string;
+  description: string;
+  leaderId: string | null;
+  headquartersId: string | null;
+  resources: Record<string, number>;
+  goals: string[];
+  traits: string[];
+  status: "active" | "disbanded" | "hidden";
+  createdAt: string;
+}
+
+// Ability types
+export interface Ability {
+  id: string;
+  sessionId: string;
+  ownerId: string | null;
+  ownerType: "template" | "character";
+  name: string;
+  description: string;
+  category: string | null;
+  cost: Record<string, number>;
+  cooldown: number | null;
+  currentCooldown: number;
+  effects: string[];
+  requirements: Record<string, number>;
+  tags: string[];
+  createdAt: string;
+}
+
+// Status effect types
+export interface StatusEffect {
+  id: string;
+  sessionId: string;
+  targetId: string;
+  name: string;
+  description: string;
+  effectType: "buff" | "debuff" | "neutral" | null;
+  duration: number | null;
+  stacks: number;
+  maxStacks: number | null;
+  effects: Record<string, number>;
+  sourceId: string | null;
+  sourceType: string | null;
+  expiresAt: string | null;
+  createdAt: string;
+}
+
+// Tag types
+export interface Tag {
+  id: string;
+  sessionId: string;
+  entityId: string;
+  entityType: string;
+  tag: string;
+  color: string | null;
+  notes: string;
+  createdAt: string;
+}
+
+// Note types
+export interface Note {
+  id: string;
+  sessionId: string;
+  title: string;
+  content: string;
+  category: string | null;
+  pinned: boolean;
+  relatedEntityId: string | null;
+  relatedEntityType: string | null;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+}

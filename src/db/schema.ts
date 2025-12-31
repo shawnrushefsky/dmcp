@@ -282,6 +282,100 @@ export function initializeSchema(): void {
     )
   `);
 
+  // Factions table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS factions (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      leader_id TEXT,
+      headquarters_id TEXT,
+      resources TEXT DEFAULT '{}',
+      goals TEXT DEFAULT '[]',
+      traits TEXT DEFAULT '[]',
+      status TEXT DEFAULT 'active' CHECK (status IN ('active', 'disbanded', 'hidden')),
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Abilities table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS abilities (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL,
+      owner_id TEXT,
+      owner_type TEXT CHECK (owner_type IN ('template', 'character')),
+      name TEXT NOT NULL,
+      description TEXT,
+      category TEXT,
+      cost TEXT DEFAULT '{}',
+      cooldown INTEGER,
+      current_cooldown INTEGER DEFAULT 0,
+      effects TEXT DEFAULT '[]',
+      requirements TEXT DEFAULT '{}',
+      tags TEXT DEFAULT '[]',
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Status effects table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS status_effects (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL,
+      target_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      effect_type TEXT CHECK (effect_type IN ('buff', 'debuff', 'neutral')),
+      duration INTEGER,
+      stacks INTEGER DEFAULT 1,
+      max_stacks INTEGER,
+      effects TEXT DEFAULT '{}',
+      source_id TEXT,
+      source_type TEXT,
+      expires_at TEXT,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Tags table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS tags (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL,
+      entity_id TEXT NOT NULL,
+      entity_type TEXT NOT NULL,
+      tag TEXT NOT NULL,
+      color TEXT,
+      notes TEXT,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE,
+      UNIQUE (session_id, entity_id, entity_type, tag)
+    )
+  `);
+
+  // Notes table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS notes (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      content TEXT NOT NULL,
+      category TEXT,
+      pinned INTEGER DEFAULT 0,
+      related_entity_id TEXT,
+      related_entity_type TEXT,
+      tags TEXT DEFAULT '[]',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+    )
+  `);
+
   // Create indexes for common queries
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_characters_session ON characters(session_id);
@@ -310,5 +404,18 @@ export function initializeSchema(): void {
     CREATE INDEX IF NOT EXISTS idx_relationships_source ON relationships(source_id, source_type);
     CREATE INDEX IF NOT EXISTS idx_relationships_target ON relationships(target_id, target_type);
     CREATE INDEX IF NOT EXISTS idx_relationship_history_rel ON relationship_history(relationship_id);
+    CREATE INDEX IF NOT EXISTS idx_factions_session ON factions(session_id);
+    CREATE INDEX IF NOT EXISTS idx_factions_status ON factions(status);
+    CREATE INDEX IF NOT EXISTS idx_abilities_session ON abilities(session_id);
+    CREATE INDEX IF NOT EXISTS idx_abilities_owner ON abilities(owner_id, owner_type);
+    CREATE INDEX IF NOT EXISTS idx_abilities_category ON abilities(category);
+    CREATE INDEX IF NOT EXISTS idx_status_effects_session ON status_effects(session_id);
+    CREATE INDEX IF NOT EXISTS idx_status_effects_target ON status_effects(target_id);
+    CREATE INDEX IF NOT EXISTS idx_tags_session ON tags(session_id);
+    CREATE INDEX IF NOT EXISTS idx_tags_entity ON tags(entity_id, entity_type);
+    CREATE INDEX IF NOT EXISTS idx_tags_tag ON tags(tag);
+    CREATE INDEX IF NOT EXISTS idx_notes_session ON notes(session_id);
+    CREATE INDEX IF NOT EXISTS idx_notes_category ON notes(category);
+    CREATE INDEX IF NOT EXISTS idx_notes_pinned ON notes(pinned);
   `);
 }
