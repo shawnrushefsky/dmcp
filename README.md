@@ -18,18 +18,29 @@ An MCP (Model Context Protocol) server that enables AI agents to act as dynamic 
     - [Docker Configuration](#docker-configuration)
     - [Testing with MCP Inspector](#testing-with-mcp-inspector)
     - [AI Self-Configuration Prompt](#ai-self-configuration-prompt)
-  - [Available Tools (53 total)](#available-tools-53-total)
-    - [Session Management](#session-management)
-    - [Game Setup Interview](#game-setup-interview)
-    - [Rules System](#rules-system)
-    - [World Management](#world-management)
-    - [Character Management](#character-management)
-    - [Dice \& Checks](#dice--checks)
-    - [Combat](#combat)
-    - [Inventory](#inventory)
-    - [Quests](#quests)
-    - [Narrative](#narrative)
-    - [Player Interaction](#player-interaction)
+  - [Available Tools (151 total)](#available-tools-151-total)
+    - [Session Management](#session-management-6-tools)
+    - [Game Setup Interview](#game-setup-interview-3-tools)
+    - [Rules System](#rules-system-3-tools)
+    - [World Management](#world-management-6-tools)
+    - [Character Management](#character-management-10-tools)
+    - [Dice \& Checks](#dice--checks-3-tools)
+    - [Combat](#combat-7-tools)
+    - [Inventory](#inventory-6-tools)
+    - [Quests](#quests-6-tools)
+    - [Narrative](#narrative-6-tools)
+    - [Player Interaction](#player-interaction-2-tools)
+    - [Resources](#resources-8-tools)
+    - [Time \& Calendar](#time--calendar-7-tools)
+    - [Timers](#timers-8-tools)
+    - [Random Tables](#random-tables-8-tools)
+    - [Secrets \& Knowledge](#secrets--knowledge-10-tools)
+    - [Relationships](#relationships-8-tools)
+    - [Tags](#tags-6-tools)
+    - [Status Effects](#status-effects-8-tools)
+    - [Factions](#factions-11-tools)
+    - [Abilities \& Powers](#abilities--powers-9-tools)
+    - [Session Notes](#session-notes-10-tools)
   - [Example Usage](#example-usage)
     - [Starting a New Game](#starting-a-new-game)
     - [NPC with Voice](#npc-with-voice)
@@ -47,9 +58,19 @@ An MCP (Model Context Protocol) server that enables AI agents to act as dynamic 
 - **Voice Descriptions** - NPC voice characteristics for TTS/voice mode integration
 - **Image Generation Metadata** - Structured visual descriptions for characters, locations, and items adaptable to any image generation tool (DALL-E, SDXL, ComfyUI, Midjourney, Flux)
 - **Player Choice System** - Structured choices with multi-select and free-form input
-- **Narrative Logging** - Event history for story continuity
+- **Narrative Logging** - Event history for story continuity and export
 - **Dice & Checks** - Flexible dice rolling and skill resolution
-- **ASCII Map Rendering** - Visual world maps with player location tracking
+- **ASCII Visualizations** - World maps, character sheets, timer displays
+- **Factions & Politics** - Organizations with resources, goals, and relationships
+- **Abilities & Powers** - Spells, skills, powers with costs and cooldowns
+- **Status Effects** - Buffs, debuffs with duration, stacking, and modifiers
+- **Custom Resources** - Track currencies, reputation, sanity, or any numeric value
+- **Time & Calendar** - In-game time tracking with scheduled events
+- **Random Tables** - Reusable tables for encounters, loot, weather, names
+- **Secrets System** - Hidden knowledge that can be revealed to characters
+- **Entity Relationships** - Track attitudes, bonds, rivalries between any entities
+- **Tagging System** - Universal tags for organizing any game entity
+- **Session Notes** - Searchable DM notes with auto-generated recaps
 
 ## Installation
 
@@ -318,9 +339,9 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 
 </details>
 
-## Available Tools (53 total)
+## Available Tools (151 total)
 
-### Session Management
+### Session Management (6 tools)
 | Tool | Description |
 |------|-------------|
 | `get_game_menu` | **Call first** - returns existing games or starts new |
@@ -330,21 +351,21 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `get_session_state` | Full game state overview |
 | `delete_session` | Remove a saved game |
 
-### Game Setup Interview
+### Game Setup Interview (3 tools)
 | Tool | Description |
 |------|-------------|
 | `get_interview_template` | Get comprehensive game setup questionnaire |
 | `save_game_preferences` | Store player's game preferences |
 | `get_game_preferences` | Retrieve saved preferences |
 
-### Rules System
+### Rules System (3 tools)
 | Tool | Description |
 |------|-------------|
 | `set_rules` | Store agent-designed rule system |
 | `get_rules` | Retrieve current rules |
 | `update_rules` | Modify rules mid-game |
 
-### World Management
+### World Management (6 tools)
 | Tool | Description |
 |------|-------------|
 | `create_location` | Add a new location |
@@ -354,7 +375,7 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `connect_locations` | Create paths between locations |
 | `render_map` | ASCII map of world (full or local radius) |
 
-### Character Management
+### Character Management (10 tools)
 | Tool | Description |
 |------|-------------|
 | `create_character` | New PC or NPC (with optional voice) |
@@ -368,14 +389,14 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `remove_condition` | Remove status effect |
 | `render_character_sheet` | ASCII character sheet with stats & inventory |
 
-### Dice & Checks
+### Dice & Checks (3 tools)
 | Tool | Description |
 |------|-------------|
 | `roll` | Roll dice (e.g., "2d6+3") |
 | `check` | Skill/ability check |
 | `contest` | Opposed check between characters |
 
-### Combat
+### Combat (7 tools)
 | Tool | Description |
 |------|-------------|
 | `start_combat` | Initialize encounter |
@@ -386,7 +407,7 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `remove_combatant` | Remove from combat |
 | `end_combat` | Resolve combat |
 
-### Inventory
+### Inventory (6 tools)
 | Tool | Description |
 |------|-------------|
 | `create_item` | Create new item |
@@ -396,7 +417,7 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `transfer_item` | Move between owners |
 | `get_inventory` | List items |
 
-### Quests
+### Quests (6 tools)
 | Tool | Description |
 |------|-------------|
 | `create_quest` | New quest with objectives |
@@ -406,7 +427,7 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `add_objective` | Add new objective |
 | `list_quests` | Filter by status |
 
-### Narrative
+### Narrative (6 tools)
 | Tool | Description |
 |------|-------------|
 | `log_event` | Record story event |
@@ -416,11 +437,148 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `export_story` | Export game overview with chapter summaries |
 | `get_chapter_for_export` | Get single chapter for subagent writing |
 
-### Player Interaction
+### Player Interaction (2 tools)
 | Tool | Description |
 |------|-------------|
 | `present_choices` | Show choices with multi-select & free-form |
 | `record_choice` | Log player's decision |
+
+### Resources (8 tools)
+| Tool | Description |
+|------|-------------|
+| `create_resource` | Create custom resource (currency, reputation, etc.) |
+| `get_resource` | Get resource details |
+| `update_resource` | Update resource metadata |
+| `delete_resource` | Remove a resource |
+| `list_resources` | List resources with filters |
+| `modify_resource` | Add/subtract from resource value |
+| `set_resource` | Set resource to specific value |
+| `get_resource_history` | Get change history |
+
+### Time & Calendar (7 tools)
+| Tool | Description |
+|------|-------------|
+| `set_calendar` | Configure calendar system (months, days, etc.) |
+| `get_time` | Get current in-game time |
+| `set_time` | Set in-game time |
+| `advance_time` | Advance time, trigger scheduled events |
+| `schedule_event` | Schedule event at specific time |
+| `list_scheduled_events` | List upcoming events |
+| `cancel_event` | Cancel scheduled event |
+
+### Timers (8 tools)
+| Tool | Description |
+|------|-------------|
+| `create_timer` | Create countdown, stopwatch, or segmented clock |
+| `get_timer` | Get timer details |
+| `update_timer` | Update timer settings |
+| `delete_timer` | Remove timer |
+| `list_timers` | List active timers |
+| `tick_timer` | Advance/reduce timer |
+| `reset_timer` | Reset to initial state |
+| `render_timer` | ASCII visualization of timer |
+
+### Random Tables (8 tools)
+| Tool | Description |
+|------|-------------|
+| `create_random_table` | Create table for encounters, loot, etc. |
+| `get_random_table` | Get table by ID |
+| `update_random_table` | Update table |
+| `delete_random_table` | Remove table |
+| `list_random_tables` | List tables in session |
+| `roll_on_table` | Roll and get result |
+| `add_table_entry` | Add entry to table |
+| `remove_table_entry` | Remove entry from table |
+
+### Secrets & Knowledge (10 tools)
+| Tool | Description |
+|------|-------------|
+| `create_secret` | Create a revealable secret |
+| `get_secret` | Get secret (DM view) |
+| `update_secret` | Update secret details |
+| `delete_secret` | Remove secret |
+| `list_secrets` | List with filters |
+| `reveal_secret` | Reveal to specific characters |
+| `make_secret_public` | Make visible to all |
+| `add_clue` | Add clue to secret |
+| `get_character_knowledge` | All secrets known by character |
+| `check_knows_secret` | Check if character knows secret |
+
+### Relationships (8 tools)
+| Tool | Description |
+|------|-------------|
+| `create_relationship` | Create relationship between entities |
+| `get_relationship` | Get relationship by ID |
+| `get_relationship_between` | Get relationship between two entities |
+| `update_relationship` | Update relationship |
+| `modify_relationship` | Adjust value with history |
+| `delete_relationship` | Remove relationship |
+| `list_relationships` | List with filters |
+| `get_relationship_history` | Get change history |
+
+### Tags (6 tools)
+| Tool | Description |
+|------|-------------|
+| `add_tag` | Tag any entity |
+| `remove_tag` | Remove tag |
+| `list_tags` | List all unique tags with counts |
+| `get_entity_tags` | Get tags for specific entity |
+| `find_by_tag` | Find entities by tag |
+| `rename_tag` | Rename tag across all entities |
+
+### Status Effects (8 tools)
+| Tool | Description |
+|------|-------------|
+| `apply_status_effect` | Apply effect with stacking |
+| `get_status_effect` | Get effect by ID |
+| `remove_status_effect` | Remove specific effect |
+| `list_status_effects` | List effects on character |
+| `tick_status_durations` | Reduce durations (end of round) |
+| `modify_effect_stacks` | Add/remove stacks |
+| `clear_status_effects` | Remove all effects |
+| `get_effective_modifiers` | Sum all stat modifiers |
+
+### Factions (11 tools)
+| Tool | Description |
+|------|-------------|
+| `create_faction` | Create faction/organization |
+| `get_faction` | Get faction by ID |
+| `update_faction` | Update faction details |
+| `delete_faction` | Remove faction |
+| `list_factions` | List factions |
+| `modify_faction_resource` | Add/subtract resource |
+| `set_faction_resource` | Set resource value |
+| `add_faction_goal` | Add goal to faction |
+| `complete_faction_goal` | Mark goal complete |
+| `add_faction_trait` | Add trait |
+| `remove_faction_trait` | Remove trait |
+
+### Abilities & Powers (9 tools)
+| Tool | Description |
+|------|-------------|
+| `create_ability` | Create ability template or character ability |
+| `get_ability` | Get ability by ID |
+| `update_ability` | Update ability |
+| `delete_ability` | Remove ability |
+| `list_abilities` | List with filters |
+| `learn_ability` | Copy template to character |
+| `use_ability` | Use ability (checks cooldown) |
+| `tick_ability_cooldowns` | Reduce cooldowns (end of round) |
+| `check_ability_requirements` | Check if character meets requirements |
+
+### Session Notes (10 tools)
+| Tool | Description |
+|------|-------------|
+| `create_note` | Create session note |
+| `get_note` | Get note by ID |
+| `update_note` | Update note content |
+| `delete_note` | Remove note |
+| `list_notes` | List with filters |
+| `search_notes` | Full-text search |
+| `pin_note` | Toggle pinned status |
+| `add_note_tag` | Add tag to note |
+| `remove_note_tag` | Remove tag from note |
+| `generate_recap` | Auto-generate session recap |
 
 ## Example Usage
 
