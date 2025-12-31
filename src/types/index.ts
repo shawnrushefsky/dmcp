@@ -426,3 +426,124 @@ export interface ResourceChange {
   reason: string | null;
   timestamp: string;
 }
+
+// Time/Calendar types
+export interface GameDateTime {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+}
+
+export interface CalendarConfig {
+  monthNames: string[];
+  daysPerMonth: number[];
+  hoursPerDay: number;
+  minutesPerHour: number;
+  startYear: number;
+  eraName?: string;
+}
+
+export interface GameTime {
+  sessionId: string;
+  currentTime: GameDateTime;
+  calendarConfig: CalendarConfig;
+}
+
+export interface ScheduledEvent {
+  id: string;
+  sessionId: string;
+  name: string;
+  description: string;
+  triggerTime: GameDateTime;
+  recurring: string | null;
+  triggered: boolean;
+  metadata: Record<string, unknown>;
+}
+
+// Timer types
+export interface Timer {
+  id: string;
+  sessionId: string;
+  name: string;
+  description: string;
+  timerType: "countdown" | "stopwatch" | "clock";
+  currentValue: number;
+  maxValue: number | null;
+  direction: "up" | "down";
+  triggerAt: number | null;
+  triggered: boolean;
+  unit: string;
+  visibleToPlayers: boolean;
+  createdAt: string;
+}
+
+// Random table types
+export interface TableEntry {
+  minRoll: number;
+  maxRoll: number;
+  result: string;
+  weight?: number;
+  subtable?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface RandomTable {
+  id: string;
+  sessionId: string;
+  name: string;
+  description: string;
+  category: string | null;
+  entries: TableEntry[];
+  rollExpression: string;
+  createdAt: string;
+}
+
+export interface TableRollResult {
+  table: RandomTable;
+  roll: DiceRoll;
+  entry: TableEntry;
+  result: string;
+  subtableResults?: TableRollResult[];
+}
+
+// Secret/Knowledge types
+export interface Secret {
+  id: string;
+  sessionId: string;
+  name: string;
+  description: string;
+  category: string | null;
+  relatedEntityId: string | null;
+  relatedEntityType: string | null;
+  revealedTo: string[];
+  isPublic: boolean;
+  clues: string[];
+  createdAt: string;
+}
+
+// Relationship types
+export interface Relationship {
+  id: string;
+  sessionId: string;
+  sourceId: string;
+  sourceType: string;
+  targetId: string;
+  targetType: string;
+  relationshipType: string;
+  value: number;
+  label: string | null;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RelationshipChange {
+  id: string;
+  relationshipId: string;
+  previousValue: number;
+  newValue: number;
+  reason: string | null;
+  timestamp: string;
+}

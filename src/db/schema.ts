@@ -172,6 +172,116 @@ export function initializeSchema(): void {
     )
   `);
 
+  // Game time table (one per session)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS game_time (
+      session_id TEXT PRIMARY KEY,
+      current_time TEXT NOT NULL,
+      calendar_config TEXT NOT NULL,
+      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Scheduled events table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS scheduled_events (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      trigger_time TEXT NOT NULL,
+      recurring TEXT,
+      triggered INTEGER DEFAULT 0,
+      metadata TEXT DEFAULT '{}',
+      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Timers table (countdowns, stopwatches, clocks)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS timers (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      timer_type TEXT NOT NULL CHECK (timer_type IN ('countdown', 'stopwatch', 'clock')),
+      current_value INTEGER NOT NULL,
+      max_value INTEGER,
+      direction TEXT DEFAULT 'down' CHECK (direction IN ('up', 'down')),
+      trigger_at INTEGER,
+      triggered INTEGER DEFAULT 0,
+      unit TEXT DEFAULT 'tick',
+      visible_to_players INTEGER DEFAULT 1,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Random tables
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS random_tables (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      category TEXT,
+      entries TEXT NOT NULL DEFAULT '[]',
+      roll_expression TEXT DEFAULT '1d100',
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Secrets table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS secrets (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT NOT NULL,
+      category TEXT,
+      related_entity_id TEXT,
+      related_entity_type TEXT,
+      revealed_to TEXT DEFAULT '[]',
+      is_public INTEGER DEFAULT 0,
+      clues TEXT DEFAULT '[]',
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Relationships table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS relationships (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL,
+      source_id TEXT NOT NULL,
+      source_type TEXT NOT NULL,
+      target_id TEXT NOT NULL,
+      target_type TEXT NOT NULL,
+      relationship_type TEXT NOT NULL,
+      value INTEGER DEFAULT 0,
+      label TEXT,
+      notes TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Relationship history table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS relationship_history (
+      id TEXT PRIMARY KEY,
+      relationship_id TEXT NOT NULL,
+      previous_value INTEGER,
+      new_value INTEGER,
+      reason TEXT,
+      timestamp TEXT NOT NULL,
+      FOREIGN KEY (relationship_id) REFERENCES relationships(id) ON DELETE CASCADE
+    )
+  `);
+
   // Create indexes for common queries
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_characters_session ON characters(session_id);
@@ -189,5 +299,16 @@ export function initializeSchema(): void {
     CREATE INDEX IF NOT EXISTS idx_resources_owner ON resources(owner_id, owner_type);
     CREATE INDEX IF NOT EXISTS idx_resources_category ON resources(category);
     CREATE INDEX IF NOT EXISTS idx_resource_history_resource ON resource_history(resource_id);
+    CREATE INDEX IF NOT EXISTS idx_scheduled_events_session ON scheduled_events(session_id);
+    CREATE INDEX IF NOT EXISTS idx_scheduled_events_trigger ON scheduled_events(trigger_time);
+    CREATE INDEX IF NOT EXISTS idx_timers_session ON timers(session_id);
+    CREATE INDEX IF NOT EXISTS idx_random_tables_session ON random_tables(session_id);
+    CREATE INDEX IF NOT EXISTS idx_random_tables_category ON random_tables(category);
+    CREATE INDEX IF NOT EXISTS idx_secrets_session ON secrets(session_id);
+    CREATE INDEX IF NOT EXISTS idx_secrets_category ON secrets(category);
+    CREATE INDEX IF NOT EXISTS idx_relationships_session ON relationships(session_id);
+    CREATE INDEX IF NOT EXISTS idx_relationships_source ON relationships(source_id, source_type);
+    CREATE INDEX IF NOT EXISTS idx_relationships_target ON relationships(target_id, target_type);
+    CREATE INDEX IF NOT EXISTS idx_relationship_history_rel ON relationship_history(relationship_id);
   `);
 }

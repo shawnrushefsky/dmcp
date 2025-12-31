@@ -17,6 +17,11 @@ import * as questTools from "./tools/quest.js";
 import * as diceTools from "./tools/dice.js";
 import * as narrativeTools from "./tools/narrative.js";
 import * as resourceTools from "./tools/resource.js";
+import * as timeTools from "./tools/time.js";
+import * as timerTools from "./tools/timers.js";
+import * as tableTools from "./tools/tables.js";
+import * as secretTools from "./tools/secrets.js";
+import * as relationshipTools from "./tools/relationship.js";
 
 // Initialize database
 initializeSchema();
@@ -2093,6 +2098,867 @@ server.tool(
   },
   async ({ resourceId, limit }) => {
     const history = resourceTools.getResourceHistory(resourceId, limit);
+    return {
+      content: [{ type: "text", text: JSON.stringify(history, null, 2) }],
+    };
+  }
+);
+
+// ============================================================================
+// TIME/CALENDAR TOOLS
+// ============================================================================
+
+const gameDateTimeSchema = z.object({
+  year: z.number(),
+  month: z.number(),
+  day: z.number(),
+  hour: z.number(),
+  minute: z.number(),
+});
+
+server.tool(
+  "set_calendar",
+  "Configure the calendar system for a session (months, days per month, hours per day, etc.)",
+  {
+    sessionId: z.string().describe("The session ID"),
+    config: z.object({
+      monthNames: z.array(z.string()).optional().describe("Names of months"),
+      daysPerMonth: z.array(z.number()).optional().describe("Days in each month"),
+      hoursPerDay: z.number().optional().describe("Hours per day (default: 24)"),
+      minutesPerHour: z.number().optional().describe("Minutes per hour (default: 60)"),
+      startYear: z.number().optional().describe("Starting year number"),
+      eraName: z.string().optional().describe("Name of the era/age"),
+    }).optional().describe("Calendar configuration (defaults to fantasy calendar)"),
+    currentTime: gameDateTimeSchema.optional().describe("Starting time"),
+  },
+  async ({ sessionId, config, currentTime }) => {
+    const gameTime = timeTools.setCalendar(sessionId, config || {}, currentTime);
+    return {
+      content: [{ type: "text", text: JSON.stringify(gameTime, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "get_time",
+  "Get the current in-game time",
+  {
+    sessionId: z.string().describe("The session ID"),
+  },
+  async ({ sessionId }) => {
+    const gameTime = timeTools.getTime(sessionId);
+    if (!gameTime) {
+      return {
+        content: [{ type: "text", text: "No calendar set for this session. Use set_calendar first." }],
+        isError: true,
+      };
+    }
+    const formatted = timeTools.formatDateTime(gameTime.currentTime, gameTime.calendarConfig);
+    return {
+      content: [{ type: "text", text: JSON.stringify({ ...gameTime, formatted }, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "set_time",
+  "Set the current in-game time to a specific value",
+  {
+    sessionId: z.string().describe("The session ID"),
+    time: gameDateTimeSchema.describe("The time to set"),
+  },
+  async ({ sessionId, time }) => {
+    const gameTime = timeTools.setTime(sessionId, time);
+    if (!gameTime) {
+      return {
+        content: [{ type: "text", text: "No calendar set for this session" }],
+        isError: true,
+      };
+    }
+    const formatted = timeTools.formatDateTime(gameTime.currentTime, gameTime.calendarConfig);
+    return {
+      content: [{ type: "text", text: JSON.stringify({ ...gameTime, formatted }, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "advance_time",
+  "Advance time by a duration, returning any triggered scheduled events",
+  {
+    sessionId: z.string().describe("The session ID"),
+    days: z.number().optional().describe("Days to advance"),
+    hours: z.number().optional().describe("Hours to advance"),
+    minutes: z.number().optional().describe("Minutes to advance"),
+  },
+  async ({ sessionId, days, hours, minutes }) => {
+    const result = timeTools.advanceTime(sessionId, { days, hours, minutes });
+    if (!result) {
+      return {
+        content: [{ type: "text", text: "No calendar set for this session" }],
+        isError: true,
+      };
+    }
+    const gameTime = timeTools.getTime(sessionId)!;
+    const formatted = timeTools.formatDateTime(result.newTime, gameTime.calendarConfig);
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          ...result,
+          formatted,
+          triggeredCount: result.triggeredEvents.length,
+        }, null, 2),
+      }],
+    };
+  }
+);
+
+server.tool(
+  "schedule_event",
+  "Schedule an event to trigger at a specific in-game time",
+  {
+    sessionId: z.string().describe("The session ID"),
+    name: z.string().describe("Event name"),
+    description: z.string().optional().describe("Event description"),
+    triggerTime: gameDateTimeSchema.describe("When the event should trigger"),
+    recurring: z.enum(["daily", "weekly", "monthly", "yearly"]).optional().describe("Recurrence pattern"),
+    metadata: z.record(z.string(), z.unknown()).optional().describe("Additional event data"),
+  },
+  async (params) => {
+    const event = timeTools.scheduleEvent(params);
+    return {
+      content: [{ type: "text", text: JSON.stringify(event, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "list_scheduled_events",
+  "List upcoming scheduled events",
+  {
+    sessionId: z.string().describe("The session ID"),
+    includeTriggered: z.boolean().optional().describe("Include already-triggered events"),
+  },
+  async ({ sessionId, includeTriggered }) => {
+    const events = timeTools.listScheduledEvents(sessionId, includeTriggered);
+    return {
+      content: [{ type: "text", text: JSON.stringify(events, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "cancel_event",
+  "Cancel a scheduled event",
+  {
+    eventId: z.string().describe("The event ID to cancel"),
+  },
+  async ({ eventId }) => {
+    const success = timeTools.cancelEvent(eventId);
+    return {
+      content: [{ type: "text", text: success ? "Event cancelled" : "Event not found" }],
+      isError: !success,
+    };
+  }
+);
+
+// ============================================================================
+// TIMER TOOLS
+// ============================================================================
+
+server.tool(
+  "create_timer",
+  "Create a countdown, stopwatch, or segmented clock",
+  {
+    sessionId: z.string().describe("The session ID"),
+    name: z.string().describe("Timer name (e.g., 'Doom Clock', 'Ritual Progress')"),
+    description: z.string().optional().describe("Timer description"),
+    timerType: z.enum(["countdown", "stopwatch", "clock"]).describe("Type: countdown (decreases), stopwatch (increases), clock (segmented like Blades in the Dark)"),
+    currentValue: z.number().optional().describe("Starting value"),
+    maxValue: z.number().optional().describe("Maximum value (for clocks: number of segments, default 6)"),
+    direction: z.enum(["up", "down"]).optional().describe("Direction of change"),
+    triggerAt: z.number().optional().describe("Value that triggers an event"),
+    unit: z.string().optional().describe("Unit label (e.g., 'rounds', 'hours', 'segments')"),
+    visibleToPlayers: z.boolean().optional().describe("Whether players can see this timer"),
+  },
+  async (params) => {
+    const timer = timerTools.createTimer(params);
+    return {
+      content: [{ type: "text", text: JSON.stringify(timer, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "get_timer",
+  "Get timer details",
+  {
+    timerId: z.string().describe("The timer ID"),
+  },
+  async ({ timerId }) => {
+    const timer = timerTools.getTimer(timerId);
+    if (!timer) {
+      return {
+        content: [{ type: "text", text: "Timer not found" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(timer, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "update_timer",
+  "Update timer settings",
+  {
+    timerId: z.string().describe("The timer ID"),
+    name: z.string().optional().describe("New name"),
+    description: z.string().optional().describe("New description"),
+    maxValue: z.number().nullable().optional().describe("New max value"),
+    triggerAt: z.number().nullable().optional().describe("New trigger value"),
+    unit: z.string().optional().describe("New unit label"),
+    visibleToPlayers: z.boolean().optional().describe("Visibility to players"),
+  },
+  async ({ timerId, ...updates }) => {
+    const timer = timerTools.updateTimer(timerId, updates);
+    if (!timer) {
+      return {
+        content: [{ type: "text", text: "Timer not found" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(timer, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "delete_timer",
+  "Delete a timer",
+  {
+    timerId: z.string().describe("The timer ID"),
+  },
+  async ({ timerId }) => {
+    const success = timerTools.deleteTimer(timerId);
+    return {
+      content: [{ type: "text", text: success ? "Timer deleted" : "Timer not found" }],
+      isError: !success,
+    };
+  }
+);
+
+server.tool(
+  "list_timers",
+  "List active timers in a session",
+  {
+    sessionId: z.string().describe("The session ID"),
+    includeTriggered: z.boolean().optional().describe("Include triggered timers"),
+  },
+  async ({ sessionId, includeTriggered }) => {
+    const timers = timerTools.listTimers(sessionId, includeTriggered);
+    return {
+      content: [{ type: "text", text: JSON.stringify(timers, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "tick_timer",
+  "Advance or reduce a timer by an amount",
+  {
+    timerId: z.string().describe("The timer ID"),
+    amount: z.number().optional().describe("Amount to tick (default: 1)"),
+  },
+  async ({ timerId, amount }) => {
+    const result = timerTools.tickTimer(timerId, amount);
+    if (!result) {
+      return {
+        content: [{ type: "text", text: "Timer not found" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "reset_timer",
+  "Reset a timer to its initial state",
+  {
+    timerId: z.string().describe("The timer ID"),
+  },
+  async ({ timerId }) => {
+    const timer = timerTools.resetTimer(timerId);
+    if (!timer) {
+      return {
+        content: [{ type: "text", text: "Timer not found" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(timer, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "render_timer",
+  "Render an ASCII visualization of a timer",
+  {
+    timerId: z.string().describe("The timer ID"),
+  },
+  async ({ timerId }) => {
+    const render = timerTools.renderTimer(timerId);
+    if (!render) {
+      return {
+        content: [{ type: "text", text: "Timer not found" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          ascii: render.ascii,
+          percentage: render.percentage,
+          timer: render.timer,
+          instruction: "Display this ASCII timer visualization to the player for dramatic effect.",
+        }, null, 2),
+      }],
+    };
+  }
+);
+
+// ============================================================================
+// RANDOM TABLE TOOLS
+// ============================================================================
+
+const tableEntrySchema = z.object({
+  minRoll: z.number().describe("Minimum roll to get this result"),
+  maxRoll: z.number().describe("Maximum roll to get this result"),
+  result: z.string().describe("The result text"),
+  weight: z.number().optional().describe("Weight for weighted random selection"),
+  subtable: z.string().optional().describe("ID of subtable to roll on"),
+  metadata: z.record(z.string(), z.unknown()).optional().describe("Additional data"),
+});
+
+server.tool(
+  "create_random_table",
+  "Create a new random table for encounters, loot, weather, etc.",
+  {
+    sessionId: z.string().describe("The session ID"),
+    name: z.string().describe("Table name"),
+    description: z.string().optional().describe("Table description"),
+    category: z.string().optional().describe("Category (e.g., 'encounter', 'loot', 'weather', 'name')"),
+    entries: z.array(tableEntrySchema).optional().describe("Table entries"),
+    rollExpression: z.string().optional().describe("Dice expression (default: '1d100')"),
+  },
+  async (params) => {
+    const table = tableTools.createTable(params);
+    return {
+      content: [{ type: "text", text: JSON.stringify(table, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "get_random_table",
+  "Get a random table by ID",
+  {
+    tableId: z.string().describe("The table ID"),
+  },
+  async ({ tableId }) => {
+    const table = tableTools.getTable(tableId);
+    if (!table) {
+      return {
+        content: [{ type: "text", text: "Table not found" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(table, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "update_random_table",
+  "Update a random table",
+  {
+    tableId: z.string().describe("The table ID"),
+    name: z.string().optional().describe("New name"),
+    description: z.string().optional().describe("New description"),
+    category: z.string().nullable().optional().describe("New category"),
+    entries: z.array(tableEntrySchema).optional().describe("Replace all entries"),
+    rollExpression: z.string().optional().describe("New dice expression"),
+  },
+  async ({ tableId, ...updates }) => {
+    const table = tableTools.updateTable(tableId, updates);
+    if (!table) {
+      return {
+        content: [{ type: "text", text: "Table not found" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(table, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "delete_random_table",
+  "Delete a random table",
+  {
+    tableId: z.string().describe("The table ID"),
+  },
+  async ({ tableId }) => {
+    const success = tableTools.deleteTable(tableId);
+    return {
+      content: [{ type: "text", text: success ? "Table deleted" : "Table not found" }],
+      isError: !success,
+    };
+  }
+);
+
+server.tool(
+  "list_random_tables",
+  "List random tables in a session",
+  {
+    sessionId: z.string().describe("The session ID"),
+    category: z.string().optional().describe("Filter by category"),
+  },
+  async ({ sessionId, category }) => {
+    const tables = tableTools.listTables(sessionId, category);
+    return {
+      content: [{ type: "text", text: JSON.stringify(tables, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "roll_on_table",
+  "Roll on a random table and get a result",
+  {
+    tableId: z.string().describe("The table ID"),
+    modifier: z.number().optional().describe("Modifier to add to the roll"),
+  },
+  async ({ tableId, modifier }) => {
+    const result = tableTools.rollTable(tableId, modifier);
+    if (!result) {
+      return {
+        content: [{ type: "text", text: "Table not found or has no entries" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "add_table_entry",
+  "Add an entry to an existing random table",
+  {
+    tableId: z.string().describe("The table ID"),
+    entry: tableEntrySchema.describe("The entry to add"),
+  },
+  async ({ tableId, entry }) => {
+    const table = tableTools.addTableEntry(tableId, entry);
+    if (!table) {
+      return {
+        content: [{ type: "text", text: "Table not found" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(table, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "remove_table_entry",
+  "Remove an entry from a random table by index",
+  {
+    tableId: z.string().describe("The table ID"),
+    index: z.number().describe("Index of the entry to remove (0-based)"),
+  },
+  async ({ tableId, index }) => {
+    const table = tableTools.removeTableEntry(tableId, index);
+    if (!table) {
+      return {
+        content: [{ type: "text", text: "Table not found or invalid index" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(table, null, 2) }],
+    };
+  }
+);
+
+// ============================================================================
+// SECRET/KNOWLEDGE TOOLS
+// ============================================================================
+
+server.tool(
+  "create_secret",
+  "Create a secret that can be revealed to specific characters",
+  {
+    sessionId: z.string().describe("The session ID"),
+    name: z.string().describe("Secret name (for DM reference)"),
+    description: z.string().describe("The actual secret information"),
+    category: z.string().optional().describe("Category (e.g., 'plot', 'character', 'location', 'item')"),
+    relatedEntityId: z.string().optional().describe("ID of related entity"),
+    relatedEntityType: z.string().optional().describe("Type of related entity"),
+    clues: z.array(z.string()).optional().describe("Clues that hint at this secret"),
+  },
+  async (params) => {
+    const secret = secretTools.createSecret(params);
+    return {
+      content: [{ type: "text", text: JSON.stringify(secret, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "get_secret",
+  "Get a secret by ID (DM view - shows all info)",
+  {
+    secretId: z.string().describe("The secret ID"),
+  },
+  async ({ secretId }) => {
+    const secret = secretTools.getSecret(secretId);
+    if (!secret) {
+      return {
+        content: [{ type: "text", text: "Secret not found" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(secret, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "update_secret",
+  "Update a secret's details",
+  {
+    secretId: z.string().describe("The secret ID"),
+    name: z.string().optional().describe("New name"),
+    description: z.string().optional().describe("New description"),
+    category: z.string().nullable().optional().describe("New category"),
+    relatedEntityId: z.string().nullable().optional().describe("New related entity ID"),
+    relatedEntityType: z.string().nullable().optional().describe("New related entity type"),
+  },
+  async ({ secretId, ...updates }) => {
+    const secret = secretTools.updateSecret(secretId, updates);
+    if (!secret) {
+      return {
+        content: [{ type: "text", text: "Secret not found" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(secret, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "delete_secret",
+  "Delete a secret",
+  {
+    secretId: z.string().describe("The secret ID"),
+  },
+  async ({ secretId }) => {
+    const success = secretTools.deleteSecret(secretId);
+    return {
+      content: [{ type: "text", text: success ? "Secret deleted" : "Secret not found" }],
+      isError: !success,
+    };
+  }
+);
+
+server.tool(
+  "list_secrets",
+  "List secrets with optional filters",
+  {
+    sessionId: z.string().describe("The session ID"),
+    category: z.string().optional().describe("Filter by category"),
+    relatedEntityId: z.string().optional().describe("Filter by related entity"),
+    isPublic: z.boolean().optional().describe("Filter by public status"),
+    knownBy: z.string().optional().describe("Only secrets known by this character ID"),
+  },
+  async ({ sessionId, ...filter }) => {
+    const secrets = secretTools.listSecrets(sessionId, filter);
+    return {
+      content: [{ type: "text", text: JSON.stringify(secrets, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "reveal_secret",
+  "Reveal a secret to specific character(s)",
+  {
+    secretId: z.string().describe("The secret ID"),
+    characterIds: z.array(z.string()).describe("Character IDs to reveal to"),
+  },
+  async ({ secretId, characterIds }) => {
+    const secret = secretTools.revealSecret(secretId, characterIds);
+    if (!secret) {
+      return {
+        content: [{ type: "text", text: "Secret not found" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(secret, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "make_secret_public",
+  "Make a secret public (revealed to everyone)",
+  {
+    secretId: z.string().describe("The secret ID"),
+  },
+  async ({ secretId }) => {
+    const secret = secretTools.makePublic(secretId);
+    if (!secret) {
+      return {
+        content: [{ type: "text", text: "Secret not found" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(secret, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "add_clue",
+  "Add a clue to a secret",
+  {
+    secretId: z.string().describe("The secret ID"),
+    clue: z.string().describe("The clue text"),
+  },
+  async ({ secretId, clue }) => {
+    const secret = secretTools.addClue(secretId, clue);
+    if (!secret) {
+      return {
+        content: [{ type: "text", text: "Secret not found" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(secret, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "get_character_knowledge",
+  "Get all secrets and clues known by a character",
+  {
+    sessionId: z.string().describe("The session ID"),
+    characterId: z.string().describe("The character ID"),
+  },
+  async ({ sessionId, characterId }) => {
+    const knowledge = secretTools.getCharacterKnowledge(sessionId, characterId);
+    return {
+      content: [{ type: "text", text: JSON.stringify(knowledge, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "check_knows_secret",
+  "Check if a character knows a specific secret",
+  {
+    secretId: z.string().describe("The secret ID"),
+    characterId: z.string().describe("The character ID"),
+  },
+  async ({ secretId, characterId }) => {
+    const knows = secretTools.checkKnowsSecret(secretId, characterId);
+    return {
+      content: [{ type: "text", text: JSON.stringify({ knows }, null, 2) }],
+    };
+  }
+);
+
+// ============================================================================
+// RELATIONSHIP TOOLS
+// ============================================================================
+
+server.tool(
+  "create_relationship",
+  "Create a relationship between two entities (characters, factions, etc.)",
+  {
+    sessionId: z.string().describe("The session ID"),
+    sourceId: z.string().describe("Source entity ID"),
+    sourceType: z.string().describe("Source entity type (e.g., 'character', 'faction')"),
+    targetId: z.string().describe("Target entity ID"),
+    targetType: z.string().describe("Target entity type"),
+    relationshipType: z.string().describe("Type of relationship (e.g., 'attitude', 'bond', 'rivalry', 'loyalty')"),
+    value: z.number().optional().describe("Initial value (-100 to 100, default: 0)"),
+    label: z.string().optional().describe("Descriptive label (e.g., 'friendly', 'hostile')"),
+    notes: z.string().optional().describe("Notes about the relationship"),
+  },
+  async (params) => {
+    const relationship = relationshipTools.createRelationship(params);
+    return {
+      content: [{ type: "text", text: JSON.stringify(relationship, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "get_relationship",
+  "Get a relationship by ID",
+  {
+    relationshipId: z.string().describe("The relationship ID"),
+  },
+  async ({ relationshipId }) => {
+    const relationship = relationshipTools.getRelationship(relationshipId);
+    if (!relationship) {
+      return {
+        content: [{ type: "text", text: "Relationship not found" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(relationship, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "get_relationship_between",
+  "Get the relationship between two specific entities",
+  {
+    sessionId: z.string().describe("The session ID"),
+    sourceId: z.string().describe("Source entity ID"),
+    targetId: z.string().describe("Target entity ID"),
+    relationshipType: z.string().optional().describe("Filter by relationship type"),
+  },
+  async ({ sessionId, sourceId, targetId, relationshipType }) => {
+    const relationship = relationshipTools.getRelationshipBetween(sessionId, sourceId, targetId, relationshipType);
+    if (!relationship) {
+      return {
+        content: [{ type: "text", text: "No relationship found between these entities" }],
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(relationship, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "update_relationship",
+  "Update a relationship's type, value, label, or notes",
+  {
+    relationshipId: z.string().describe("The relationship ID"),
+    relationshipType: z.string().optional().describe("New relationship type"),
+    value: z.number().optional().describe("New value"),
+    label: z.string().nullable().optional().describe("New label"),
+    notes: z.string().optional().describe("New notes"),
+  },
+  async ({ relationshipId, ...updates }) => {
+    const relationship = relationshipTools.updateRelationship(relationshipId, updates);
+    if (!relationship) {
+      return {
+        content: [{ type: "text", text: "Relationship not found" }],
+        isError: true,
+      };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(relationship, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "modify_relationship",
+  "Adjust a relationship value by a delta (with history logging)",
+  {
+    relationshipId: z.string().describe("The relationship ID"),
+    delta: z.number().describe("Amount to change (+/-)"),
+    reason: z.string().optional().describe("Reason for the change (logged)"),
+    minValue: z.number().optional().describe("Minimum bound (default: none)"),
+    maxValue: z.number().optional().describe("Maximum bound (default: none)"),
+  },
+  async (params) => {
+    const result = relationshipTools.modifyRelationship(params);
+    if (!result) {
+      return {
+        content: [{ type: "text", text: "Relationship not found" }],
+        isError: true,
+      };
+    }
+    const label = relationshipTools.getRelationshipLabel(result.relationship.value);
+    return {
+      content: [{ type: "text", text: JSON.stringify({ ...result, suggestedLabel: label }, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "delete_relationship",
+  "Delete a relationship",
+  {
+    relationshipId: z.string().describe("The relationship ID"),
+  },
+  async ({ relationshipId }) => {
+    const success = relationshipTools.deleteRelationship(relationshipId);
+    return {
+      content: [{ type: "text", text: success ? "Relationship deleted" : "Relationship not found" }],
+      isError: !success,
+    };
+  }
+);
+
+server.tool(
+  "list_relationships",
+  "List relationships with optional filters",
+  {
+    sessionId: z.string().describe("The session ID"),
+    entityId: z.string().optional().describe("Filter by entity (either source or target)"),
+    sourceId: z.string().optional().describe("Filter by source entity"),
+    targetId: z.string().optional().describe("Filter by target entity"),
+    relationshipType: z.string().optional().describe("Filter by relationship type"),
+    entityType: z.string().optional().describe("Filter by entity type"),
+  },
+  async ({ sessionId, ...filter }) => {
+    const relationships = relationshipTools.listRelationships(sessionId, filter);
+    return {
+      content: [{ type: "text", text: JSON.stringify(relationships, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  "get_relationship_history",
+  "Get change history for a relationship",
+  {
+    relationshipId: z.string().describe("The relationship ID"),
+    limit: z.number().optional().describe("Maximum entries to return"),
+  },
+  async ({ relationshipId, limit }) => {
+    const history = relationshipTools.getRelationshipHistory(relationshipId, limit);
     return {
       content: [{ type: "text", text: JSON.stringify(history, null, 2) }],
     };
