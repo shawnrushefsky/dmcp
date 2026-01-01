@@ -822,6 +822,7 @@ export interface StoreImageParams {
   // Image data (one required)
   base64?: string;            // Base64-encoded image data
   url?: string;               // URL to fetch image from
+  filePath?: string;          // Local file path to copy from
 
   // Metadata
   label?: string;

@@ -6,7 +6,7 @@ import { LIMITS } from "../utils/validation.js";
 export function registerImageTools(server: McpServer) {
   server.tool(
     "store_image",
-    "Store an image for an entity (from base64 data or URL)",
+    "Store an image for an entity (from base64 data, URL, or local file path)",
     {
       sessionId: z.string().max(100).describe("The session ID"),
       entityId: z
@@ -23,6 +23,7 @@ export function registerImageTools(server: McpServer) {
           "Base64-encoded image data (with or without data URI prefix)"
         ),
       url: z.string().max(2000).optional().describe("URL to fetch the image from"),
+      filePath: z.string().max(2000).optional().describe("Local file path to copy the image from"),
       label: z
         .string()
         .max(LIMITS.NAME_MAX)

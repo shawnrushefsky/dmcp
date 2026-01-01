@@ -111,8 +111,16 @@ export async function storeImage(params: StoreImageParams): Promise<StoredImage>
       response.headers.get("content-type") || params.mimeType || "image/png";
     source = "url";
     sourceUrl = params.url;
+  } else if (params.filePath) {
+    // Copy from local file
+    if (!existsSync(params.filePath)) {
+      throw new Error(`File not found: ${params.filePath}`);
+    }
+    imageBuffer = readFileSync(params.filePath);
+    mimeType = params.mimeType || "image/png"; // Will be refined by sharp below
+    source = "uploaded";
   } else {
-    throw new Error("Either base64 or url must be provided");
+    throw new Error("Either base64, url, or filePath must be provided");
   }
 
   // Get image metadata using sharp
