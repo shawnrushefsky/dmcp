@@ -25,6 +25,8 @@ import { registerAbilityTools } from "./register/abilities.js";
 import { registerNoteTools } from "./register/notes.js";
 import { registerPauseTools } from "./register/pause.js";
 import { registerImageTools } from "./register/images.js";
+import { registerMcpResources } from "./register/mcp-resources.js";
+import { registerMcpPrompts } from "./register/mcp-prompts.js";
 
 // Initialize database
 initializeSchema();
@@ -55,6 +57,10 @@ registerAbilityTools(server);        // Abilities/Powers
 registerNoteTools(server);           // Session Notes
 registerPauseTools(server);          // Pause/Resume, Context Snapshots, External Updates
 registerImageTools(server);          // Stored Images
+
+// Register MCP Resources and Prompts
+registerMcpResources(server);        // Read-only data access via URI
+registerMcpPrompts(server);          // Reusable prompt templates
 
 // ============================================================================
 // START SERVER
