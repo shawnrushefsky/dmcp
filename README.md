@@ -41,12 +41,16 @@ An MCP (Model Context Protocol) server that enables AI agents to act as dynamic 
     - [Factions](#factions-11-tools)
     - [Abilities \& Powers](#abilities--powers-9-tools)
     - [Session Notes](#session-notes-10-tools)
+    - [Pause \& Resume](#pause--resume-7-tools)
+    - [Multi-Agent Collaboration](#multi-agent-collaboration-8-tools)
   - [Example Usage](#example-usage)
     - [Starting a New Game](#starting-a-new-game)
     - [NPC with Voice](#npc-with-voice)
     - [Player Choices](#player-choices)
     - [Character with Image Generation](#character-with-image-generation)
     - [Story Export Workflow](#story-export-workflow)
+    - [Pause \& Resume](#pause--resume)
+    - [Multi-Agent Collaboration](#multi-agent-collaboration)
   - [Data Storage](#data-storage)
   - [License](#license)
 
@@ -71,6 +75,8 @@ An MCP (Model Context Protocol) server that enables AI agents to act as dynamic 
 - **Entity Relationships** - Track attitudes, bonds, rivalries between any entities
 - **Tagging System** - Universal tags for organizing any game entity
 - **Session Notes** - Searchable DM notes with auto-generated recaps
+- **Pause & Resume** - Save agent context for seamless game continuation across sessions
+- **Multi-Agent Collaboration** - External agents can push updates for DM incorporation
 
 ## Installation
 
@@ -339,7 +345,7 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 
 </details>
 
-## Available Tools (151 total)
+## Available Tools (166 total)
 
 ### Session Management (6 tools)
 | Tool | Description |
@@ -580,6 +586,29 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `remove_note_tag` | Remove tag from note |
 | `generate_recap` | Auto-generate session recap |
 
+### Pause & Resume (7 tools)
+| Tool | Description |
+|------|-------------|
+| `prepare_pause` | Get checklist and current state before pausing |
+| `save_pause_state` | Save DM context (scene, plans, NPC attitudes, threads) |
+| `get_pause_state` | Retrieve saved pause state |
+| `get_resume_context` | Get complete resume briefing with game state |
+| `save_context_snapshot` | Lightweight incremental context save during play |
+| `check_context_freshness` | Check if context needs saving |
+| `clear_pause_state` | Clear pause state after resuming |
+
+### Multi-Agent Collaboration (8 tools)
+| Tool | Description |
+|------|-------------|
+| `push_external_update` | External agent pushes lore/research/worldbuilding |
+| `get_pending_updates` | Check for updates from external agents |
+| `acknowledge_update` | Mark update as seen |
+| `apply_update` | Mark update as incorporated into narrative |
+| `reject_update` | Reject update as not appropriate |
+| `list_external_updates` | List all updates with status filter |
+| `get_external_update` | Get specific update by ID |
+| `delete_external_update` | Delete an update |
+
 ## Example Usage
 
 ### Starting a New Game
@@ -687,6 +716,67 @@ get_chapter_for_export({ sessionId: "...", chapterNumber: 1, style: "epic-fantas
 
 // 4. Each subagent writes its chapter as narrative prose
 // 5. Combine chapters into final book
+```
+
+### Pause & Resume
+
+Save context before ending a session for seamless continuation:
+
+```javascript
+// Before pausing - get checklist of what to save
+prepare_pause({ sessionId: "..." })
+
+// Save your DM context
+save_pause_state({
+  sessionId: "...",
+  currentScene: "The party is in the merchant's basement after discovering the hidden door",
+  immediateSituation: "Kira has her hand on the trapdoor, asking if they should descend",
+  sceneAtmosphere: "Tense, dusty, dim light from above",
+  pendingPlayerAction: "Deciding whether to open trapdoor or search for traps",
+  dmShortTermPlans: "If they descend, ghost encounter triggers",
+  dmLongTermPlans: "Building toward cult revelation in Chapter 3",
+  activeThreads: [{
+    name: "Missing Merchant",
+    status: "active",
+    urgency: "high",
+    description: "Finding what happened to Old Chen"
+  }],
+  npcAttitudes: { "guard_captain_id": "suspicious after tavern incident" },
+  playerApparentGoals: "Focused on finding the merchant, ignoring side quests"
+})
+
+// On resume - get everything needed to continue
+get_resume_context({ sessionId: "..." })
+// Returns formatted briefing + full game state
+```
+
+### Multi-Agent Collaboration
+
+External agents can push updates for the DM to incorporate:
+
+```javascript
+// Research agent pushes lore discovery
+push_external_update({
+  sessionId: "...",
+  sourceAgent: "lore-researcher",
+  sourceDescription: "Deep worldbuilding research agent",
+  updateType: "lore",
+  title: "The Merchant Guild's Secret History",
+  content: "The Merchant Guild was founded 200 years ago as a front for...",
+  priority: "normal",
+  targetEntityType: "faction",
+  targetEntityId: "merchant_guild_id"
+})
+
+// DM checks for pending updates periodically
+get_pending_updates({ sessionId: "..." })
+// Returns prioritized list of pending updates
+
+// DM incorporates the update into narrative
+apply_update({
+  updateId: "...",
+  dmNotes: "Revealed through ancient tome in library scene"
+})
 ```
 
 ## Data Storage

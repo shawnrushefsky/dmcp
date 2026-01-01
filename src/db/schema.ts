@@ -376,6 +376,86 @@ export function initializeSchema(): void {
     )
   `);
 
+  // External updates table - enables multi-agent collaboration
+  // External agents can push updates that the primary DM agent receives
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS external_updates (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL,
+
+      -- Source identification
+      source_agent TEXT NOT NULL,
+      source_description TEXT,
+
+      -- Update content
+      update_type TEXT NOT NULL,
+      category TEXT,
+      title TEXT NOT NULL,
+      content TEXT NOT NULL,
+      structured_data TEXT,
+
+      -- Targeting (what entities this relates to)
+      target_entity_id TEXT,
+      target_entity_type TEXT,
+
+      -- Priority and status
+      priority TEXT DEFAULT 'normal' CHECK (priority IN ('low', 'normal', 'high', 'urgent')),
+      status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'acknowledged', 'applied', 'rejected')),
+
+      -- Timestamps
+      created_at TEXT NOT NULL,
+      acknowledged_at TEXT,
+      applied_at TEXT,
+
+      -- DM notes on how update was used
+      dm_notes TEXT,
+
+      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Pause states table - captures agent context for seamless resume
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS pause_states (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL UNIQUE,
+
+      -- Current scene/moment context
+      current_scene TEXT NOT NULL,
+      scene_atmosphere TEXT,
+      immediate_situation TEXT NOT NULL,
+
+      -- Pending player interaction
+      pending_player_action TEXT,
+      awaiting_response_to TEXT,
+      presented_choices TEXT,
+
+      -- Active narrative threads
+      active_threads TEXT DEFAULT '[]',
+
+      -- DM's plans and notes
+      dm_short_term_plans TEXT,
+      dm_long_term_plans TEXT,
+      upcoming_reveals TEXT DEFAULT '[]',
+
+      -- NPC states (not persisted elsewhere)
+      npc_attitudes TEXT DEFAULT '{}',
+      active_conversations TEXT DEFAULT '[]',
+
+      -- Important context that might be lost
+      recent_tone TEXT,
+      player_apparent_goals TEXT,
+      unresolved_hooks TEXT DEFAULT '[]',
+
+      -- Metadata
+      pause_reason TEXT,
+      created_at TEXT NOT NULL,
+      model_used TEXT,
+
+      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+    )
+  `);
+
   // Create indexes for common queries
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_characters_session ON characters(session_id);
@@ -417,5 +497,9 @@ export function initializeSchema(): void {
     CREATE INDEX IF NOT EXISTS idx_notes_session ON notes(session_id);
     CREATE INDEX IF NOT EXISTS idx_notes_category ON notes(category);
     CREATE INDEX IF NOT EXISTS idx_notes_pinned ON notes(pinned);
+    CREATE INDEX IF NOT EXISTS idx_pause_states_session ON pause_states(session_id);
+    CREATE INDEX IF NOT EXISTS idx_external_updates_session ON external_updates(session_id);
+    CREATE INDEX IF NOT EXISTS idx_external_updates_status ON external_updates(status);
+    CREATE INDEX IF NOT EXISTS idx_external_updates_priority ON external_updates(priority);
   `);
 }

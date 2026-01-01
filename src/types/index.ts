@@ -625,3 +625,162 @@ export interface Note {
   createdAt: string;
   updatedAt: string;
 }
+
+// External update types - enables multi-agent collaboration
+export interface ExternalUpdate {
+  id: string;
+  sessionId: string;
+
+  // Source identification
+  sourceAgent: string;           // ID/name of the agent pushing this update
+  sourceDescription: string | null; // Description of what the source agent does
+
+  // Update content
+  updateType: string;            // e.g., "lore", "npc_backstory", "world_event", "item_details"
+  category: string | null;       // Optional categorization
+  title: string;                 // Brief title/summary
+  content: string;               // The actual content/information
+  structuredData: Record<string, unknown> | null; // Optional structured data
+
+  // Targeting
+  targetEntityId: string | null;   // If this relates to a specific entity
+  targetEntityType: string | null; // Type of that entity
+
+  // Priority and status
+  priority: "low" | "normal" | "high" | "urgent";
+  status: "pending" | "acknowledged" | "applied" | "rejected";
+
+  // Timestamps
+  createdAt: string;
+  acknowledgedAt: string | null;
+  appliedAt: string | null;
+
+  // DM notes
+  dmNotes: string | null;
+}
+
+export interface PendingUpdatesResult {
+  sessionId: string;
+  pendingCount: number;
+  urgentCount: number;
+  updates: ExternalUpdate[];
+  hasUrgent: boolean;
+  suggestion: string;
+}
+
+// Pause state types - captures agent context for seamless resume
+export interface PauseState {
+  id: string;
+  sessionId: string;
+
+  // Current scene/moment context
+  currentScene: string;                    // Description of where we are in the story
+  sceneAtmosphere: string | null;          // Mood, lighting, sounds, feelings
+  immediateSituation: string;              // What's happening RIGHT NOW
+
+  // Pending player interaction
+  pendingPlayerAction: string | null;      // What action is the player about to take
+  awaitingResponseTo: string | null;       // What question/prompt awaits response
+  presentedChoices: string[] | null;       // Choices offered to player
+
+  // Active narrative threads
+  activeThreads: NarrativeThread[];        // Ongoing storylines, investigations, conversations
+
+  // DM's plans and notes
+  dmShortTermPlans: string | null;         // What was about to happen next
+  dmLongTermPlans: string | null;          // Major plot points being built toward
+  upcomingReveals: string[];               // Secrets about to be revealed
+
+  // NPC states (attitudes may shift in ways not captured elsewhere)
+  npcAttitudes: Record<string, string>;    // characterId -> current disposition
+  activeConversations: ActiveConversation[];
+
+  // Important context that might be lost
+  recentTone: string | null;               // Recent narrative tone (tense, relaxed, etc.)
+  playerApparentGoals: string | null;      // What the player seems to be trying to do
+  unresolvedHooks: string[];               // Plot hooks player noticed but hasn't pursued
+
+  // Metadata
+  pauseReason: string | null;              // Why was the game paused
+  createdAt: string;
+  modelUsed: string | null;                // Which model was running the session
+}
+
+export interface NarrativeThread {
+  name: string;                            // Thread name/label
+  description: string;                     // What this thread is about
+  status: "active" | "background" | "climax" | "resolving";
+  urgency: "low" | "medium" | "high" | "critical";
+  involvedCharacterIds?: string[];
+  involvedLocationIds?: string[];
+  relatedQuestId?: string;
+  notes?: string;
+}
+
+export interface ActiveConversation {
+  npcId: string;                           // Character ID of NPC
+  topic: string;                           // What's being discussed
+  npcEmotionalState: string;               // How they're feeling
+  lastNpcStatement?: string;               // What they just said
+  playerIntent?: string;                   // What player seems to want from convo
+}
+
+// Pause preparation checklist returned by prepare_pause
+export interface PauseChecklist {
+  sessionId: string;
+  sessionName: string;
+
+  // Current state summary (for agent reference)
+  currentState: {
+    playerLocation: string | null;
+    activeQuests: number;
+    activeCombat: boolean;
+    activeTimers: number;
+    pendingEvents: number;
+    recentEventCount: number;
+  };
+
+  // Checklist of things to save
+  checklist: PauseChecklistItem[];
+
+  // Existing pause state if any
+  existingPauseState: PauseState | null;
+
+  // Instructions for the agent
+  instructions: string;
+}
+
+export interface PauseChecklistItem {
+  category: string;
+  item: string;
+  description: string;
+  required: boolean;
+  example?: string;
+}
+
+// Resume context returned by get_resume_context
+export interface ResumeContext {
+  // The saved pause state
+  pauseState: PauseState;
+
+  // Full game state for quick reference
+  gameState: {
+    session: Session;
+    playerCharacter: Character | null;
+    currentLocation: Location | null;
+    activeQuests: Quest[];
+    activeCombat: Combat | null;
+    recentEvents: NarrativeEvent[];
+    activeTimers: Timer[];
+    pendingScheduledEvents: ScheduledEvent[];
+  };
+
+  // Narrative summary
+  narrativeSummary: string;
+
+  // Ready-to-use resume prompt
+  resumePrompt: string;
+
+  // Warnings about potential issues
+  warnings: string[];
+}

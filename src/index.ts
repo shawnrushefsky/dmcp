@@ -23,6 +23,7 @@ import { registerStatusTools } from "./register/status.js";
 import { registerFactionTools } from "./register/factions.js";
 import { registerAbilityTools } from "./register/abilities.js";
 import { registerNoteTools } from "./register/notes.js";
+import { registerPauseTools } from "./register/pause.js";
 
 // Initialize database
 initializeSchema();
@@ -51,6 +52,7 @@ registerStatusTools(server);         // Status Effects
 registerFactionTools(server);        // Factions
 registerAbilityTools(server);        // Abilities/Powers
 registerNoteTools(server);           // Session Notes
+registerPauseTools(server);          // Pause/Resume, Context Snapshots, External Updates
 
 // ============================================================================
 // START SERVER

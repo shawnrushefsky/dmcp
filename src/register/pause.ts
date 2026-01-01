@@ -1,0 +1,641 @@
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
+import * as pauseTools from "../tools/pause.js";
+
+// Zod schemas for nested types
+const NarrativeThreadSchema = z.object({
+  name: z.string().describe("Thread name/label"),
+  description: z.string().describe("What this thread is about"),
+  status: z
+    .enum(["active", "background", "climax", "resolving"])
+    .describe("Thread status"),
+  urgency: z.enum(["low", "medium", "high", "critical"]).describe("Urgency level"),
+  involvedCharacterIds: z.array(z.string()).optional(),
+  involvedLocationIds: z.array(z.string()).optional(),
+  relatedQuestId: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+const ActiveConversationSchema = z.object({
+  npcId: z.string().describe("Character ID of NPC"),
+  topic: z.string().describe("What's being discussed"),
+  npcEmotionalState: z.string().describe("How they're feeling"),
+  lastNpcStatement: z.string().optional().describe("What they just said"),
+  playerIntent: z.string().optional().describe("What player seems to want"),
+});
+
+export function registerPauseTools(server: McpServer) {
+  // ============================================================================
+  // PAUSE PREPARATION
+  // ============================================================================
+
+  server.tool(
+    "prepare_pause",
+    `Prepare to pause the game. Returns a checklist of context to save and current game state.
+
+WHEN TO CALL: Before ending a session or when the player says they need to stop.
+
+This tool returns:
+- Current game state summary
+- Checklist of ephemeral context that should be saved
+- Any existing pause state
+- Instructions for what to save
+
+After calling this, use save_pause_state to persist your context.`,
+    {
+      sessionId: z.string().describe("The session ID"),
+    },
+    async ({ sessionId }) => {
+      const checklist = pauseTools.preparePause(sessionId);
+      if (!checklist) {
+        return {
+          content: [{ type: "text", text: `Session ${sessionId} not found` }],
+          isError: true,
+        };
+      }
+      return {
+        content: [{ type: "text", text: JSON.stringify(checklist, null, 2) }],
+      };
+    }
+  );
+
+  // ============================================================================
+  // SAVE PAUSE STATE
+  // ============================================================================
+
+  server.tool(
+    "save_pause_state",
+    `Save your context for seamless game resumption. Call this before ending a session.
+
+REQUIRED FIELDS:
+- currentScene: Where we are in the story
+- immediateSituation: What's happening RIGHT NOW (be specific!)
+
+The more detail you provide, the smoother the resume will be for the next DM
+(which might be you in a new context window, or a different model entirely).
+
+Write as if briefing a replacement DM who's taking over mid-session.`,
+    {
+      sessionId: z.string().describe("The session ID"),
+
+      // Required
+      currentScene: z
+        .string()
+        .describe(
+          "Description of where we are in the story - the scene, location, narrative moment"
+        ),
+      immediateSituation: z
+        .string()
+        .describe(
+          "What is happening RIGHT NOW - the exact moment we're pausing at. Be specific!"
+        ),
+
+      // Scene context
+      sceneAtmosphere: z
+        .string()
+        .optional()
+        .describe("Mood, lighting, sounds, emotional tension"),
+      recentTone: z
+        .string()
+        .optional()
+        .describe("Recent narrative tone (tense, comedic, romantic, etc.)"),
+
+      // Player interaction
+      pendingPlayerAction: z
+        .string()
+        .optional()
+        .describe("What action was the player about to take?"),
+      awaitingResponseTo: z
+        .string()
+        .optional()
+        .describe("What question/prompt awaits player response?"),
+      presentedChoices: z
+        .array(z.string())
+        .optional()
+        .describe("Formal choices presented to player"),
+
+      // Player context
+      playerApparentGoals: z
+        .string()
+        .optional()
+        .describe("What the player seems to be trying to accomplish"),
+      unresolvedHooks: z
+        .array(z.string())
+        .optional()
+        .describe("Plot hooks player noticed but hasn't pursued"),
+
+      // Narrative threads
+      activeThreads: z
+        .array(NarrativeThreadSchema)
+        .optional()
+        .describe("Ongoing storylines, investigations, subplots"),
+
+      // DM notes
+      dmShortTermPlans: z
+        .string()
+        .optional()
+        .describe("What was about to happen next? Planned encounters/reveals?"),
+      dmLongTermPlans: z
+        .string()
+        .optional()
+        .describe("Major plot arcs being developed"),
+      upcomingReveals: z
+        .array(z.string())
+        .optional()
+        .describe("Secrets close to being discovered"),
+
+      // NPC state
+      npcAttitudes: z
+        .record(z.string(), z.string())
+        .optional()
+        .describe("NPC emotional states/attitudes (characterId -> disposition)"),
+      activeConversations: z
+        .array(ActiveConversationSchema)
+        .optional()
+        .describe("Ongoing conversations and where they left off"),
+
+      // Metadata
+      pauseReason: z.string().optional().describe("Why is the game pausing?"),
+      modelUsed: z
+        .string()
+        .optional()
+        .describe("Which model/agent is saving this state"),
+    },
+    async (params) => {
+      const pauseState = pauseTools.savePauseState(params);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                saved: true,
+                pauseStateId: pauseState.id,
+                message:
+                  "Context saved successfully. Game can be resumed seamlessly using get_resume_context.",
+                savedFields: {
+                  required: {
+                    currentScene: true,
+                    immediateSituation: true,
+                  },
+                  optional: {
+                    sceneAtmosphere: !!pauseState.sceneAtmosphere,
+                    pendingPlayerAction: !!pauseState.pendingPlayerAction,
+                    awaitingResponseTo: !!pauseState.awaitingResponseTo,
+                    presentedChoices: (pauseState.presentedChoices?.length || 0) > 0,
+                    activeThreads: pauseState.activeThreads.length > 0,
+                    dmShortTermPlans: !!pauseState.dmShortTermPlans,
+                    dmLongTermPlans: !!pauseState.dmLongTermPlans,
+                    upcomingReveals: pauseState.upcomingReveals.length > 0,
+                    npcAttitudes: Object.keys(pauseState.npcAttitudes).length > 0,
+                    activeConversations: pauseState.activeConversations.length > 0,
+                    recentTone: !!pauseState.recentTone,
+                    playerApparentGoals: !!pauseState.playerApparentGoals,
+                    unresolvedHooks: pauseState.unresolvedHooks.length > 0,
+                  },
+                },
+              },
+              null,
+              2
+            ),
+          },
+        ],
+      };
+    }
+  );
+
+  // ============================================================================
+  // GET PAUSE STATE
+  // ============================================================================
+
+  server.tool(
+    "get_pause_state",
+    "Get the saved pause state for a session (if any). Use this to check what context was preserved.",
+    {
+      sessionId: z.string().describe("The session ID"),
+    },
+    async ({ sessionId }) => {
+      const pauseState = pauseTools.getPauseState(sessionId);
+      if (!pauseState) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                hasPauseState: false,
+                message:
+                  "No pause state saved for this session. If resuming, rely on narrative_events and game state.",
+              }),
+            },
+          ],
+        };
+      }
+      return {
+        content: [{ type: "text", text: JSON.stringify(pauseState, null, 2) }],
+      };
+    }
+  );
+
+  // ============================================================================
+  // GET RESUME CONTEXT
+  // ============================================================================
+
+  server.tool(
+    "get_resume_context",
+    `Get everything needed to resume a paused game seamlessly.
+
+WHEN TO CALL: At the start of a session when continuing a paused game.
+
+Returns:
+- Full pause state (DM context, scene, plans)
+- Current game state (characters, quests, location)
+- Recent narrative events
+- A ready-to-use resume briefing/prompt
+- Warnings about things that need attention (active combat, etc.)
+
+Use this to get up to speed quickly and resume exactly where the game left off.`,
+    {
+      sessionId: z.string().describe("The session ID"),
+    },
+    async ({ sessionId }) => {
+      const context = pauseTools.getResumeContext(sessionId);
+      if (!context) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `No pause state found for session ${sessionId}. Use load_session and get_history instead.`,
+            },
+          ],
+          isError: true,
+        };
+      }
+
+      // Return the formatted resume prompt prominently
+      return {
+        content: [
+          {
+            type: "text",
+            text:
+              context.resumePrompt +
+              "\n\n" +
+              "═══════════════════════════════════════════════════════════════════════════════\n" +
+              "                              FULL DATA (JSON)\n" +
+              "═══════════════════════════════════════════════════════════════════════════════\n\n" +
+              JSON.stringify(
+                {
+                  pauseState: context.pauseState,
+                  gameState: context.gameState,
+                  warnings: context.warnings,
+                },
+                null,
+                2
+              ),
+          },
+        ],
+      };
+    }
+  );
+
+  // ============================================================================
+  // CONTEXT SNAPSHOT (Lightweight incremental save)
+  // ============================================================================
+
+  server.tool(
+    "save_context_snapshot",
+    `Quick lightweight context save - use this DURING play to preserve context incrementally.
+
+WHEN TO USE:
+- After significant story beats
+- After important NPC interactions
+- When player makes major decisions
+- Every 10-15 turns as a safety net
+
+This is faster than full save_pause_state but captures less detail.
+For end-of-session, use prepare_pause + save_pause_state instead.`,
+    {
+      sessionId: z.string().describe("The session ID"),
+      situation: z
+        .string()
+        .describe(
+          "Brief description of current situation (what's happening right now)"
+        ),
+      notes: z.string().optional().describe("Any additional context to preserve"),
+      npcMood: z
+        .record(z.string(), z.string())
+        .optional()
+        .describe("Current NPC attitudes (characterId -> mood)"),
+      playerIntent: z
+        .string()
+        .optional()
+        .describe("What the player seems to be trying to do"),
+    },
+    async (params) => {
+      const result = pauseTools.saveContextSnapshot(params);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    }
+  );
+
+  // ============================================================================
+  // CHECK CONTEXT FRESHNESS
+  // ============================================================================
+
+  server.tool(
+    "check_context_freshness",
+    `Check if context needs to be saved. Returns a reminder if it's been too long since last save.
+
+Use this periodically during long sessions to get nudged about saving context.`,
+    {
+      sessionId: z.string().describe("The session ID"),
+    },
+    async ({ sessionId }) => {
+      const result = pauseTools.checkContextFreshness(sessionId);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    }
+  );
+
+  // ============================================================================
+  // CLEAR PAUSE STATE
+  // ============================================================================
+
+  server.tool(
+    "clear_pause_state",
+    "Clear the saved pause state for a session. Use after successfully resuming to start fresh.",
+    {
+      sessionId: z.string().describe("The session ID"),
+    },
+    async ({ sessionId }) => {
+      const deleted = pauseTools.deletePauseState(sessionId);
+      return {
+        content: [
+          {
+            type: "text",
+            text: deleted
+              ? "Pause state cleared. The session can now accumulate fresh context."
+              : "No pause state to clear.",
+          },
+        ],
+      };
+    }
+  );
+
+  // ============================================================================
+  // EXTERNAL UPDATES - Multi-agent collaboration
+  // ============================================================================
+
+  server.tool(
+    "push_external_update",
+    `Push an update from an external agent into the game session.
+
+USE CASE: External agents (research agents, worldbuilders, lore generators, etc.)
+can push updates that the primary DM agent will receive and incorporate.
+
+EXAMPLES:
+- A research agent discovers detailed lore about a faction
+- A worldbuilder generates NPC backstory
+- A consistency checker flags a plot hole
+- An atmosphere generator provides environmental details
+
+The DM agent should periodically check for pending updates via get_pending_updates.`,
+    {
+      sessionId: z.string().describe("The session ID"),
+      sourceAgent: z.string().describe("ID/name of the agent pushing this update"),
+      sourceDescription: z.string().optional().describe("Description of what this agent does"),
+      updateType: z
+        .string()
+        .describe("Type of update (e.g., 'lore', 'npc_backstory', 'world_event', 'item_details', 'plot_suggestion')"),
+      category: z.string().optional().describe("Optional category for organization"),
+      title: z.string().describe("Brief title/summary of the update"),
+      content: z.string().describe("The full content/information being pushed"),
+      structuredData: z
+        .record(z.string(), z.unknown())
+        .optional()
+        .describe("Optional structured data (JSON) for programmatic use"),
+      targetEntityId: z.string().optional().describe("If this relates to a specific entity, its ID"),
+      targetEntityType: z
+        .string()
+        .optional()
+        .describe("Type of target entity (character, location, item, quest, etc.)"),
+      priority: z
+        .enum(["low", "normal", "high", "urgent"])
+        .optional()
+        .describe("Priority level (default: normal). Urgent updates demand immediate DM attention."),
+    },
+    async (params) => {
+      const update = pauseTools.pushExternalUpdate(params);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                pushed: true,
+                updateId: update.id,
+                priority: update.priority,
+                message: `Update pushed successfully. The DM agent will see this when checking pending updates.`,
+                tip:
+                  update.priority === "urgent"
+                    ? "This urgent update will be highlighted for immediate DM attention."
+                    : "The DM will see this in their pending updates queue.",
+              },
+              null,
+              2
+            ),
+          },
+        ],
+      };
+    }
+  );
+
+  server.tool(
+    "get_pending_updates",
+    `Check for pending updates from external agents.
+
+WHEN TO CALL:
+- At the start of each scene/turn
+- Before making major narrative decisions
+- Periodically during long sessions
+
+Returns all pending updates, prioritized by urgency.
+Use acknowledge_update, apply_update, or reject_update to process them.`,
+    {
+      sessionId: z.string().describe("The session ID"),
+    },
+    async ({ sessionId }) => {
+      const result = pauseTools.getPendingUpdates(sessionId);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    }
+  );
+
+  server.tool(
+    "acknowledge_update",
+    "Mark an external update as acknowledged (seen by DM). Use when you've read but haven't yet incorporated an update.",
+    {
+      updateId: z.string().describe("The update ID"),
+    },
+    async ({ updateId }) => {
+      const update = pauseTools.acknowledgeUpdate(updateId);
+      if (!update) {
+        return {
+          content: [{ type: "text", text: "Update not found" }],
+          isError: true,
+        };
+      }
+      return {
+        content: [{ type: "text", text: JSON.stringify(update, null, 2) }],
+      };
+    }
+  );
+
+  server.tool(
+    "apply_update",
+    "Mark an external update as applied (incorporated into the narrative). Use when you've woven the update into the story.",
+    {
+      updateId: z.string().describe("The update ID"),
+      dmNotes: z
+        .string()
+        .optional()
+        .describe("Notes on how the update was incorporated"),
+    },
+    async ({ updateId, dmNotes }) => {
+      const update = pauseTools.applyUpdate(updateId, dmNotes);
+      if (!update) {
+        return {
+          content: [{ type: "text", text: "Update not found" }],
+          isError: true,
+        };
+      }
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                applied: true,
+                update,
+                message: "Update marked as applied. It will no longer appear in pending updates.",
+              },
+              null,
+              2
+            ),
+          },
+        ],
+      };
+    }
+  );
+
+  server.tool(
+    "reject_update",
+    "Reject an external update (not appropriate for the narrative). Use when an update doesn't fit the current story direction.",
+    {
+      updateId: z.string().describe("The update ID"),
+      dmNotes: z
+        .string()
+        .optional()
+        .describe("Reason for rejection (helps external agents improve)"),
+    },
+    async ({ updateId, dmNotes }) => {
+      const update = pauseTools.rejectUpdate(updateId, dmNotes);
+      if (!update) {
+        return {
+          content: [{ type: "text", text: "Update not found" }],
+          isError: true,
+        };
+      }
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                rejected: true,
+                update,
+                message: "Update rejected. It will no longer appear in pending updates.",
+              },
+              null,
+              2
+            ),
+          },
+        ],
+      };
+    }
+  );
+
+  server.tool(
+    "list_external_updates",
+    "List all external updates for a session with optional status filter.",
+    {
+      sessionId: z.string().describe("The session ID"),
+      status: z
+        .enum(["pending", "acknowledged", "applied", "rejected"])
+        .optional()
+        .describe("Filter by status"),
+    },
+    async ({ sessionId, status }) => {
+      const updates = pauseTools.listExternalUpdates(sessionId, status);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                count: updates.length,
+                status: status || "all",
+                updates,
+              },
+              null,
+              2
+            ),
+          },
+        ],
+      };
+    }
+  );
+
+  server.tool(
+    "get_external_update",
+    "Get details of a specific external update by ID.",
+    {
+      updateId: z.string().describe("The update ID"),
+    },
+    async ({ updateId }) => {
+      const update = pauseTools.getExternalUpdate(updateId);
+      if (!update) {
+        return {
+          content: [{ type: "text", text: "Update not found" }],
+          isError: true,
+        };
+      }
+      return {
+        content: [{ type: "text", text: JSON.stringify(update, null, 2) }],
+      };
+    }
+  );
+
+  server.tool(
+    "delete_external_update",
+    "Delete an external update entirely.",
+    {
+      updateId: z.string().describe("The update ID"),
+    },
+    async ({ updateId }) => {
+      const deleted = pauseTools.deleteExternalUpdate(updateId);
+      return {
+        content: [
+          {
+            type: "text",
+            text: deleted ? "Update deleted" : "Update not found",
+          },
+        ],
+        isError: !deleted,
+      };
+    }
+  );
+}
+
