@@ -456,6 +456,39 @@ export function initializeSchema(): void {
     )
   `);
 
+  // Stored images table - file-based image storage
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS stored_images (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL,
+      entity_id TEXT NOT NULL,
+      entity_type TEXT NOT NULL CHECK (entity_type IN ('character', 'location', 'item', 'scene')),
+
+      -- File information
+      file_path TEXT NOT NULL,
+      file_size INTEGER NOT NULL,
+      mime_type TEXT NOT NULL,
+      width INTEGER,
+      height INTEGER,
+
+      -- Metadata
+      label TEXT,
+      description TEXT,
+      source TEXT NOT NULL CHECK (source IN ('generated', 'uploaded', 'url')),
+      source_url TEXT,
+      generation_tool TEXT,
+      generation_prompt TEXT,
+
+      -- Flags
+      is_primary INTEGER DEFAULT 0,
+
+      -- Timestamps
+      created_at TEXT NOT NULL,
+
+      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+    )
+  `);
+
   // Create indexes for common queries
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_characters_session ON characters(session_id);
@@ -501,5 +534,8 @@ export function initializeSchema(): void {
     CREATE INDEX IF NOT EXISTS idx_external_updates_session ON external_updates(session_id);
     CREATE INDEX IF NOT EXISTS idx_external_updates_status ON external_updates(status);
     CREATE INDEX IF NOT EXISTS idx_external_updates_priority ON external_updates(priority);
+    CREATE INDEX IF NOT EXISTS idx_stored_images_session ON stored_images(session_id);
+    CREATE INDEX IF NOT EXISTS idx_stored_images_entity ON stored_images(entity_id, entity_type);
+    CREATE INDEX IF NOT EXISTS idx_stored_images_primary ON stored_images(entity_id, entity_type, is_primary);
   `);
 }

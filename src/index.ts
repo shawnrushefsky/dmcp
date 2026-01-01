@@ -24,6 +24,7 @@ import { registerFactionTools } from "./register/factions.js";
 import { registerAbilityTools } from "./register/abilities.js";
 import { registerNoteTools } from "./register/notes.js";
 import { registerPauseTools } from "./register/pause.js";
+import { registerImageTools } from "./register/images.js";
 
 // Initialize database
 initializeSchema();
@@ -53,6 +54,7 @@ registerFactionTools(server);        // Factions
 registerAbilityTools(server);        // Abilities/Powers
 registerNoteTools(server);           // Session Notes
 registerPauseTools(server);          // Pause/Resume, Context Snapshots, External Updates
+registerImageTools(server);          // Stored Images
 
 // ============================================================================
 // START SERVER

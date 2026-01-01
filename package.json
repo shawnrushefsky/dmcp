@@ -18,12 +18,14 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
     "better-sqlite3": "^11.0.0",
+    "sharp": "^0.34.5",
     "uuid": "^10.0.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.11",
     "@types/node": "^22.0.0",
+    "@types/sharp": "^0.31.1",
     "@types/uuid": "^10.0.0",
     "tsx": "^4.0.0",
     "typescript": "^5.0.0"

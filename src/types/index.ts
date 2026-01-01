@@ -784,3 +784,59 @@ export interface ResumeContext {
   // Warnings about potential issues
   warnings: string[];
 }
+
+// Stored image types - for file-based image storage
+export interface StoredImage {
+  id: string;
+  sessionId: string;
+  entityId: string;
+  entityType: "character" | "location" | "item" | "scene";
+
+  // File information
+  filePath: string;           // Relative path from data/images/
+  fileSize: number;           // Size in bytes
+  mimeType: string;           // e.g., 'image/png'
+  width: number | null;
+  height: number | null;
+
+  // Metadata
+  label: string | null;
+  description: string | null;
+  source: "generated" | "uploaded" | "url";
+  sourceUrl: string | null;
+  generationTool: string | null;
+  generationPrompt: string | null;
+
+  // Flags
+  isPrimary: boolean;
+
+  // Timestamps
+  createdAt: string;
+}
+
+export interface StoreImageParams {
+  sessionId: string;
+  entityId: string;
+  entityType: "character" | "location" | "item" | "scene";
+
+  // Image data (one required)
+  base64?: string;            // Base64-encoded image data
+  url?: string;               // URL to fetch image from
+
+  // Metadata
+  label?: string;
+  description?: string;
+  mimeType?: string;          // Required if base64, inferred from URL/content otherwise
+  generationTool?: string;
+  generationPrompt?: string;
+
+  // Set as primary?
+  setAsPrimary?: boolean;
+}
+
+export interface ImageListResult {
+  entityId: string;
+  entityType: string;
+  images: StoredImage[];
+  primaryImage: StoredImage | null;
+}
