@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
+import { safeJsonParse } from "../utils/json.js";
 import type { Ability } from "../types/index.js";
 import { getCharacter } from "./character.js";
 
@@ -73,12 +74,12 @@ export function getAbility(id: string): Ability | null {
     name: row.name as string,
     description: row.description as string,
     category: row.category as string | null,
-    cost: JSON.parse(row.cost as string || "{}"),
+    cost: safeJsonParse<Record<string, number>>(row.cost as string || "{}", {}),
     cooldown: row.cooldown as number | null,
     currentCooldown: row.current_cooldown as number,
-    effects: JSON.parse(row.effects as string || "[]"),
-    requirements: JSON.parse(row.requirements as string || "{}"),
-    tags: JSON.parse(row.tags as string || "[]"),
+    effects: safeJsonParse<string[]>(row.effects as string || "[]", []),
+    requirements: safeJsonParse<Record<string, number>>(row.requirements as string || "{}", {}),
+    tags: safeJsonParse<string[]>(row.tags as string || "[]", []),
     createdAt: row.created_at as string,
   };
 }
@@ -184,12 +185,12 @@ export function listAbilities(
     name: row.name as string,
     description: row.description as string,
     category: row.category as string | null,
-    cost: JSON.parse(row.cost as string || "{}"),
+    cost: safeJsonParse<Record<string, number>>(row.cost as string || "{}", {}),
     cooldown: row.cooldown as number | null,
     currentCooldown: row.current_cooldown as number,
-    effects: JSON.parse(row.effects as string || "[]"),
-    requirements: JSON.parse(row.requirements as string || "{}"),
-    tags: JSON.parse(row.tags as string || "[]"),
+    effects: safeJsonParse<string[]>(row.effects as string || "[]", []),
+    requirements: safeJsonParse<Record<string, number>>(row.requirements as string || "{}", {}),
+    tags: safeJsonParse<string[]>(row.tags as string || "[]", []),
     createdAt: row.created_at as string,
   }));
 }
@@ -303,12 +304,12 @@ export function tickCooldowns(sessionId: string, amount = 1): Ability[] {
       name: row.name as string,
       description: row.description as string,
       category: row.category as string | null,
-      cost: JSON.parse(row.cost as string || "{}"),
+      cost: safeJsonParse<Record<string, number>>(row.cost as string || "{}", {}),
       cooldown: row.cooldown as number | null,
       currentCooldown: newCooldown,
-      effects: JSON.parse(row.effects as string || "[]"),
-      requirements: JSON.parse(row.requirements as string || "{}"),
-      tags: JSON.parse(row.tags as string || "[]"),
+      effects: safeJsonParse<string[]>(row.effects as string || "[]", []),
+      requirements: safeJsonParse<Record<string, number>>(row.requirements as string || "{}", {}),
+      tags: safeJsonParse<string[]>(row.tags as string || "[]", []),
       createdAt: row.created_at as string,
     });
   }

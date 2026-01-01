@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
+import { safeJsonParse } from "../utils/json.js";
 import type { StatusEffect } from "../types/index.js";
 
 export function applyStatusEffect(params: {
@@ -99,7 +100,7 @@ export function getStatusEffect(id: string): StatusEffect | null {
     duration: row.duration as number | null,
     stacks: row.stacks as number,
     maxStacks: row.max_stacks as number | null,
-    effects: JSON.parse(row.effects as string || "{}"),
+    effects: safeJsonParse<Record<string, number>>(row.effects as string || "{}", {}),
     sourceId: row.source_id as string | null,
     sourceType: row.source_type as string | null,
     expiresAt: row.expires_at as string | null,
@@ -141,7 +142,7 @@ export function listStatusEffects(
     duration: row.duration as number | null,
     stacks: row.stacks as number,
     maxStacks: row.max_stacks as number | null,
-    effects: JSON.parse(row.effects as string || "{}"),
+    effects: safeJsonParse<Record<string, number>>(row.effects as string || "{}", {}),
     sourceId: row.source_id as string | null,
     sourceType: row.source_type as string | null,
     expiresAt: row.expires_at as string | null,
@@ -182,7 +183,7 @@ export function tickDurations(sessionId: string, amount = 1): TickResult {
         duration: 0,
         stacks: row.stacks as number,
         maxStacks: row.max_stacks as number | null,
-        effects: JSON.parse(row.effects as string || "{}"),
+        effects: safeJsonParse<Record<string, number>>(row.effects as string || "{}", {}),
         sourceId: row.source_id as string | null,
         sourceType: row.source_type as string | null,
         expiresAt: row.expires_at as string | null,
@@ -201,7 +202,7 @@ export function tickDurations(sessionId: string, amount = 1): TickResult {
         duration: newDuration,
         stacks: row.stacks as number,
         maxStacks: row.max_stacks as number | null,
-        effects: JSON.parse(row.effects as string || "{}"),
+        effects: safeJsonParse<Record<string, number>>(row.effects as string || "{}", {}),
         sourceId: row.source_id as string | null,
         sourceType: row.source_type as string | null,
         expiresAt: row.expires_at as string | null,

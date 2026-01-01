@@ -1,15 +1,16 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import * as narrativeTools from "../tools/narrative.js";
+import { LIMITS } from "../utils/validation.js";
 
 export function registerNarrativeTools(server: McpServer) {
   server.tool(
     "log_event",
     "Log a narrative event",
     {
-      sessionId: z.string().describe("The session ID"),
-      eventType: z.string().describe("Type of event (e.g., 'dialogue', 'action', 'discovery', 'combat')"),
-      content: z.string().describe("Event content/description"),
+      sessionId: z.string().max(100).describe("The session ID"),
+      eventType: z.string().max(100).describe("Type of event (e.g., 'dialogue', 'action', 'discovery', 'combat')"),
+      content: z.string().max(LIMITS.CONTENT_MAX).describe("Event content/description"),
       metadata: z.record(z.string(), z.unknown()).optional().describe("Additional metadata"),
     },
     async (params) => {
@@ -24,10 +25,10 @@ export function registerNarrativeTools(server: McpServer) {
     "get_history",
     "Get narrative history",
     {
-      sessionId: z.string().describe("The session ID"),
+      sessionId: z.string().max(100).describe("The session ID"),
       limit: z.number().optional().describe("Maximum events to return"),
-      eventType: z.string().optional().describe("Filter by event type"),
-      since: z.string().optional().describe("Only events after this timestamp"),
+      eventType: z.string().max(100).optional().describe("Filter by event type"),
+      since: z.string().max(100).optional().describe("Only events after this timestamp"),
     },
     async ({ sessionId, limit, eventType, since }) => {
       const events = narrativeTools.getHistory(sessionId, { limit, eventType, since });
@@ -41,7 +42,7 @@ export function registerNarrativeTools(server: McpServer) {
     "get_summary",
     "Get a summary of the narrative so far",
     {
-      sessionId: z.string().describe("The session ID"),
+      sessionId: z.string().max(100).describe("The session ID"),
     },
     async ({ sessionId }) => {
       const summary = narrativeTools.getSummary(sessionId);
@@ -84,8 +85,8 @@ export function registerNarrativeTools(server: McpServer) {
     "export_story",
     "Export the game history as structured data for reconstruction into a narrative book. Use get_chapter_for_export to fetch individual chapters for writing.",
     {
-      sessionId: z.string().describe("The session ID"),
-      style: z.string().describe("Narrative style (e.g., 'literary-fiction', 'pulp-adventure', 'epic-fantasy', 'noir', or custom)"),
+      sessionId: z.string().max(100).describe("The session ID"),
+      style: z.string().max(100).describe("Narrative style (e.g., 'literary-fiction', 'pulp-adventure', 'epic-fantasy', 'noir', or custom)"),
     },
     async ({ sessionId, style }) => {
       const exportData = narrativeTools.exportStoryData(sessionId, style);
@@ -140,9 +141,9 @@ export function registerNarrativeTools(server: McpServer) {
     "get_chapter_for_export",
     "Get a single chapter's full event data for writing. Use this to fetch chapters one at a time for subagent processing.",
     {
-      sessionId: z.string().describe("The session ID"),
+      sessionId: z.string().max(100).describe("The session ID"),
       chapterNumber: z.number().describe("Chapter number (1-indexed)"),
-      style: z.string().describe("Narrative style for the instruction"),
+      style: z.string().max(100).describe("Narrative style for the instruction"),
     },
     async ({ sessionId, chapterNumber, style }) => {
       const exportData = narrativeTools.exportStoryData(sessionId, style);
@@ -190,20 +191,20 @@ export function registerNarrativeTools(server: McpServer) {
     "present_choices",
     "Present choices to the player with multi-select and free-form input support. Returns structured choice data for the DM agent to display.",
     {
-      sessionId: z.string().describe("The session ID"),
-      prompt: z.string().describe("The question or situation description to present"),
+      sessionId: z.string().max(100).describe("The session ID"),
+      prompt: z.string().max(LIMITS.DESCRIPTION_MAX).describe("The question or situation description to present"),
       choices: z.array(z.object({
-        id: z.string().describe("Unique identifier for this choice"),
-        label: z.string().describe("Short label for the choice (1-5 words)"),
-        description: z.string().describe("Fuller description of what this choice means"),
-        consequences: z.string().optional().describe("Hint at consequences (optional, for DM reference)"),
+        id: z.string().max(100).describe("Unique identifier for this choice"),
+        label: z.string().max(LIMITS.NAME_MAX).describe("Short label for the choice (1-5 words)"),
+        description: z.string().max(LIMITS.DESCRIPTION_MAX).describe("Fuller description of what this choice means"),
+        consequences: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("Hint at consequences (optional, for DM reference)"),
       })).min(1).max(6).describe("Available choices (1-6 options)"),
       allowMultiple: z.boolean().optional().describe("Allow selecting multiple choices (default: false)"),
       allowFreeform: z.boolean().optional().describe("Allow player to type a custom response (default: true)"),
-      freeformPlaceholder: z.string().optional().describe("Placeholder text for free-form input (default: 'Or describe what you want to do...')"),
+      freeformPlaceholder: z.string().max(LIMITS.NAME_MAX).optional().describe("Placeholder text for free-form input (default: 'Or describe what you want to do...')"),
       context: z.object({
-        locationId: z.string().optional(),
-        characterIds: z.array(z.string()).optional(),
+        locationId: z.string().max(100).optional(),
+        characterIds: z.array(z.string().max(100)).max(LIMITS.ARRAY_MAX).optional(),
         urgency: z.enum(["low", "medium", "high", "critical"]).optional(),
       }).optional().describe("Context for the choice"),
     },
@@ -237,9 +238,9 @@ export function registerNarrativeTools(server: McpServer) {
     "record_choice",
     "Record the player's choice after they've selected",
     {
-      sessionId: z.string().describe("The session ID"),
-      choiceIds: z.array(z.string()).describe("The ID(s) of the choice(s) the player selected"),
-      customResponse: z.string().optional().describe("If player chose 'Other', their custom response"),
+      sessionId: z.string().max(100).describe("The session ID"),
+      choiceIds: z.array(z.string().max(100)).max(LIMITS.ARRAY_MAX).describe("The ID(s) of the choice(s) the player selected"),
+      customResponse: z.string().max(LIMITS.CONTENT_MAX).optional().describe("If player chose 'Other', their custom response"),
     },
     async ({ sessionId, choiceIds, customResponse }) => {
       const event = narrativeTools.logEvent({

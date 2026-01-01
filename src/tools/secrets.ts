@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
+import { safeJsonParse } from "../utils/json.js";
 import type { Secret } from "../types/index.js";
 
 export function createSecret(params: {
@@ -59,9 +60,9 @@ export function getSecret(id: string): Secret | null {
     category: row.category as string | null,
     relatedEntityId: row.related_entity_id as string | null,
     relatedEntityType: row.related_entity_type as string | null,
-    revealedTo: JSON.parse(row.revealed_to as string || "[]"),
+    revealedTo: safeJsonParse<string[]>(row.revealed_to as string || "[]", []),
     isPublic: (row.is_public as number) === 1,
-    clues: JSON.parse(row.clues as string || "[]"),
+    clues: safeJsonParse<string[]>(row.clues as string || "[]", []),
     createdAt: row.created_at as string,
   };
 }
@@ -149,9 +150,9 @@ export function listSecrets(
     category: row.category as string | null,
     relatedEntityId: row.related_entity_id as string | null,
     relatedEntityType: row.related_entity_type as string | null,
-    revealedTo: JSON.parse(row.revealed_to as string || "[]"),
+    revealedTo: safeJsonParse<string[]>(row.revealed_to as string || "[]", []),
     isPublic: (row.is_public as number) === 1,
-    clues: JSON.parse(row.clues as string || "[]"),
+    clues: safeJsonParse<string[]>(row.clues as string || "[]", []),
     createdAt: row.created_at as string,
   }));
 

@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
+import { safeJsonParse } from "../utils/json.js";
 import type { Session, RuleSystem, GamePreferences } from "../types/index.js";
 
 export function createSession(params: {
@@ -52,8 +53,8 @@ export function loadSession(id: string): Session | null {
     name: row.name as string,
     setting: row.setting as string,
     style: row.style as string,
-    rules: row.rules ? JSON.parse(row.rules as string) : null,
-    preferences: row.preferences ? JSON.parse(row.preferences as string) : null,
+    rules: row.rules ? safeJsonParse<RuleSystem>(row.rules as string, null as unknown as RuleSystem) : null,
+    preferences: row.preferences ? safeJsonParse<GamePreferences>(row.preferences as string, null as unknown as GamePreferences) : null,
     currentLocationId: row.current_location_id as string | null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
@@ -70,8 +71,8 @@ export function listSessions(): Session[] {
     name: row.name as string,
     setting: row.setting as string,
     style: row.style as string,
-    rules: row.rules ? JSON.parse(row.rules as string) : null,
-    preferences: row.preferences ? JSON.parse(row.preferences as string) : null,
+    rules: row.rules ? safeJsonParse<RuleSystem>(row.rules as string, null as unknown as RuleSystem) : null,
+    preferences: row.preferences ? safeJsonParse<GamePreferences>(row.preferences as string, null as unknown as GamePreferences) : null,
     currentLocationId: row.current_location_id as string | null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,

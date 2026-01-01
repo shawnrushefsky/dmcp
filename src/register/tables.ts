@@ -1,13 +1,14 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import * as tableTools from "../tools/tables.js";
+import { LIMITS } from "../utils/validation.js";
 
 const tableEntrySchema = z.object({
   minRoll: z.number().describe("Minimum roll to get this result"),
   maxRoll: z.number().describe("Maximum roll to get this result"),
-  result: z.string().describe("The result text"),
+  result: z.string().max(LIMITS.DESCRIPTION_MAX).describe("The result text"),
   weight: z.number().optional().describe("Weight for weighted random selection"),
-  subtable: z.string().optional().describe("ID of subtable to roll on"),
+  subtable: z.string().max(100).optional().describe("ID of subtable to roll on"),
   metadata: z.record(z.string(), z.unknown()).optional().describe("Additional data"),
 });
 
@@ -16,12 +17,12 @@ export function registerTableTools(server: McpServer) {
     "create_random_table",
     "Create a new random table for encounters, loot, weather, etc.",
     {
-      sessionId: z.string().describe("The session ID"),
-      name: z.string().describe("Table name"),
-      description: z.string().optional().describe("Table description"),
-      category: z.string().optional().describe("Category (e.g., 'encounter', 'loot', 'weather', 'name')"),
-      entries: z.array(tableEntrySchema).optional().describe("Table entries"),
-      rollExpression: z.string().optional().describe("Dice expression (default: '1d100')"),
+      sessionId: z.string().max(100).describe("The session ID"),
+      name: z.string().min(1).max(LIMITS.NAME_MAX).describe("Table name"),
+      description: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("Table description"),
+      category: z.string().max(100).optional().describe("Category (e.g., 'encounter', 'loot', 'weather', 'name')"),
+      entries: z.array(tableEntrySchema).max(LIMITS.ARRAY_MAX).optional().describe("Table entries"),
+      rollExpression: z.string().max(100).optional().describe("Dice expression (default: '1d100')"),
     },
     async (params) => {
       const table = tableTools.createTable(params);
@@ -35,7 +36,7 @@ export function registerTableTools(server: McpServer) {
     "get_random_table",
     "Get a random table by ID",
     {
-      tableId: z.string().describe("The table ID"),
+      tableId: z.string().max(100).describe("The table ID"),
     },
     async ({ tableId }) => {
       const table = tableTools.getTable(tableId);
@@ -55,12 +56,12 @@ export function registerTableTools(server: McpServer) {
     "update_random_table",
     "Update a random table",
     {
-      tableId: z.string().describe("The table ID"),
-      name: z.string().optional().describe("New name"),
-      description: z.string().optional().describe("New description"),
-      category: z.string().nullable().optional().describe("New category"),
-      entries: z.array(tableEntrySchema).optional().describe("Replace all entries"),
-      rollExpression: z.string().optional().describe("New dice expression"),
+      tableId: z.string().max(100).describe("The table ID"),
+      name: z.string().max(LIMITS.NAME_MAX).optional().describe("New name"),
+      description: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("New description"),
+      category: z.string().max(100).nullable().optional().describe("New category"),
+      entries: z.array(tableEntrySchema).max(LIMITS.ARRAY_MAX).optional().describe("Replace all entries"),
+      rollExpression: z.string().max(100).optional().describe("New dice expression"),
     },
     async ({ tableId, ...updates }) => {
       const table = tableTools.updateTable(tableId, updates);
@@ -80,7 +81,7 @@ export function registerTableTools(server: McpServer) {
     "delete_random_table",
     "Delete a random table",
     {
-      tableId: z.string().describe("The table ID"),
+      tableId: z.string().max(100).describe("The table ID"),
     },
     async ({ tableId }) => {
       const success = tableTools.deleteTable(tableId);
@@ -95,8 +96,8 @@ export function registerTableTools(server: McpServer) {
     "list_random_tables",
     "List random tables in a session",
     {
-      sessionId: z.string().describe("The session ID"),
-      category: z.string().optional().describe("Filter by category"),
+      sessionId: z.string().max(100).describe("The session ID"),
+      category: z.string().max(100).optional().describe("Filter by category"),
     },
     async ({ sessionId, category }) => {
       const tables = tableTools.listTables(sessionId, category);
@@ -110,7 +111,7 @@ export function registerTableTools(server: McpServer) {
     "roll_on_table",
     "Roll on a random table and get a result",
     {
-      tableId: z.string().describe("The table ID"),
+      tableId: z.string().max(100).describe("The table ID"),
       modifier: z.number().optional().describe("Modifier to add to the roll"),
     },
     async ({ tableId, modifier }) => {
@@ -131,7 +132,7 @@ export function registerTableTools(server: McpServer) {
     "add_table_entry",
     "Add an entry to an existing random table",
     {
-      tableId: z.string().describe("The table ID"),
+      tableId: z.string().max(100).describe("The table ID"),
       entry: tableEntrySchema.describe("The entry to add"),
     },
     async ({ tableId, entry }) => {
@@ -152,7 +153,7 @@ export function registerTableTools(server: McpServer) {
     "remove_table_entry",
     "Remove an entry from a random table by index",
     {
-      tableId: z.string().describe("The table ID"),
+      tableId: z.string().max(100).describe("The table ID"),
       index: z.number().describe("Index of the entry to remove (0-based)"),
     },
     async ({ tableId, index }) => {

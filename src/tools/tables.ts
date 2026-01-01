@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
+import { safeJsonParse } from "../utils/json.js";
 import type { RandomTable, TableEntry, TableRollResult, DiceRoll } from "../types/index.js";
 import { roll } from "./dice.js";
 
@@ -56,7 +57,7 @@ export function getTable(id: string): RandomTable | null {
     name: row.name as string,
     description: row.description as string || "",
     category: row.category as string | null,
-    entries: JSON.parse(row.entries as string),
+    entries: safeJsonParse<TableEntry[]>(row.entries as string, []),
     rollExpression: row.roll_expression as string,
     createdAt: row.created_at as string,
   };
@@ -125,7 +126,7 @@ export function listTables(sessionId: string, category?: string): RandomTable[] 
     name: row.name as string,
     description: row.description as string || "",
     category: row.category as string | null,
-    entries: JSON.parse(row.entries as string),
+    entries: safeJsonParse<TableEntry[]>(row.entries as string, []),
     rollExpression: row.roll_expression as string,
     createdAt: row.created_at as string,
   }));

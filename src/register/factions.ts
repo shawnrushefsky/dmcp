@@ -1,20 +1,21 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import * as factionTools from "../tools/faction.js";
+import { LIMITS } from "../utils/validation.js";
 
 export function registerFactionTools(server: McpServer) {
   server.tool(
     "create_faction",
     "Create a new faction/organization",
     {
-      sessionId: z.string().describe("The session ID"),
-      name: z.string().describe("Faction name"),
-      description: z.string().optional().describe("Faction description"),
-      leaderId: z.string().optional().describe("Character ID of the leader"),
-      headquartersId: z.string().optional().describe("Location ID of headquarters"),
+      sessionId: z.string().max(100).describe("The session ID"),
+      name: z.string().min(1).max(LIMITS.NAME_MAX).describe("Faction name"),
+      description: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("Faction description"),
+      leaderId: z.string().max(100).optional().describe("Character ID of the leader"),
+      headquartersId: z.string().max(100).optional().describe("Location ID of headquarters"),
       resources: z.record(z.number()).optional().describe("Initial resources (e.g., {gold: 1000, soldiers: 50})"),
-      goals: z.array(z.string()).optional().describe("Faction goals"),
-      traits: z.array(z.string()).optional().describe("Faction traits (e.g., ['secretive', 'militant'])"),
+      goals: z.array(z.string().max(LIMITS.DESCRIPTION_MAX)).max(LIMITS.ARRAY_MAX).optional().describe("Faction goals"),
+      traits: z.array(z.string().max(LIMITS.NAME_MAX)).max(LIMITS.ARRAY_MAX).optional().describe("Faction traits (e.g., ['secretive', 'militant'])"),
       status: z.enum(["active", "disbanded", "hidden"]).optional().describe("Faction status"),
     },
     async (params) => {
@@ -29,7 +30,7 @@ export function registerFactionTools(server: McpServer) {
     "get_faction",
     "Get a faction by ID",
     {
-      factionId: z.string().describe("The faction ID"),
+      factionId: z.string().max(100).describe("The faction ID"),
     },
     async ({ factionId }) => {
       const faction = factionTools.getFaction(factionId);
@@ -49,12 +50,12 @@ export function registerFactionTools(server: McpServer) {
     "update_faction",
     "Update a faction's details",
     {
-      factionId: z.string().describe("The faction ID"),
-      name: z.string().optional().describe("New name"),
-      description: z.string().optional().describe("New description"),
-      leaderId: z.string().nullable().optional().describe("New leader ID (null to remove)"),
-      headquartersId: z.string().nullable().optional().describe("New headquarters ID (null to remove)"),
-      traits: z.array(z.string()).optional().describe("Replace traits"),
+      factionId: z.string().max(100).describe("The faction ID"),
+      name: z.string().max(LIMITS.NAME_MAX).optional().describe("New name"),
+      description: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("New description"),
+      leaderId: z.string().max(100).nullable().optional().describe("New leader ID (null to remove)"),
+      headquartersId: z.string().max(100).nullable().optional().describe("New headquarters ID (null to remove)"),
+      traits: z.array(z.string().max(LIMITS.NAME_MAX)).max(LIMITS.ARRAY_MAX).optional().describe("Replace traits"),
       status: z.enum(["active", "disbanded", "hidden"]).optional().describe("New status"),
     },
     async ({ factionId, ...updates }) => {
@@ -75,7 +76,7 @@ export function registerFactionTools(server: McpServer) {
     "delete_faction",
     "Delete a faction",
     {
-      factionId: z.string().describe("The faction ID"),
+      factionId: z.string().max(100).describe("The faction ID"),
     },
     async ({ factionId }) => {
       const success = factionTools.deleteFaction(factionId);
@@ -90,7 +91,7 @@ export function registerFactionTools(server: McpServer) {
     "list_factions",
     "List factions in a session",
     {
-      sessionId: z.string().describe("The session ID"),
+      sessionId: z.string().max(100).describe("The session ID"),
       status: z.enum(["active", "disbanded", "hidden"]).optional().describe("Filter by status"),
     },
     async ({ sessionId, status }) => {
@@ -105,8 +106,8 @@ export function registerFactionTools(server: McpServer) {
     "modify_faction_resource",
     "Add or subtract from a faction resource",
     {
-      factionId: z.string().describe("The faction ID"),
-      resource: z.string().describe("Resource name (e.g., 'gold', 'soldiers')"),
+      factionId: z.string().max(100).describe("The faction ID"),
+      resource: z.string().max(LIMITS.NAME_MAX).describe("Resource name (e.g., 'gold', 'soldiers')"),
       delta: z.number().describe("Amount to add (positive) or subtract (negative)"),
     },
     async (params) => {
@@ -127,8 +128,8 @@ export function registerFactionTools(server: McpServer) {
     "set_faction_resource",
     "Set a faction resource to a specific value",
     {
-      factionId: z.string().describe("The faction ID"),
-      resource: z.string().describe("Resource name"),
+      factionId: z.string().max(100).describe("The faction ID"),
+      resource: z.string().max(LIMITS.NAME_MAX).describe("Resource name"),
       value: z.number().describe("New value (0 or less removes the resource)"),
     },
     async (params) => {
@@ -149,8 +150,8 @@ export function registerFactionTools(server: McpServer) {
     "add_faction_goal",
     "Add a goal to a faction",
     {
-      factionId: z.string().describe("The faction ID"),
-      goal: z.string().describe("The goal to add"),
+      factionId: z.string().max(100).describe("The faction ID"),
+      goal: z.string().max(LIMITS.DESCRIPTION_MAX).describe("The goal to add"),
     },
     async ({ factionId, goal }) => {
       const faction = factionTools.addFactionGoal(factionId, goal);
@@ -170,7 +171,7 @@ export function registerFactionTools(server: McpServer) {
     "complete_faction_goal",
     "Mark a faction goal as complete (removes it)",
     {
-      factionId: z.string().describe("The faction ID"),
+      factionId: z.string().max(100).describe("The faction ID"),
       goalIndex: z.number().describe("Index of the goal to complete (0-based)"),
     },
     async ({ factionId, goalIndex }) => {
@@ -191,8 +192,8 @@ export function registerFactionTools(server: McpServer) {
     "add_faction_trait",
     "Add a trait to a faction",
     {
-      factionId: z.string().describe("The faction ID"),
-      trait: z.string().describe("The trait to add"),
+      factionId: z.string().max(100).describe("The faction ID"),
+      trait: z.string().max(LIMITS.NAME_MAX).describe("The trait to add"),
     },
     async ({ factionId, trait }) => {
       const faction = factionTools.addFactionTrait(factionId, trait);
@@ -212,8 +213,8 @@ export function registerFactionTools(server: McpServer) {
     "remove_faction_trait",
     "Remove a trait from a faction",
     {
-      factionId: z.string().describe("The faction ID"),
-      trait: z.string().describe("The trait to remove"),
+      factionId: z.string().max(100).describe("The faction ID"),
+      trait: z.string().max(LIMITS.NAME_MAX).describe("The trait to remove"),
     },
     async ({ factionId, trait }) => {
       const faction = factionTools.removeFactionTrait(factionId, trait);

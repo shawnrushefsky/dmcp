@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
+import { safeJsonParse } from "../utils/json.js";
 import type { Item, ItemProperties, ImageGeneration } from "../types/index.js";
 
 export function createItem(params: {
@@ -58,8 +59,8 @@ export function getItem(id: string): Item | null {
     ownerId: row.owner_id as string,
     ownerType: row.owner_type as "character" | "location",
     name: row.name as string,
-    properties: JSON.parse(row.properties as string),
-    imageGen: row.image_gen ? JSON.parse(row.image_gen as string) : null,
+    properties: safeJsonParse<ItemProperties>(row.properties as string, { description: "", type: "misc" }),
+    imageGen: row.image_gen ? safeJsonParse<ImageGeneration>(row.image_gen as string, null as unknown as ImageGeneration) : null,
   };
 }
 
@@ -146,8 +147,8 @@ export function getInventory(
     ownerId: row.owner_id as string,
     ownerType: row.owner_type as "character" | "location",
     name: row.name as string,
-    properties: JSON.parse(row.properties as string),
-    imageGen: row.image_gen ? JSON.parse(row.image_gen as string) : null,
+    properties: safeJsonParse<ItemProperties>(row.properties as string, { description: "", type: "misc" }),
+    imageGen: row.image_gen ? safeJsonParse<ImageGeneration>(row.image_gen as string, null as unknown as ImageGeneration) : null,
   }));
 }
 
@@ -169,8 +170,8 @@ export function findItemByName(
     ownerId: row.owner_id as string,
     ownerType: row.owner_type as "character" | "location",
     name: row.name as string,
-    properties: JSON.parse(row.properties as string),
-    imageGen: row.image_gen ? JSON.parse(row.image_gen as string) : null,
+    properties: safeJsonParse<ItemProperties>(row.properties as string, { description: "", type: "misc" }),
+    imageGen: row.image_gen ? safeJsonParse<ImageGeneration>(row.image_gen as string, null as unknown as ImageGeneration) : null,
   };
 }
 
@@ -185,7 +186,7 @@ export function listSessionItems(sessionId: string): Item[] {
     ownerId: row.owner_id as string,
     ownerType: row.owner_type as "character" | "location",
     name: row.name as string,
-    properties: JSON.parse(row.properties as string),
-    imageGen: row.image_gen ? JSON.parse(row.image_gen as string) : null,
+    properties: safeJsonParse<ItemProperties>(row.properties as string, { description: "", type: "misc" }),
+    imageGen: row.image_gen ? safeJsonParse<ImageGeneration>(row.image_gen as string, null as unknown as ImageGeneration) : null,
   }));
 }

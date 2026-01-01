@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
+import { safeJsonParse } from "../utils/json.js";
 import type { Quest, QuestObjective } from "../types/index.js";
 
 export function createQuest(params: {
@@ -56,7 +57,7 @@ export function getQuest(id: string): Quest | null {
     sessionId: row.session_id as string,
     name: row.name as string,
     description: row.description as string,
-    objectives: JSON.parse(row.objectives as string),
+    objectives: safeJsonParse<QuestObjective[]>(row.objectives as string, []),
     status: row.status as Quest["status"],
     rewards: row.rewards as string | undefined,
   };
@@ -186,7 +187,7 @@ export function listQuests(
     sessionId: row.session_id as string,
     name: row.name as string,
     description: row.description as string,
-    objectives: JSON.parse(row.objectives as string),
+    objectives: safeJsonParse<QuestObjective[]>(row.objectives as string, []),
     status: row.status as Quest["status"],
     rewards: row.rewards as string | undefined,
   }));

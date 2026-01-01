@@ -1,21 +1,22 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import * as questTools from "../tools/quest.js";
+import { LIMITS } from "../utils/validation.js";
 
 export function registerQuestTools(server: McpServer) {
   server.tool(
     "create_quest",
     "Create a new quest",
     {
-      sessionId: z.string().describe("The session ID"),
-      name: z.string().describe("Quest name"),
-      description: z.string().describe("Quest description"),
+      sessionId: z.string().max(100).describe("The session ID"),
+      name: z.string().min(1).max(LIMITS.NAME_MAX).describe("Quest name"),
+      description: z.string().max(LIMITS.DESCRIPTION_MAX).describe("Quest description"),
       objectives: z.array(z.object({
-        description: z.string(),
+        description: z.string().max(LIMITS.DESCRIPTION_MAX),
         completed: z.boolean().optional(),
         optional: z.boolean().optional(),
-      })).describe("Quest objectives"),
-      rewards: z.string().optional().describe("Quest rewards"),
+      })).max(LIMITS.ARRAY_MAX).describe("Quest objectives"),
+      rewards: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("Quest rewards"),
     },
     async (params) => {
       const quest = questTools.createQuest({
@@ -36,7 +37,7 @@ export function registerQuestTools(server: McpServer) {
     "get_quest",
     "Get quest details",
     {
-      questId: z.string().describe("The quest ID"),
+      questId: z.string().max(100).describe("The quest ID"),
     },
     async ({ questId }) => {
       const quest = questTools.getQuest(questId);
@@ -56,11 +57,11 @@ export function registerQuestTools(server: McpServer) {
     "update_quest",
     "Update a quest",
     {
-      questId: z.string().describe("The quest ID"),
-      name: z.string().optional().describe("New name"),
-      description: z.string().optional().describe("New description"),
+      questId: z.string().max(100).describe("The quest ID"),
+      name: z.string().max(LIMITS.NAME_MAX).optional().describe("New name"),
+      description: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("New description"),
       status: z.enum(["active", "completed", "failed", "abandoned"]).optional().describe("New status"),
-      rewards: z.string().optional().describe("Updated rewards"),
+      rewards: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("Updated rewards"),
     },
     async ({ questId, ...updates }) => {
       const quest = questTools.updateQuest(questId, updates);
@@ -80,8 +81,8 @@ export function registerQuestTools(server: McpServer) {
     "complete_objective",
     "Mark a quest objective as completed",
     {
-      questId: z.string().describe("The quest ID"),
-      objectiveId: z.string().describe("The objective ID"),
+      questId: z.string().max(100).describe("The quest ID"),
+      objectiveId: z.string().max(100).describe("The objective ID"),
     },
     async ({ questId, objectiveId }) => {
       const quest = questTools.completeObjective(questId, objectiveId);
@@ -101,8 +102,8 @@ export function registerQuestTools(server: McpServer) {
     "add_objective",
     "Add a new objective to a quest",
     {
-      questId: z.string().describe("The quest ID"),
-      description: z.string().describe("Objective description"),
+      questId: z.string().max(100).describe("The quest ID"),
+      description: z.string().max(LIMITS.DESCRIPTION_MAX).describe("Objective description"),
       optional: z.boolean().optional().describe("Is this objective optional?"),
     },
     async ({ questId, description, optional }) => {
@@ -123,7 +124,7 @@ export function registerQuestTools(server: McpServer) {
     "list_quests",
     "List quests in a session",
     {
-      sessionId: z.string().describe("The session ID"),
+      sessionId: z.string().max(100).describe("The session ID"),
       status: z.enum(["active", "completed", "failed", "abandoned"]).optional().describe("Filter by status"),
     },
     async ({ sessionId, status }) => {

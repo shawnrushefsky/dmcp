@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
+import { safeJsonParse } from "../utils/json.js";
 import type { Combat, CombatParticipant } from "../types/index.js";
 import { getCharacter } from "./character.js";
 import { roll } from "./dice.js";
@@ -74,11 +75,11 @@ export function getCombat(id: string): Combat | null {
     id: row.id as string,
     sessionId: row.session_id as string,
     locationId: row.location_id as string,
-    participants: JSON.parse(row.participants as string),
+    participants: safeJsonParse<CombatParticipant[]>(row.participants as string, []),
     currentTurn: row.current_turn as number,
     round: row.round as number,
     status: row.status as "active" | "resolved",
-    log: JSON.parse(row.log as string),
+    log: safeJsonParse<string[]>(row.log as string, []),
   };
 }
 
@@ -95,11 +96,11 @@ export function getActiveCombat(sessionId: string): Combat | null {
     id: row.id as string,
     sessionId: row.session_id as string,
     locationId: row.location_id as string,
-    participants: JSON.parse(row.participants as string),
+    participants: safeJsonParse<CombatParticipant[]>(row.participants as string, []),
     currentTurn: row.current_turn as number,
     round: row.round as number,
     status: row.status as "active" | "resolved",
-    log: JSON.parse(row.log as string),
+    log: safeJsonParse<string[]>(row.log as string, []),
   };
 }
 

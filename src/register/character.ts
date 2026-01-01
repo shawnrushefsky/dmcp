@@ -2,26 +2,27 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import * as characterTools from "../tools/character.js";
 import { imageGenSchema, voiceSchema } from "../schemas/index.js";
+import { LIMITS } from "../utils/validation.js";
 
 export function registerCharacterTools(server: McpServer) {
   server.tool(
     "create_character",
     "Create a new character (PC or NPC)",
     {
-      sessionId: z.string().describe("The session ID"),
-      name: z.string().describe("Character name"),
+      sessionId: z.string().max(100).describe("The session ID"),
+      name: z.string().min(1).max(LIMITS.NAME_MAX).describe("Character name"),
       isPlayer: z.boolean().describe("True for player character, false for NPC"),
-      attributes: z.record(z.string(), z.number()).optional().describe("Character attributes"),
-      skills: z.record(z.string(), z.number()).optional().describe("Character skills"),
+      attributes: z.record(z.string().max(50), z.number()).optional().describe("Character attributes"),
+      skills: z.record(z.string().max(50), z.number()).optional().describe("Character skills"),
       status: z.object({
         health: z.number().optional(),
         maxHealth: z.number().optional(),
-        conditions: z.array(z.string()).optional(),
+        conditions: z.array(z.string().max(100)).max(LIMITS.ARRAY_MAX).optional(),
         experience: z.number().optional(),
         level: z.number().optional(),
       }).optional().describe("Initial status"),
-      locationId: z.string().optional().describe("Starting location"),
-      notes: z.string().optional().describe("Character notes"),
+      locationId: z.string().max(100).optional().describe("Starting location"),
+      notes: z.string().max(LIMITS.CONTENT_MAX).optional().describe("Character notes"),
       voice: voiceSchema.optional().describe("Voice characteristics for TTS/voice mode"),
       imageGen: imageGenSchema.optional().describe("Image generation metadata for character portraits"),
     },

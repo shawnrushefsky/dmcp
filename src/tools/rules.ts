@@ -1,4 +1,5 @@
 import { getDatabase } from "../db/connection.js";
+import { safeJsonParseOrNull } from "../utils/json.js";
 import type { RuleSystem } from "../types/index.js";
 
 export function setRules(sessionId: string, rules: RuleSystem): boolean {
@@ -17,7 +18,7 @@ export function getRules(sessionId: string): RuleSystem | null {
   const row = stmt.get(sessionId) as { rules: string | null } | undefined;
 
   if (!row || !row.rules) return null;
-  return JSON.parse(row.rules);
+  return safeJsonParseOrNull<RuleSystem>(row.rules);
 }
 
 export function updateRules(

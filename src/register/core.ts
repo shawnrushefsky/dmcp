@@ -2,6 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import * as sessionTools from "../tools/session.js";
 import * as rulesTools from "../tools/rules.js";
+import { LIMITS } from "../utils/validation.js";
 
 export function registerCoreTools(server: McpServer) {
   // ============================================================================
@@ -24,9 +25,9 @@ export function registerCoreTools(server: McpServer) {
     "create_session",
     "Create a new game session with a setting and style",
     {
-      name: z.string().describe("Name for this game session"),
-      setting: z.string().describe("The game setting (e.g., 'dark fantasy', 'cyberpunk', 'cosmic horror')"),
-      style: z.string().describe("The narrative style (e.g., 'gritty', 'heroic', 'survival')"),
+      name: z.string().min(1).max(LIMITS.NAME_MAX).describe("Name for this game session"),
+      setting: z.string().min(1).max(LIMITS.DESCRIPTION_MAX).describe("The game setting (e.g., 'dark fantasy', 'cyberpunk', 'cosmic horror')"),
+      style: z.string().min(1).max(LIMITS.NAME_MAX).describe("The narrative style (e.g., 'gritty', 'heroic', 'survival')"),
     },
     async ({ name, setting, style }) => {
       const session = sessionTools.createSession({ name, setting, style });
@@ -40,7 +41,7 @@ export function registerCoreTools(server: McpServer) {
     "load_session",
     "Load an existing game session by ID",
     {
-      sessionId: z.string().describe("The session ID to load"),
+      sessionId: z.string().max(100).describe("The session ID to load"),
     },
     async ({ sessionId }) => {
       const session = sessionTools.loadSession(sessionId);

@@ -1,23 +1,24 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import * as abilityTools from "../tools/ability.js";
+import { LIMITS } from "../utils/validation.js";
 
 export function registerAbilityTools(server: McpServer) {
   server.tool(
     "create_ability",
     "Create an ability template or character-owned ability",
     {
-      sessionId: z.string().describe("The session ID"),
+      sessionId: z.string().max(100).describe("The session ID"),
       ownerType: z.enum(["template", "character"]).describe("'template' for reusable, 'character' for owned"),
-      ownerId: z.string().optional().describe("Character ID if ownerType is 'character'"),
-      name: z.string().describe("Ability name"),
-      description: z.string().optional().describe("Ability description"),
-      category: z.string().optional().describe("Category (e.g., 'spell', 'skill', 'power')"),
+      ownerId: z.string().max(100).optional().describe("Character ID if ownerType is 'character'"),
+      name: z.string().min(1).max(LIMITS.NAME_MAX).describe("Ability name"),
+      description: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("Ability description"),
+      category: z.string().max(100).optional().describe("Category (e.g., 'spell', 'skill', 'power')"),
       cost: z.record(z.number()).optional().describe("Resource costs (e.g., {mana: 10, stamina: 5})"),
       cooldown: z.number().optional().describe("Cooldown in rounds"),
-      effects: z.array(z.string()).optional().describe("Effect descriptions"),
+      effects: z.array(z.string().max(LIMITS.DESCRIPTION_MAX)).max(LIMITS.ARRAY_MAX).optional().describe("Effect descriptions"),
       requirements: z.record(z.number()).optional().describe("Requirements (e.g., {level: 5, strength: 10})"),
-      tags: z.array(z.string()).optional().describe("Tags for categorization"),
+      tags: z.array(z.string().max(LIMITS.NAME_MAX)).max(LIMITS.ARRAY_MAX).optional().describe("Tags for categorization"),
     },
     async (params) => {
       const ability = abilityTools.createAbility(params);
@@ -31,7 +32,7 @@ export function registerAbilityTools(server: McpServer) {
     "get_ability",
     "Get an ability by ID",
     {
-      abilityId: z.string().describe("The ability ID"),
+      abilityId: z.string().max(100).describe("The ability ID"),
     },
     async ({ abilityId }) => {
       const ability = abilityTools.getAbility(abilityId);
@@ -51,15 +52,15 @@ export function registerAbilityTools(server: McpServer) {
     "update_ability",
     "Update an ability's details",
     {
-      abilityId: z.string().describe("The ability ID"),
-      name: z.string().optional().describe("New name"),
-      description: z.string().optional().describe("New description"),
-      category: z.string().nullable().optional().describe("New category"),
+      abilityId: z.string().max(100).describe("The ability ID"),
+      name: z.string().max(LIMITS.NAME_MAX).optional().describe("New name"),
+      description: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("New description"),
+      category: z.string().max(100).nullable().optional().describe("New category"),
       cost: z.record(z.number()).optional().describe("New cost"),
       cooldown: z.number().nullable().optional().describe("New cooldown"),
-      effects: z.array(z.string()).optional().describe("New effects"),
+      effects: z.array(z.string().max(LIMITS.DESCRIPTION_MAX)).max(LIMITS.ARRAY_MAX).optional().describe("New effects"),
       requirements: z.record(z.number()).optional().describe("New requirements"),
-      tags: z.array(z.string()).optional().describe("New tags"),
+      tags: z.array(z.string().max(LIMITS.NAME_MAX)).max(LIMITS.ARRAY_MAX).optional().describe("New tags"),
     },
     async ({ abilityId, ...updates }) => {
       const ability = abilityTools.updateAbility(abilityId, updates);
@@ -79,7 +80,7 @@ export function registerAbilityTools(server: McpServer) {
     "delete_ability",
     "Delete an ability",
     {
-      abilityId: z.string().describe("The ability ID"),
+      abilityId: z.string().max(100).describe("The ability ID"),
     },
     async ({ abilityId }) => {
       const success = abilityTools.deleteAbility(abilityId);
@@ -94,10 +95,10 @@ export function registerAbilityTools(server: McpServer) {
     "list_abilities",
     "List abilities with optional filters",
     {
-      sessionId: z.string().describe("The session ID"),
+      sessionId: z.string().max(100).describe("The session ID"),
       ownerType: z.enum(["template", "character"]).optional().describe("Filter by owner type"),
-      ownerId: z.string().optional().describe("Filter by owner ID"),
-      category: z.string().optional().describe("Filter by category"),
+      ownerId: z.string().max(100).optional().describe("Filter by owner ID"),
+      category: z.string().max(100).optional().describe("Filter by category"),
     },
     async ({ sessionId, ...filter }) => {
       const abilities = abilityTools.listAbilities(sessionId, filter);
@@ -111,8 +112,8 @@ export function registerAbilityTools(server: McpServer) {
     "learn_ability",
     "Copy a template ability to a character",
     {
-      templateId: z.string().describe("The template ability ID"),
-      characterId: z.string().describe("The character ID to learn the ability"),
+      templateId: z.string().max(100).describe("The template ability ID"),
+      characterId: z.string().max(100).describe("The character ID to learn the ability"),
     },
     async ({ templateId, characterId }) => {
       const ability = abilityTools.learnAbility(templateId, characterId);
@@ -132,8 +133,8 @@ export function registerAbilityTools(server: McpServer) {
     "use_ability",
     "Use an ability (checks cooldown, sets new cooldown)",
     {
-      abilityId: z.string().describe("The ability ID"),
-      characterId: z.string().describe("The character using the ability"),
+      abilityId: z.string().max(100).describe("The ability ID"),
+      characterId: z.string().max(100).describe("The character using the ability"),
     },
     async ({ abilityId, characterId }) => {
       const result = abilityTools.useAbility(abilityId, characterId);
@@ -148,7 +149,7 @@ export function registerAbilityTools(server: McpServer) {
     "tick_ability_cooldowns",
     "Reduce all ability cooldowns (call at end of round)",
     {
-      sessionId: z.string().describe("The session ID"),
+      sessionId: z.string().max(100).describe("The session ID"),
       amount: z.number().optional().describe("Rounds to tick (default: 1)"),
     },
     async ({ sessionId, amount }) => {
@@ -163,8 +164,8 @@ export function registerAbilityTools(server: McpServer) {
     "check_ability_requirements",
     "Check if a character meets an ability's requirements",
     {
-      abilityId: z.string().describe("The ability ID"),
-      characterId: z.string().describe("The character ID"),
+      abilityId: z.string().max(100).describe("The ability ID"),
+      characterId: z.string().max(100).describe("The character ID"),
     },
     async ({ abilityId, characterId }) => {
       const result = abilityTools.checkRequirements(abilityId, characterId);

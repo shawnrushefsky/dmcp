@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
+import { safeJsonParse } from "../utils/json.js";
 import type { GameTime, GameDateTime, CalendarConfig, ScheduledEvent } from "../types/index.js";
 
 // Default calendar (fantasy-style)
@@ -106,8 +107,8 @@ export function getTime(sessionId: string): GameTime | null {
 
   return {
     sessionId: row.session_id as string,
-    currentTime: JSON.parse(row.current_time as string),
-    calendarConfig: JSON.parse(row.calendar_config as string),
+    currentTime: safeJsonParse<GameDateTime>(row.current_time as string, { year: 1, month: 1, day: 1, hour: 0, minute: 0 }),
+    calendarConfig: safeJsonParse<CalendarConfig>(row.calendar_config as string, DEFAULT_CALENDAR),
   };
 }
 
@@ -160,7 +161,7 @@ export function advanceTime(
   const triggeredEvents: ScheduledEvent[] = [];
 
   for (const row of events) {
-    const triggerTime = JSON.parse(row.trigger_time as string) as GameDateTime;
+    const triggerTime = safeJsonParse<GameDateTime>(row.trigger_time as string, { year: 1, month: 1, day: 1, hour: 0, minute: 0 });
 
     // Check if event should trigger (trigger time is between previous and new time)
     if (
@@ -175,7 +176,7 @@ export function advanceTime(
         triggerTime,
         recurring: row.recurring as string | null,
         triggered: true,
-        metadata: JSON.parse(row.metadata as string || "{}"),
+        metadata: safeJsonParse<Record<string, unknown>>(row.metadata as string || "{}", {}),
       };
 
       triggeredEvents.push(event);
@@ -271,10 +272,10 @@ export function listScheduledEvents(sessionId: string, includeTriggered = false)
     sessionId: row.session_id as string,
     name: row.name as string,
     description: row.description as string || "",
-    triggerTime: JSON.parse(row.trigger_time as string),
+    triggerTime: safeJsonParse<GameDateTime>(row.trigger_time as string, { year: 1, month: 1, day: 1, hour: 0, minute: 0 }),
     recurring: row.recurring as string | null,
     triggered: (row.triggered as number) === 1,
-    metadata: JSON.parse(row.metadata as string || "{}"),
+    metadata: safeJsonParse<Record<string, unknown>>(row.metadata as string || "{}", {}),
   }));
 }
 

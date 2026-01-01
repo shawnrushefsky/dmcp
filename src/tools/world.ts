@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
+import { safeJsonParse } from "../utils/json.js";
 import type { Location, LocationProperties, Exit, ImageGeneration } from "../types/index.js";
 
 export function createLocation(params: {
@@ -55,8 +56,8 @@ export function getLocation(id: string): Location | null {
     sessionId: row.session_id as string,
     name: row.name as string,
     description: row.description as string,
-    properties: JSON.parse(row.properties as string),
-    imageGen: row.image_gen ? JSON.parse(row.image_gen as string) : null,
+    properties: safeJsonParse<LocationProperties>(row.properties as string, { exits: [], features: [], atmosphere: "" }),
+    imageGen: row.image_gen ? safeJsonParse<ImageGeneration>(row.image_gen as string, null as unknown as ImageGeneration) : null,
   };
 }
 
@@ -112,8 +113,8 @@ export function listLocations(sessionId: string): Location[] {
     sessionId: row.session_id as string,
     name: row.name as string,
     description: row.description as string,
-    properties: JSON.parse(row.properties as string),
-    imageGen: row.image_gen ? JSON.parse(row.image_gen as string) : null,
+    properties: safeJsonParse<LocationProperties>(row.properties as string, { exits: [], features: [], atmosphere: "" }),
+    imageGen: row.image_gen ? safeJsonParse<ImageGeneration>(row.image_gen as string, null as unknown as ImageGeneration) : null,
   }));
 }
 

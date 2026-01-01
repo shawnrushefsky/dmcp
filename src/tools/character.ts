@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
+import { safeJsonParse } from "../utils/json.js";
 import type { Character, CharacterStatus, VoiceDescription, ImageGeneration } from "../types/index.js";
 
 export function createCharacter(params: {
@@ -75,13 +76,13 @@ export function getCharacter(id: string): Character | null {
     sessionId: row.session_id as string,
     name: row.name as string,
     isPlayer: (row.is_player as number) === 1,
-    attributes: JSON.parse(row.attributes as string),
-    skills: JSON.parse(row.skills as string),
-    status: JSON.parse(row.status as string),
+    attributes: safeJsonParse<Record<string, number>>(row.attributes as string, {}),
+    skills: safeJsonParse<Record<string, number>>(row.skills as string, {}),
+    status: safeJsonParse<CharacterStatus>(row.status as string, { health: 0, maxHealth: 0, conditions: [], experience: 0, level: 1 }),
     locationId: row.location_id as string | null,
     notes: row.notes as string,
-    voice: row.voice ? JSON.parse(row.voice as string) : null,
-    imageGen: row.image_gen ? JSON.parse(row.image_gen as string) : null,
+    voice: row.voice ? safeJsonParse<VoiceDescription>(row.voice as string, null as unknown as VoiceDescription) : null,
+    imageGen: row.image_gen ? safeJsonParse<ImageGeneration>(row.image_gen as string, null as unknown as ImageGeneration) : null,
     createdAt: row.created_at as string,
   };
 }
@@ -188,13 +189,13 @@ export function listCharacters(
     sessionId: row.session_id as string,
     name: row.name as string,
     isPlayer: (row.is_player as number) === 1,
-    attributes: JSON.parse(row.attributes as string),
-    skills: JSON.parse(row.skills as string),
-    status: JSON.parse(row.status as string),
+    attributes: safeJsonParse<Record<string, number>>(row.attributes as string, {}),
+    skills: safeJsonParse<Record<string, number>>(row.skills as string, {}),
+    status: safeJsonParse<CharacterStatus>(row.status as string, { health: 0, maxHealth: 0, conditions: [], experience: 0, level: 1 }),
     locationId: row.location_id as string | null,
     notes: row.notes as string,
-    voice: row.voice ? JSON.parse(row.voice as string) : null,
-    imageGen: row.image_gen ? JSON.parse(row.image_gen as string) : null,
+    voice: row.voice ? safeJsonParse<VoiceDescription>(row.voice as string, null as unknown as VoiceDescription) : null,
+    imageGen: row.image_gen ? safeJsonParse<ImageGeneration>(row.image_gen as string, null as unknown as ImageGeneration) : null,
     createdAt: row.created_at as string,
   }));
 }
@@ -286,7 +287,7 @@ export function renderCharacterSheet(characterId: string): CharacterSheetData | 
   const items = db.prepare(`SELECT name, properties FROM items WHERE owner_id = ? AND owner_type = 'character'`)
     .all(characterId) as Array<{ name: string; properties: string }>;
   const inventory = items.map(item => {
-    const props = JSON.parse(item.properties);
+    const props = safeJsonParse<{ type?: string }>(item.properties, {});
     return { name: item.name, type: props.type };
   });
 

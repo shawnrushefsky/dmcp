@@ -2,18 +2,19 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import * as worldTools from "../tools/world.js";
 import { imageGenSchema } from "../schemas/index.js";
+import { LIMITS } from "../utils/validation.js";
 
 export function registerWorldTools(server: McpServer) {
   server.tool(
     "create_location",
     "Create a new location in the game world",
     {
-      sessionId: z.string().describe("The session ID"),
-      name: z.string().describe("Location name"),
-      description: z.string().describe("Location description"),
+      sessionId: z.string().max(100).describe("The session ID"),
+      name: z.string().min(1).max(LIMITS.NAME_MAX).describe("Location name"),
+      description: z.string().max(LIMITS.DESCRIPTION_MAX).describe("Location description"),
       properties: z.object({
-        features: z.array(z.string()).optional(),
-        atmosphere: z.string().optional(),
+        features: z.array(z.string().max(LIMITS.NAME_MAX)).max(LIMITS.ARRAY_MAX).optional(),
+        atmosphere: z.string().max(LIMITS.DESCRIPTION_MAX).optional(),
       }).optional().describe("Additional location properties"),
       imageGen: imageGenSchema.optional().describe("Image generation metadata for location art"),
     },

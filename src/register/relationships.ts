@@ -1,21 +1,22 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import * as relationshipTools from "../tools/relationship.js";
+import { LIMITS } from "../utils/validation.js";
 
 export function registerRelationshipTools(server: McpServer) {
   server.tool(
     "create_relationship",
     "Create a relationship between two entities (characters, factions, etc.)",
     {
-      sessionId: z.string().describe("The session ID"),
-      sourceId: z.string().describe("Source entity ID"),
-      sourceType: z.string().describe("Source entity type (e.g., 'character', 'faction')"),
-      targetId: z.string().describe("Target entity ID"),
-      targetType: z.string().describe("Target entity type"),
-      relationshipType: z.string().describe("Type of relationship (e.g., 'attitude', 'bond', 'rivalry', 'loyalty')"),
+      sessionId: z.string().max(100).describe("The session ID"),
+      sourceId: z.string().max(100).describe("Source entity ID"),
+      sourceType: z.string().max(100).describe("Source entity type (e.g., 'character', 'faction')"),
+      targetId: z.string().max(100).describe("Target entity ID"),
+      targetType: z.string().max(100).describe("Target entity type"),
+      relationshipType: z.string().max(100).describe("Type of relationship (e.g., 'attitude', 'bond', 'rivalry', 'loyalty')"),
       value: z.number().optional().describe("Initial value (-100 to 100, default: 0)"),
-      label: z.string().optional().describe("Descriptive label (e.g., 'friendly', 'hostile')"),
-      notes: z.string().optional().describe("Notes about the relationship"),
+      label: z.string().max(LIMITS.NAME_MAX).optional().describe("Descriptive label (e.g., 'friendly', 'hostile')"),
+      notes: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("Notes about the relationship"),
     },
     async (params) => {
       const relationship = relationshipTools.createRelationship(params);
@@ -29,7 +30,7 @@ export function registerRelationshipTools(server: McpServer) {
     "get_relationship",
     "Get a relationship by ID",
     {
-      relationshipId: z.string().describe("The relationship ID"),
+      relationshipId: z.string().max(100).describe("The relationship ID"),
     },
     async ({ relationshipId }) => {
       const relationship = relationshipTools.getRelationship(relationshipId);
@@ -49,10 +50,10 @@ export function registerRelationshipTools(server: McpServer) {
     "get_relationship_between",
     "Get the relationship between two specific entities",
     {
-      sessionId: z.string().describe("The session ID"),
-      sourceId: z.string().describe("Source entity ID"),
-      targetId: z.string().describe("Target entity ID"),
-      relationshipType: z.string().optional().describe("Filter by relationship type"),
+      sessionId: z.string().max(100).describe("The session ID"),
+      sourceId: z.string().max(100).describe("Source entity ID"),
+      targetId: z.string().max(100).describe("Target entity ID"),
+      relationshipType: z.string().max(100).optional().describe("Filter by relationship type"),
     },
     async ({ sessionId, sourceId, targetId, relationshipType }) => {
       const relationship = relationshipTools.getRelationshipBetween(sessionId, sourceId, targetId, relationshipType);
@@ -71,11 +72,11 @@ export function registerRelationshipTools(server: McpServer) {
     "update_relationship",
     "Update a relationship's type, value, label, or notes",
     {
-      relationshipId: z.string().describe("The relationship ID"),
-      relationshipType: z.string().optional().describe("New relationship type"),
+      relationshipId: z.string().max(100).describe("The relationship ID"),
+      relationshipType: z.string().max(100).optional().describe("New relationship type"),
       value: z.number().optional().describe("New value"),
-      label: z.string().nullable().optional().describe("New label"),
-      notes: z.string().optional().describe("New notes"),
+      label: z.string().max(LIMITS.NAME_MAX).nullable().optional().describe("New label"),
+      notes: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("New notes"),
     },
     async ({ relationshipId, ...updates }) => {
       const relationship = relationshipTools.updateRelationship(relationshipId, updates);
@@ -95,9 +96,9 @@ export function registerRelationshipTools(server: McpServer) {
     "modify_relationship",
     "Adjust a relationship value by a delta (with history logging)",
     {
-      relationshipId: z.string().describe("The relationship ID"),
+      relationshipId: z.string().max(100).describe("The relationship ID"),
       delta: z.number().describe("Amount to change (+/-)"),
-      reason: z.string().optional().describe("Reason for the change (logged)"),
+      reason: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("Reason for the change (logged)"),
       minValue: z.number().optional().describe("Minimum bound (default: none)"),
       maxValue: z.number().optional().describe("Maximum bound (default: none)"),
     },
@@ -120,7 +121,7 @@ export function registerRelationshipTools(server: McpServer) {
     "delete_relationship",
     "Delete a relationship",
     {
-      relationshipId: z.string().describe("The relationship ID"),
+      relationshipId: z.string().max(100).describe("The relationship ID"),
     },
     async ({ relationshipId }) => {
       const success = relationshipTools.deleteRelationship(relationshipId);
@@ -135,12 +136,12 @@ export function registerRelationshipTools(server: McpServer) {
     "list_relationships",
     "List relationships with optional filters",
     {
-      sessionId: z.string().describe("The session ID"),
-      entityId: z.string().optional().describe("Filter by entity (either source or target)"),
-      sourceId: z.string().optional().describe("Filter by source entity"),
-      targetId: z.string().optional().describe("Filter by target entity"),
-      relationshipType: z.string().optional().describe("Filter by relationship type"),
-      entityType: z.string().optional().describe("Filter by entity type"),
+      sessionId: z.string().max(100).describe("The session ID"),
+      entityId: z.string().max(100).optional().describe("Filter by entity (either source or target)"),
+      sourceId: z.string().max(100).optional().describe("Filter by source entity"),
+      targetId: z.string().max(100).optional().describe("Filter by target entity"),
+      relationshipType: z.string().max(100).optional().describe("Filter by relationship type"),
+      entityType: z.string().max(100).optional().describe("Filter by entity type"),
     },
     async ({ sessionId, ...filter }) => {
       const relationships = relationshipTools.listRelationships(sessionId, filter);
@@ -154,7 +155,7 @@ export function registerRelationshipTools(server: McpServer) {
     "get_relationship_history",
     "Get change history for a relationship",
     {
-      relationshipId: z.string().describe("The relationship ID"),
+      relationshipId: z.string().max(100).describe("The relationship ID"),
       limit: z.number().optional().describe("Maximum entries to return"),
     },
     async ({ relationshipId, limit }) => {

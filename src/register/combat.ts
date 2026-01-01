@@ -2,6 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import * as combatTools from "../tools/combat.js";
 import * as diceTools from "../tools/dice.js";
+import { LIMITS } from "../utils/validation.js";
 
 export function registerCombatTools(server: McpServer) {
   // ============================================================================
@@ -12,7 +13,7 @@ export function registerCombatTools(server: McpServer) {
     "roll",
     "Roll dice using standard notation",
     {
-      expression: z.string().describe("Dice expression (e.g., '2d6+3', '1d20', '4d6-2')"),
+      expression: z.string().max(100).describe("Dice expression (e.g., '2d6+3', '1d20', '4d6-2')"),
     },
     async ({ expression }) => {
       try {
@@ -33,10 +34,10 @@ export function registerCombatTools(server: McpServer) {
     "check",
     "Perform a skill or ability check",
     {
-      sessionId: z.string().describe("The session ID"),
-      characterId: z.string().describe("The character making the check"),
-      skill: z.string().optional().describe("Skill to use"),
-      attribute: z.string().optional().describe("Attribute to use"),
+      sessionId: z.string().max(100).describe("The session ID"),
+      characterId: z.string().max(100).describe("The character making the check"),
+      skill: z.string().max(100).optional().describe("Skill to use"),
+      attribute: z.string().max(100).optional().describe("Attribute to use"),
       difficulty: z.number().describe("Difficulty threshold"),
       bonusModifier: z.number().optional().describe("Additional modifier"),
     },
@@ -59,13 +60,13 @@ export function registerCombatTools(server: McpServer) {
     "contest",
     "Opposed check between two characters",
     {
-      sessionId: z.string().describe("The session ID"),
-      attackerId: z.string().describe("First character ID"),
-      defenderId: z.string().describe("Second character ID"),
-      attackerSkill: z.string().optional().describe("Skill for first character"),
-      defenderSkill: z.string().optional().describe("Skill for second character"),
-      attackerAttribute: z.string().optional().describe("Attribute for first character"),
-      defenderAttribute: z.string().optional().describe("Attribute for second character"),
+      sessionId: z.string().max(100).describe("The session ID"),
+      attackerId: z.string().max(100).describe("First character ID"),
+      defenderId: z.string().max(100).describe("Second character ID"),
+      attackerSkill: z.string().max(100).optional().describe("Skill for first character"),
+      defenderSkill: z.string().max(100).optional().describe("Skill for second character"),
+      attackerAttribute: z.string().max(100).optional().describe("Attribute for first character"),
+      defenderAttribute: z.string().max(100).optional().describe("Attribute for second character"),
     },
     async (params) => {
       try {
@@ -90,9 +91,9 @@ export function registerCombatTools(server: McpServer) {
     "start_combat",
     "Initialize a combat encounter",
     {
-      sessionId: z.string().describe("The session ID"),
-      locationId: z.string().describe("Location where combat occurs"),
-      participantIds: z.array(z.string()).describe("Character IDs of all combatants"),
+      sessionId: z.string().max(100).describe("The session ID"),
+      locationId: z.string().max(100).describe("Location where combat occurs"),
+      participantIds: z.array(z.string().max(100)).max(LIMITS.ARRAY_MAX).describe("Character IDs of all combatants"),
     },
     async (params) => {
       const combat = combatTools.startCombat(params);
@@ -106,7 +107,7 @@ export function registerCombatTools(server: McpServer) {
     "get_combat",
     "Get current combat state",
     {
-      combatId: z.string().describe("The combat ID"),
+      combatId: z.string().max(100).describe("The combat ID"),
     },
     async ({ combatId }) => {
       const combat = combatTools.getCombat(combatId);
@@ -126,7 +127,7 @@ export function registerCombatTools(server: McpServer) {
     "get_active_combat",
     "Get the active combat for a session",
     {
-      sessionId: z.string().describe("The session ID"),
+      sessionId: z.string().max(100).describe("The session ID"),
     },
     async ({ sessionId }) => {
       const combat = combatTools.getActiveCombat(sessionId);
@@ -145,7 +146,7 @@ export function registerCombatTools(server: McpServer) {
     "next_turn",
     "Advance to the next combatant's turn",
     {
-      combatId: z.string().describe("The combat ID"),
+      combatId: z.string().max(100).describe("The combat ID"),
     },
     async ({ combatId }) => {
       const combat = combatTools.nextTurn(combatId);
@@ -165,8 +166,8 @@ export function registerCombatTools(server: McpServer) {
     "add_combat_log",
     "Add an entry to the combat log",
     {
-      combatId: z.string().describe("The combat ID"),
-      entry: z.string().describe("Log entry text"),
+      combatId: z.string().max(100).describe("The combat ID"),
+      entry: z.string().max(LIMITS.DESCRIPTION_MAX).describe("Log entry text"),
     },
     async ({ combatId, entry }) => {
       const success = combatTools.addCombatLog(combatId, entry);
@@ -181,8 +182,8 @@ export function registerCombatTools(server: McpServer) {
     "remove_combatant",
     "Remove a character from combat (defeated, fled, etc.)",
     {
-      combatId: z.string().describe("The combat ID"),
-      characterId: z.string().describe("The character to remove"),
+      combatId: z.string().max(100).describe("The combat ID"),
+      characterId: z.string().max(100).describe("The character to remove"),
     },
     async ({ combatId, characterId }) => {
       const combat = combatTools.removeParticipant(combatId, characterId);
@@ -202,7 +203,7 @@ export function registerCombatTools(server: McpServer) {
     "end_combat",
     "End a combat encounter",
     {
-      combatId: z.string().describe("The combat ID"),
+      combatId: z.string().max(100).describe("The combat ID"),
     },
     async ({ combatId }) => {
       const combat = combatTools.endCombat(combatId);

@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
-import type { NarrativeEvent } from "../types/index.js";
+import { safeJsonParse } from "../utils/json.js";
+import type { NarrativeEvent, QuestObjective } from "../types/index.js";
 
 export function logEvent(params: {
   sessionId: string;
@@ -48,7 +49,7 @@ export function getEvent(id: string): NarrativeEvent | null {
     sessionId: row.session_id as string,
     eventType: row.event_type as string,
     content: row.content as string,
-    metadata: JSON.parse(row.metadata as string),
+    metadata: safeJsonParse<Record<string, unknown>>(row.metadata as string, {}),
     timestamp: row.timestamp as string,
   };
 }
@@ -98,7 +99,7 @@ export function getHistory(
       sessionId: row.session_id as string,
       eventType: row.event_type as string,
       content: row.content as string,
-      metadata: JSON.parse(row.metadata as string),
+      metadata: safeJsonParse<Record<string, unknown>>(row.metadata as string, {}),
       timestamp: row.timestamp as string,
     }))
     .reverse();
@@ -243,7 +244,7 @@ export function exportStoryData(
     sessionId: row.session_id as string,
     eventType: row.event_type as string,
     content: row.content as string,
-    metadata: JSON.parse(row.metadata as string),
+    metadata: safeJsonParse<Record<string, unknown>>(row.metadata as string, {}),
     timestamp: row.timestamp as string,
   }));
 
@@ -270,7 +271,7 @@ export function exportStoryData(
       name: q.name,
       description: q.description,
       status: q.status,
-      objectives: JSON.parse(q.objectives),
+      objectives: safeJsonParse<QuestObjective[]>(q.objectives, []),
     })),
     chapters,
     totalEvents: narrativeEvents.length,

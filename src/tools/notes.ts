@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
+import { safeJsonParse } from "../utils/json.js";
 import type { Note } from "../types/index.js";
 import { getHistory } from "./narrative.js";
 
@@ -64,7 +65,7 @@ export function getNote(id: string): Note | null {
     pinned: (row.pinned as number) === 1,
     relatedEntityId: row.related_entity_id as string | null,
     relatedEntityType: row.related_entity_type as string | null,
-    tags: JSON.parse(row.tags as string || "[]"),
+    tags: safeJsonParse<string[]>(row.tags as string || "[]", []),
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
@@ -153,8 +154,8 @@ export function listNotes(
   // Filter by tag in memory (since it's a JSON array)
   if (filter?.tag) {
     rows = rows.filter(row => {
-      const tags = JSON.parse(row.tags as string || "[]");
-      return tags.includes(filter.tag);
+      const tags = safeJsonParse<string[]>(row.tags as string || "[]", []);
+      return tags.includes(filter.tag!);
     });
   }
 
@@ -167,7 +168,7 @@ export function listNotes(
     pinned: (row.pinned as number) === 1,
     relatedEntityId: row.related_entity_id as string | null,
     relatedEntityType: row.related_entity_type as string | null,
-    tags: JSON.parse(row.tags as string || "[]"),
+    tags: safeJsonParse<string[]>(row.tags as string || "[]", []),
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   }));
@@ -192,7 +193,7 @@ export function searchNotes(sessionId: string, query: string): Note[] {
     pinned: (row.pinned as number) === 1,
     relatedEntityId: row.related_entity_id as string | null,
     relatedEntityType: row.related_entity_type as string | null,
-    tags: JSON.parse(row.tags as string || "[]"),
+    tags: safeJsonParse<string[]>(row.tags as string || "[]", []),
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   }));

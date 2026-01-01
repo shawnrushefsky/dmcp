@@ -1,19 +1,20 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import * as noteTools from "../tools/notes.js";
+import { LIMITS } from "../utils/validation.js";
 
 export function registerNoteTools(server: McpServer) {
   server.tool(
     "create_note",
     "Create a session note",
     {
-      sessionId: z.string().describe("The session ID"),
-      title: z.string().describe("Note title"),
-      content: z.string().describe("Note content (supports markdown)"),
-      category: z.string().optional().describe("Category (e.g., 'plot', 'npc', 'location', 'idea', 'recap')"),
-      relatedEntityId: z.string().optional().describe("ID of related entity"),
-      relatedEntityType: z.string().optional().describe("Type of related entity"),
-      tags: z.array(z.string()).optional().describe("Tags for the note"),
+      sessionId: z.string().max(100).describe("The session ID"),
+      title: z.string().min(1).max(LIMITS.NAME_MAX).describe("Note title"),
+      content: z.string().max(LIMITS.CONTENT_MAX).describe("Note content (supports markdown)"),
+      category: z.string().max(100).optional().describe("Category (e.g., 'plot', 'npc', 'location', 'idea', 'recap')"),
+      relatedEntityId: z.string().max(100).optional().describe("ID of related entity"),
+      relatedEntityType: z.string().max(100).optional().describe("Type of related entity"),
+      tags: z.array(z.string().max(LIMITS.NAME_MAX)).max(LIMITS.ARRAY_MAX).optional().describe("Tags for the note"),
       pinned: z.boolean().optional().describe("Pin this note"),
     },
     async (params) => {
@@ -28,7 +29,7 @@ export function registerNoteTools(server: McpServer) {
     "get_note",
     "Get a note by ID",
     {
-      noteId: z.string().describe("The note ID"),
+      noteId: z.string().max(100).describe("The note ID"),
     },
     async ({ noteId }) => {
       const note = noteTools.getNote(noteId);
@@ -48,13 +49,13 @@ export function registerNoteTools(server: McpServer) {
     "update_note",
     "Update a note's content",
     {
-      noteId: z.string().describe("The note ID"),
-      title: z.string().optional().describe("New title"),
-      content: z.string().optional().describe("New content"),
-      category: z.string().nullable().optional().describe("New category"),
-      relatedEntityId: z.string().nullable().optional().describe("New related entity ID"),
-      relatedEntityType: z.string().nullable().optional().describe("New related entity type"),
-      tags: z.array(z.string()).optional().describe("Replace tags"),
+      noteId: z.string().max(100).describe("The note ID"),
+      title: z.string().max(LIMITS.NAME_MAX).optional().describe("New title"),
+      content: z.string().max(LIMITS.CONTENT_MAX).optional().describe("New content"),
+      category: z.string().max(100).nullable().optional().describe("New category"),
+      relatedEntityId: z.string().max(100).nullable().optional().describe("New related entity ID"),
+      relatedEntityType: z.string().max(100).nullable().optional().describe("New related entity type"),
+      tags: z.array(z.string().max(LIMITS.NAME_MAX)).max(LIMITS.ARRAY_MAX).optional().describe("Replace tags"),
     },
     async ({ noteId, ...updates }) => {
       const note = noteTools.updateNote(noteId, updates);
@@ -74,7 +75,7 @@ export function registerNoteTools(server: McpServer) {
     "delete_note",
     "Delete a note",
     {
-      noteId: z.string().describe("The note ID"),
+      noteId: z.string().max(100).describe("The note ID"),
     },
     async ({ noteId }) => {
       const success = noteTools.deleteNote(noteId);
@@ -89,11 +90,11 @@ export function registerNoteTools(server: McpServer) {
     "list_notes",
     "List notes with optional filters",
     {
-      sessionId: z.string().describe("The session ID"),
-      category: z.string().optional().describe("Filter by category"),
+      sessionId: z.string().max(100).describe("The session ID"),
+      category: z.string().max(100).optional().describe("Filter by category"),
       pinned: z.boolean().optional().describe("Filter by pinned status"),
-      tag: z.string().optional().describe("Filter by tag"),
-      relatedEntityId: z.string().optional().describe("Filter by related entity"),
+      tag: z.string().max(LIMITS.NAME_MAX).optional().describe("Filter by tag"),
+      relatedEntityId: z.string().max(100).optional().describe("Filter by related entity"),
     },
     async ({ sessionId, ...filter }) => {
       const notes = noteTools.listNotes(sessionId, filter);
@@ -107,8 +108,8 @@ export function registerNoteTools(server: McpServer) {
     "search_notes",
     "Search notes by title or content",
     {
-      sessionId: z.string().describe("The session ID"),
-      query: z.string().describe("Search query"),
+      sessionId: z.string().max(100).describe("The session ID"),
+      query: z.string().max(LIMITS.NAME_MAX).describe("Search query"),
     },
     async ({ sessionId, query }) => {
       const notes = noteTools.searchNotes(sessionId, query);
@@ -122,7 +123,7 @@ export function registerNoteTools(server: McpServer) {
     "pin_note",
     "Toggle a note's pinned status",
     {
-      noteId: z.string().describe("The note ID"),
+      noteId: z.string().max(100).describe("The note ID"),
       pinned: z.boolean().describe("Pin or unpin"),
     },
     async ({ noteId, pinned }) => {
@@ -143,8 +144,8 @@ export function registerNoteTools(server: McpServer) {
     "add_note_tag",
     "Add a tag to a note",
     {
-      noteId: z.string().describe("The note ID"),
-      tag: z.string().describe("Tag to add"),
+      noteId: z.string().max(100).describe("The note ID"),
+      tag: z.string().min(1).max(LIMITS.NAME_MAX).describe("Tag to add"),
     },
     async ({ noteId, tag }) => {
       const note = noteTools.addNoteTag(noteId, tag);
@@ -164,8 +165,8 @@ export function registerNoteTools(server: McpServer) {
     "remove_note_tag",
     "Remove a tag from a note",
     {
-      noteId: z.string().describe("The note ID"),
-      tag: z.string().describe("Tag to remove"),
+      noteId: z.string().max(100).describe("The note ID"),
+      tag: z.string().max(LIMITS.NAME_MAX).describe("Tag to remove"),
     },
     async ({ noteId, tag }) => {
       const note = noteTools.removeNoteTag(noteId, tag);
@@ -185,7 +186,7 @@ export function registerNoteTools(server: McpServer) {
     "generate_recap",
     "Auto-generate a session recap note from recent narrative events",
     {
-      sessionId: z.string().describe("The session ID"),
+      sessionId: z.string().max(100).describe("The session ID"),
       eventLimit: z.number().optional().describe("Maximum events to include (default: 20)"),
     },
     async ({ sessionId, eventLimit }) => {

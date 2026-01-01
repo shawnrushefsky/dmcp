@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
+import { safeJsonParse } from "../utils/json.js";
 import type { Faction } from "../types/index.js";
 
 export function createFaction(params: {
@@ -62,9 +63,9 @@ export function getFaction(id: string): Faction | null {
     description: row.description as string,
     leaderId: row.leader_id as string | null,
     headquartersId: row.headquarters_id as string | null,
-    resources: JSON.parse(row.resources as string || "{}"),
-    goals: JSON.parse(row.goals as string || "[]"),
-    traits: JSON.parse(row.traits as string || "[]"),
+    resources: safeJsonParse<Record<string, number>>(row.resources as string || "{}", {}),
+    goals: safeJsonParse<string[]>(row.goals as string || "[]", []),
+    traits: safeJsonParse<string[]>(row.traits as string || "[]", []),
     status: row.status as "active" | "disbanded" | "hidden",
     createdAt: row.created_at as string,
   };
@@ -140,9 +141,9 @@ export function listFactions(
     description: row.description as string,
     leaderId: row.leader_id as string | null,
     headquartersId: row.headquarters_id as string | null,
-    resources: JSON.parse(row.resources as string || "{}"),
-    goals: JSON.parse(row.goals as string || "[]"),
-    traits: JSON.parse(row.traits as string || "[]"),
+    resources: safeJsonParse<Record<string, number>>(row.resources as string || "{}", {}),
+    goals: safeJsonParse<string[]>(row.goals as string || "[]", []),
+    traits: safeJsonParse<string[]>(row.traits as string || "[]", []),
     status: row.status as "active" | "disbanded" | "hidden",
     createdAt: row.created_at as string,
   }));
