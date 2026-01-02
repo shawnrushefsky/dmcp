@@ -195,10 +195,15 @@ export function registerCombatTools(server: McpServer) {
       annotations: ANNOTATIONS.UPDATE,
     },
     async ({ combatId, entry }) => {
-      const success = combatTools.addCombatLog(combatId, entry);
+      const combat = combatTools.addCombatLog(combatId, entry);
+      if (!combat) {
+        return {
+          content: [{ type: "text", text: "Combat not found" }],
+          isError: true,
+        };
+      }
       return {
-        content: [{ type: "text", text: success ? "Entry added" : "Combat not found" }],
-        isError: !success,
+        content: [{ type: "text", text: JSON.stringify(combat, null, 2) }],
       };
     }
   );

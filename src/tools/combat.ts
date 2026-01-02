@@ -144,16 +144,20 @@ export function nextTurn(combatId: string): Combat | null {
   };
 }
 
-export function addCombatLog(combatId: string, entry: string): boolean {
+export function addCombatLog(combatId: string, entry: string): Combat | null {
   const combat = getCombat(combatId);
-  if (!combat) return false;
+  if (!combat) return null;
 
   const db = getDatabase();
   const log = [...combat.log, entry];
 
   const stmt = db.prepare(`UPDATE combats SET log = ? WHERE id = ?`);
   stmt.run(JSON.stringify(log), combatId);
-  return true;
+
+  return {
+    ...combat,
+    log,
+  };
 }
 
 export function removeParticipant(

@@ -112,7 +112,7 @@ export function registerWorldTools(server: McpServer) {
       annotations: ANNOTATIONS.CREATE,
     },
     async ({ fromLocationId, toLocationId, fromDirection, toDirection, description, bidirectional }) => {
-      const success = worldTools.connectLocations({
+      const result = worldTools.connectLocations({
         fromLocationId,
         toLocationId,
         fromDirection,
@@ -120,9 +120,38 @@ export function registerWorldTools(server: McpServer) {
         description,
         bidirectional,
       });
+      if (!result) {
+        return {
+          content: [{ type: "text", text: "Failed to connect locations - one or both locations not found" }],
+          isError: true,
+        };
+      }
       return {
-        content: [{ type: "text", text: success ? "Locations connected" : "Failed to connect locations" }],
-        isError: !success,
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    }
+  );
+
+  server.registerTool(
+    "get_location_by_name",
+    {
+      description: "Look up a location by name within a session. Supports exact, partial, and fuzzy matching. Returns the best match or an error if no reasonable match found.",
+      inputSchema: {
+        sessionId: z.string().describe("The session ID to search within"),
+        name: z.string().describe("Location name to search for (case-insensitive)"),
+      },
+      annotations: ANNOTATIONS.READ_ONLY,
+    },
+    async ({ sessionId, name }) => {
+      const location = worldTools.getLocationByName(sessionId, name);
+      if (!location) {
+        return {
+          content: [{ type: "text", text: `No location found matching "${name}"` }],
+          isError: true,
+        };
+      }
+      return {
+        content: [{ type: "text", text: JSON.stringify(location, null, 2) }],
       };
     }
   );

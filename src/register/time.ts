@@ -202,7 +202,7 @@ export function registerTimeTools(server: McpServer) {
         currentValue: z.number().optional().describe("Starting value"),
         maxValue: z.number().optional().describe("Maximum value (for clocks: number of segments, default 6)"),
         direction: z.enum(["up", "down"]).optional().describe("Direction of change"),
-        triggerAt: z.number().optional().describe("Value that triggers an event"),
+        triggerAt: z.number().optional().describe("Value that triggers an event. If not provided, defaults to 0 for countdowns (direction 'down') or maxValue for stopwatches (direction 'up')"),
         unit: z.string().max(100).optional().describe("Unit label (e.g., 'rounds', 'hours', 'segments')"),
         visibleToPlayers: z.boolean().optional().describe("Whether players can see this timer"),
       },

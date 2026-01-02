@@ -125,6 +125,15 @@ export function deleteLocation(id: string): boolean {
   return result.changes > 0;
 }
 
+export interface ConnectLocationsResult {
+  success: boolean;
+  fromLocation: { id: string; name: string };
+  toLocation: { id: string; name: string };
+  exitCreated: Exit;
+  reverseExitCreated: Exit | null;
+  bidirectional: boolean;
+}
+
 export function connectLocations(params: {
   fromLocationId: string;
   toLocationId: string;
@@ -132,11 +141,11 @@ export function connectLocations(params: {
   toDirection: string;
   description?: string;
   bidirectional?: boolean;
-}): boolean {
+}): ConnectLocationsResult | null {
   const fromLocation = getLocation(params.fromLocationId);
   const toLocation = getLocation(params.toLocationId);
 
-  if (!fromLocation || !toLocation) return false;
+  if (!fromLocation || !toLocation) return null;
 
   // Add exit from first location to second
   const exitFromTo: Exit = {
@@ -154,6 +163,8 @@ export function connectLocations(params: {
     properties: fromLocation.properties,
   });
 
+  let reverseExitCreated: Exit | null = null;
+
   // If bidirectional, add reverse exit
   if (params.bidirectional !== false) {
     const exitToFrom: Exit = {
@@ -170,15 +181,81 @@ export function connectLocations(params: {
     updateLocation(params.toLocationId, {
       properties: toLocation.properties,
     });
+
+    reverseExitCreated = exitToFrom;
   }
 
-  return true;
+  return {
+    success: true,
+    fromLocation: { id: fromLocation.id, name: fromLocation.name },
+    toLocation: { id: toLocation.id, name: toLocation.name },
+    exitCreated: exitFromTo,
+    reverseExitCreated,
+    bidirectional: params.bidirectional !== false,
+  };
 }
 
 export function getExits(locationId: string): Exit[] {
   const location = getLocation(locationId);
   if (!location) return [];
   return location.properties.exits;
+}
+
+/**
+ * Find a location by name (case-insensitive, fuzzy match).
+ * Returns the best match or null if no reasonable match found.
+ */
+export function getLocationByName(
+  sessionId: string,
+  name: string
+): Location | null {
+  const db = getDatabase();
+  const searchName = name.toLowerCase().trim();
+
+  // First try exact match (case-insensitive)
+  const exactMatch = db.prepare(
+    `SELECT * FROM locations WHERE session_id = ? AND LOWER(name) = ?`
+  ).get(sessionId, searchName) as Record<string, unknown> | undefined;
+
+  if (exactMatch) {
+    return mapRowToLocation(exactMatch);
+  }
+
+  // Try contains match
+  const containsMatch = db.prepare(
+    `SELECT * FROM locations WHERE session_id = ? AND LOWER(name) LIKE ?`
+  ).get(sessionId, `%${searchName}%`) as Record<string, unknown> | undefined;
+
+  if (containsMatch) {
+    return mapRowToLocation(containsMatch);
+  }
+
+  // Try matching just the last word (e.g., "Square" matches "Village Square")
+  const words = searchName.split(/\s+/);
+  if (words.length > 0) {
+    const lastWord = words[words.length - 1];
+    const lastWordMatch = db.prepare(
+      `SELECT * FROM locations WHERE session_id = ? AND LOWER(name) LIKE ?`
+    ).get(sessionId, `%${lastWord}%`) as Record<string, unknown> | undefined;
+
+    if (lastWordMatch) {
+      return mapRowToLocation(lastWordMatch);
+    }
+  }
+
+  return null;
+}
+
+// Helper function to map database row to Location
+function mapRowToLocation(row: Record<string, unknown>): Location {
+  return {
+    id: row.id as string,
+    sessionId: row.session_id as string,
+    name: row.name as string,
+    description: row.description as string,
+    properties: safeJsonParse<LocationProperties>(row.properties as string, { exits: [], features: [], atmosphere: "" }),
+    imageGen: row.image_gen ? safeJsonParse<ImageGeneration>(row.image_gen as string, null as unknown as ImageGeneration) : null,
+  };
 }
 
 // Direction to grid offset mapping
