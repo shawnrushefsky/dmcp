@@ -4,7 +4,6 @@ import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
 import type { MapData, SessionState } from '../types'
 import SessionTabs from '../components/SessionTabs.vue'
-import AsciiBox from '../components/AsciiBox.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
 
 const route = useRoute()
@@ -44,13 +43,8 @@ onMounted(async () => {
 
     <SessionTabs :session-id="sessionId" active="map" :counts="state.counts" />
 
-    <div class="map-container">
-      <AsciiBox v-if="mapData?.ascii" :content="mapData.ascii" />
-      <p v-else class="empty">No map data available. Create some locations first.</p>
-    </div>
-
-    <template v-if="mapData">
-      <h3 class="mt-30">Locations</h3>
+    <template v-if="mapData && mapData.nodes.length > 0">
+      <h3>Locations</h3>
       <div class="grid">
         <div v-for="node in mapData.nodes" :key="node.id" class="card">
           <h3>
@@ -63,6 +57,7 @@ onMounted(async () => {
         </div>
       </div>
     </template>
+    <p v-else class="empty">No locations found. Create some locations first.</p>
   </div>
   <p v-else class="empty">Session not found.</p>
 </template>

@@ -680,9 +680,8 @@ a.underline-effect:hover::after {
 }
 
 /* ============================================================================
-   Code / ASCII Display
+   Code Display
    ============================================================================ */
-.ascii-box,
 .code-block {
   background: var(--code-bg);
   color: var(--code-text);
@@ -694,11 +693,6 @@ a.underline-effect:hover::after {
   font-size: var(--text-sm);
   line-height: 1.4;
   border: 1px solid var(--border);
-}
-
-/* Hide ASCII when disabled */
-[data-show-ascii-sheets="false"] .ascii-box {
-  display: none;
 }
 
 /* Collapsible code block */

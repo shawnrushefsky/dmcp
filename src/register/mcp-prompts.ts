@@ -85,7 +85,6 @@ export function registerMcpPrompts(server: McpServer) {
       promptText += `1. Stay consistent with the established tone and setting\n`;
       promptText += `2. Honor player preferences and avoid restricted content\n`;
       promptText += `3. Create immersive descriptions that match the genre\n`;
-      promptText += `4. Use ASCII art for maps, character portraits, and scene illustrations when image generation is unavailable\n`;
 
       promptText += `\n## CRITICAL: State Persistence Rules\n`;
       promptText += `The database IS the game state. Persist entities IMMEDIATELY as you introduce them in narrative:\n\n`;

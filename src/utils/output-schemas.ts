@@ -281,8 +281,26 @@ export const narrativeSummaryOutputSchema = {
 // ============================================================================
 
 export const mapOutputSchema = {
-  ascii: z.string(),
-  legend: z.record(z.string(), z.string()).optional(),
+  nodes: z.array(z.object({
+    id: z.string(),
+    name: z.string(),
+    hasPlayer: z.boolean(),
+    exits: z.array(z.object({
+      direction: z.string(),
+      destinationId: z.string(),
+    })),
+  })),
+  connections: z.array(z.object({
+    from: z.string(),
+    to: z.string(),
+    direction: z.string(),
+  })),
+  bounds: z.object({
+    minX: z.number(),
+    maxX: z.number(),
+    minY: z.number(),
+    maxY: z.number(),
+  }),
   playerLocation: z.string().optional(),
 };
 

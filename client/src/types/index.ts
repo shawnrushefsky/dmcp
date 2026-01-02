@@ -179,15 +179,15 @@ export interface MapNode {
 }
 
 export interface MapData {
-  ascii: string
   nodes: MapNode[]
+  connections: { from: string; to: string; direction: string }[]
+  bounds: { minX: number; maxX: number; minY: number; maxY: number }
 }
 
 export interface CharacterSheet {
   character: Character
   inventory: Item[]
   locationName: string
-  ascii: string
 }
 
 export interface SessionCounts {

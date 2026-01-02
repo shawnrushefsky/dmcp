@@ -294,7 +294,6 @@ interface MapData {
   nodes: MapNode[];
   connections: Array<{ from: string; to: string; direction: string }>;
   bounds: { minX: number; maxX: number; minY: number; maxY: number };
-  ascii: string;
 }
 
 export function renderMap(
@@ -405,10 +404,7 @@ export function renderMap(
     maxY: Math.max(...ys),
   };
 
-  // Render ASCII map
-  const ascii = renderAsciiMap(nodes, connections, bounds, options?.playerLocationId);
-
-  return { nodes, connections, bounds, ascii };
+  return { nodes, connections, bounds };
 }
 
 function getDirectionOffset(direction: string): { dx: number; dy: number } {
@@ -447,112 +443,3 @@ function findNearbySpot(
   return { x: x + 3, y };
 }
 
-function renderAsciiMap(
-  nodes: MapNode[],
-  connections: Array<{ from: string; to: string; direction: string }>,
-  bounds: { minX: number; maxX: number; minY: number; maxY: number },
-  playerLocationId?: string
-): string {
-  // Each cell is 12 chars wide, 3 chars tall
-  const cellWidth = 14;
-  const cellHeight = 3;
-
-  const width = (bounds.maxX - bounds.minX + 1) * cellWidth + 1;
-  const height = (bounds.maxY - bounds.minY + 1) * cellHeight + 1;
-
-  // Initialize grid
-  const grid: string[][] = [];
-  for (let y = 0; y < height; y++) {
-    grid.push(new Array(width).fill(" "));
-  }
-
-  // Create position lookup
-  const nodesByPos = new Map<string, MapNode>();
-  for (const node of nodes) {
-    nodesByPos.set(`${node.x},${node.y}`, node);
-  }
-
-  // Draw nodes
-  for (const node of nodes) {
-    const gridX = (node.x - bounds.minX) * cellWidth;
-    const gridY = (node.y - bounds.minY) * cellHeight;
-
-    // Truncate name to fit
-    let displayName = node.name.slice(0, cellWidth - 4);
-    if (node.hasPlayer) {
-      displayName = `@${displayName}`;
-    }
-
-    // Draw box
-    const boxWidth = Math.max(displayName.length + 2, 8);
-    const startX = gridX + Math.floor((cellWidth - boxWidth) / 2);
-
-    // Top border
-    for (let i = 0; i < boxWidth; i++) {
-      grid[gridY][startX + i] = i === 0 ? "+" : i === boxWidth - 1 ? "+" : "-";
-    }
-
-    // Middle with name
-    grid[gridY + 1][startX] = "|";
-    for (let i = 1; i < boxWidth - 1; i++) {
-      const charIndex = i - 1;
-      grid[gridY + 1][startX + i] = charIndex < displayName.length ? displayName[charIndex] : " ";
-    }
-    grid[gridY + 1][startX + boxWidth - 1] = "|";
-
-    // Bottom border
-    for (let i = 0; i < boxWidth; i++) {
-      grid[gridY + 2][startX + i] = i === 0 ? "+" : i === boxWidth - 1 ? "+" : "-";
-    }
-  }
-
-  // Draw connections
-  for (const conn of connections) {
-    const fromNode = nodes.find((n) => n.id === conn.from);
-    const toNode = nodes.find((n) => n.id === conn.to);
-    if (!fromNode || !toNode) continue;
-
-    const fromGridX = (fromNode.x - bounds.minX) * cellWidth + Math.floor(cellWidth / 2);
-    const fromGridY = (fromNode.y - bounds.minY) * cellHeight + 1;
-    const toGridX = (toNode.x - bounds.minX) * cellWidth + Math.floor(cellWidth / 2);
-    const toGridY = (toNode.y - bounds.minY) * cellHeight + 1;
-
-    // Draw simple line between nodes
-    if (fromGridY === toGridY) {
-      // Horizontal connection
-      const startX = Math.min(fromGridX, toGridX) + 4;
-      const endX = Math.max(fromGridX, toGridX) - 4;
-      for (let x = startX; x <= endX; x++) {
-        if (grid[fromGridY][x] === " ") grid[fromGridY][x] = "-";
-      }
-    } else if (fromGridX === toGridX) {
-      // Vertical connection
-      const startY = Math.min(fromGridY, toGridY) + 2;
-      const endY = Math.max(fromGridY, toGridY) - 1;
-      for (let y = startY; y <= endY; y++) {
-        if (grid[y] && grid[y][fromGridX] === " ") grid[y][fromGridX] = "|";
-      }
-    } else {
-      // Diagonal - draw L-shaped path
-      const midX = fromGridX;
-      const midY = toGridY;
-
-      // Vertical segment
-      const startY = Math.min(fromGridY, midY);
-      const endY = Math.max(fromGridY, midY);
-      for (let y = startY + 2; y < endY; y++) {
-        if (grid[y] && grid[y][midX] === " ") grid[y][midX] = "|";
-      }
-
-      // Horizontal segment
-      const startX = Math.min(midX, toGridX);
-      const endX = Math.max(midX, toGridX);
-      for (let x = startX + 1; x < endX - 3; x++) {
-        if (grid[midY] && grid[midY][x] === " ") grid[midY][x] = "-";
-      }
-    }
-  }
-
-  // Convert grid to string
-  return grid.map((row) => row.join("").trimEnd()).join("\n");
-}

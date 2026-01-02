@@ -192,7 +192,7 @@ export function getGameMenu(): GameMenuResult {
       hasExistingGames: false,
       sessions: [],
       instruction: "No existing games found. Start the new game interview process directly using get_interview_template.",
-      visualizationTip: "Enhance the experience with visuals: use render_map for world maps, and create ASCII art for character portraits, items, scene illustrations, and combat layouts when image generation isn't available.",
+      visualizationTip: "Enhance the experience with visuals: use render_map for world maps, and use image generation for character portraits, items, and scene illustrations.",
     };
   }
 

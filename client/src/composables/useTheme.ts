@@ -38,7 +38,6 @@ export interface ThemeConfig {
 
   // Display options
   showHealthBars: boolean
-  showAsciiSheets: boolean
   showConditionTags: boolean
   showImages: boolean
 
@@ -73,7 +72,6 @@ const defaultConfig: ThemeConfig = {
 
   // Display options
   showHealthBars: true,
-  showAsciiSheets: true,
   showConditionTags: true,
   showImages: true,
 
@@ -205,7 +203,6 @@ function applyTheme(theme: ThemeConfig): void {
 
   // Display options as data attributes for conditional CSS
   root.setAttribute('data-show-health-bars', String(theme.showHealthBars))
-  root.setAttribute('data-show-ascii-sheets', String(theme.showAsciiSheets))
   root.setAttribute('data-show-condition-tags', String(theme.showConditionTags))
   root.setAttribute('data-show-images', String(theme.showImages))
 

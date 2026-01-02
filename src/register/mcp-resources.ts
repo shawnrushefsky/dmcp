@@ -173,15 +173,15 @@ export function registerMcpResources(server: McpServer) {
     }
   );
 
-  // Session map (ASCII)
+  // Session map (JSON data)
   server.registerResource(
     "session-map",
     new ResourceTemplate("dmcp://session/{sessionId}/map", {
       list: createSessionListCallback("/map", (s) => `${s.name} - Map`),
     }),
     {
-      description: "ASCII world map",
-      mimeType: "text/plain",
+      description: "World map data with location nodes and connections",
+      mimeType: "application/json",
     },
     async (uri, variables) => {
       const sessionId = variables.sessionId as string;
@@ -194,8 +194,8 @@ export function registerMcpResources(server: McpServer) {
           contents: [
             {
               uri: uri.href,
-              mimeType: "text/plain",
-              text: "No locations in this session",
+              mimeType: "application/json",
+              text: JSON.stringify({ error: "No locations in this session" }),
             },
           ],
         };
@@ -204,8 +204,8 @@ export function registerMcpResources(server: McpServer) {
         contents: [
           {
             uri: uri.href,
-            mimeType: "text/plain",
-            text: mapResult.ascii,
+            mimeType: "application/json",
+            text: JSON.stringify(mapResult, null, 2),
           },
         ],
       };
@@ -309,8 +309,8 @@ export function registerMcpResources(server: McpServer) {
       list: undefined, // No enumeration - access by ID only
     }),
     {
-      description: "Character sheet (ASCII rendered)",
-      mimeType: "text/plain",
+      description: "Character sheet data",
+      mimeType: "application/json",
     },
     async (uri, variables) => {
       const characterId = variables.characterId as string;
@@ -320,8 +320,8 @@ export function registerMcpResources(server: McpServer) {
           contents: [
             {
               uri: uri.href,
-              mimeType: "text/plain",
-              text: "Character not found",
+              mimeType: "application/json",
+              text: JSON.stringify({ error: "Character not found" }),
             },
           ],
         };
@@ -330,8 +330,8 @@ export function registerMcpResources(server: McpServer) {
         contents: [
           {
             uri: uri.href,
-            mimeType: "text/plain",
-            text: sheet.ascii,
+            mimeType: "application/json",
+            text: JSON.stringify(sheet, null, 2),
           },
         ],
       };

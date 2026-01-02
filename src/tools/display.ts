@@ -38,7 +38,6 @@ export interface DisplayConfig {
 
   // Display options
   showHealthBars: boolean;
-  showAsciiSheets: boolean;
   showConditionTags: boolean;
   showImages: boolean;
 
@@ -75,7 +74,6 @@ const defaultConfig: DisplayConfig = {
 
   // Display options
   showHealthBars: true,
-  showAsciiSheets: false, // ASCII is supplemental, not primary
   showConditionTags: true,
   showImages: true,
 
@@ -439,7 +437,6 @@ export function listThemePresets(): Array<{
  */
 export function setDisplayOptions(options: {
   showHealthBars?: boolean;
-  showAsciiSheets?: boolean;
   showConditionTags?: boolean;
   showImages?: boolean;
 }): DisplayConfig {

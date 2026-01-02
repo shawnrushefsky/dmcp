@@ -384,7 +384,6 @@ export interface CharacterSheetData {
   character: Character;
   locationName: string | null;
   inventory: Array<{ name: string; type?: string }>;
-  ascii: string;
 }
 
 export function renderCharacterSheet(characterId: string): CharacterSheetData | null {
@@ -407,149 +406,10 @@ export function renderCharacterSheet(characterId: string): CharacterSheetData | 
     return { name: item.name, type: props.type };
   });
 
-  // Build ASCII sheet
-  const ascii = buildAsciiSheet(character, locationName, inventory);
-
   return {
     character,
     locationName,
     inventory,
-    ascii,
   };
 }
 
-function buildAsciiSheet(
-  char: Character,
-  locationName: string | null,
-  inventory: Array<{ name: string; type?: string }>
-): string {
-  const lines: string[] = [];
-  const width = 50;
-  const border = "═".repeat(width - 2);
-
-  // Helper functions
-  const centerText = (text: string, w: number): string => {
-    const pad = Math.max(0, w - text.length);
-    const left = Math.floor(pad / 2);
-    const right = pad - left;
-    return " ".repeat(left) + text + " ".repeat(right);
-  };
-
-  const padRight = (text: string, w: number): string => {
-    return text.slice(0, w).padEnd(w);
-  };
-
-  // Header
-  lines.push(`╔${border}╗`);
-  lines.push(`║${centerText(char.name.toUpperCase(), width - 2)}║`);
-  lines.push(`║${centerText(char.isPlayer ? "[ PLAYER CHARACTER ]" : "[ NPC ]", width - 2)}║`);
-  lines.push(`╠${border}╣`);
-
-  // Health bar
-  const healthPercent = char.status.maxHealth > 0
-    ? char.status.health / char.status.maxHealth
-    : 0;
-  const healthBarWidth = 30;
-  const filledBars = Math.round(healthPercent * healthBarWidth);
-  const emptyBars = healthBarWidth - filledBars;
-  const healthBar = "█".repeat(filledBars) + "░".repeat(emptyBars);
-  const healthText = `HP: ${char.status.health}/${char.status.maxHealth}`;
-  lines.push(`║ ${padRight(healthText, 15)} [${healthBar}] ║`);
-
-  // Level & XP
-  const levelXp = `Level: ${char.status.level}  XP: ${char.status.experience}`;
-  lines.push(`║ ${padRight(levelXp, width - 4)} ║`);
-
-  // Location
-  if (locationName) {
-    lines.push(`║ Location: ${padRight(locationName, width - 14)} ║`);
-  }
-
-  // Conditions
-  if (char.status.conditions.length > 0) {
-    lines.push(`╟${"─".repeat(width - 2)}╢`);
-    lines.push(`║ ${padRight("CONDITIONS:", width - 4)} ║`);
-    const condStr = char.status.conditions.join(", ");
-    // Word wrap conditions if needed
-    const condLines = wordWrap(condStr, width - 6);
-    for (const line of condLines) {
-      lines.push(`║   ${padRight(line, width - 6)} ║`);
-    }
-  }
-
-  // Attributes
-  const attrs = Object.entries(char.attributes);
-  if (attrs.length > 0) {
-    lines.push(`╟${"─".repeat(width - 2)}╢`);
-    lines.push(`║ ${padRight("ATTRIBUTES", width - 4)} ║`);
-
-    // Display in two columns
-    for (let i = 0; i < attrs.length; i += 2) {
-      const col1 = `${attrs[i][0]}: ${attrs[i][1]}`;
-      const col2 = attrs[i + 1] ? `${attrs[i + 1][0]}: ${attrs[i + 1][1]}` : "";
-      lines.push(`║   ${padRight(col1, 20)} ${padRight(col2, width - 27)} ║`);
-    }
-  }
-
-  // Skills
-  const skills = Object.entries(char.skills);
-  if (skills.length > 0) {
-    lines.push(`╟${"─".repeat(width - 2)}╢`);
-    lines.push(`║ ${padRight("SKILLS", width - 4)} ║`);
-
-    for (let i = 0; i < skills.length; i += 2) {
-      const col1 = `${skills[i][0]}: ${skills[i][1]}`;
-      const col2 = skills[i + 1] ? `${skills[i + 1][0]}: ${skills[i + 1][1]}` : "";
-      lines.push(`║   ${padRight(col1, 20)} ${padRight(col2, width - 27)} ║`);
-    }
-  }
-
-  // Inventory
-  if (inventory.length > 0) {
-    lines.push(`╟${"─".repeat(width - 2)}╢`);
-    lines.push(`║ ${padRight("INVENTORY", width - 4)} ║`);
-
-    for (const item of inventory.slice(0, 8)) { // Limit to 8 items for display
-      const itemText = item.type ? `• ${item.name} (${item.type})` : `• ${item.name}`;
-      lines.push(`║   ${padRight(itemText, width - 6)} ║`);
-    }
-    if (inventory.length > 8) {
-      lines.push(`║   ${padRight(`... and ${inventory.length - 8} more items`, width - 6)} ║`);
-    }
-  }
-
-  // Notes (truncated)
-  if (char.notes && char.notes.trim()) {
-    lines.push(`╟${"─".repeat(width - 2)}╢`);
-    lines.push(`║ ${padRight("NOTES", width - 4)} ║`);
-    const noteLines = wordWrap(char.notes, width - 6).slice(0, 3);
-    for (const line of noteLines) {
-      lines.push(`║   ${padRight(line, width - 6)} ║`);
-    }
-    if (wordWrap(char.notes, width - 6).length > 3) {
-      lines.push(`║   ${padRight("...", width - 6)} ║`);
-    }
-  }
-
-  // Footer
-  lines.push(`╚${border}╝`);
-
-  return lines.join("\n");
-}
-
-function wordWrap(text: string, maxWidth: number): string[] {
-  const words = text.split(" ");
-  const lines: string[] = [];
-  let currentLine = "";
-
-  for (const word of words) {
-    if (currentLine.length + word.length + 1 <= maxWidth) {
-      currentLine += (currentLine ? " " : "") + word;
-    } else {
-      if (currentLine) lines.push(currentLine);
-      currentLine = word.slice(0, maxWidth);
-    }
-  }
-  if (currentLine) lines.push(currentLine);
-  return lines;
-}

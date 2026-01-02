@@ -156,7 +156,7 @@ export function registerCoreTools(server: McpServer) {
               message: `View game at: ${webUiUrl}`,
             },
             tips: {
-              visualization: "Use the location and character data to describe the world. Generate ASCII art, maps, or other visualizations as appropriate to enhance immersion.",
+              visualization: "Use the location and character data to describe the world. Generate maps or other visualizations as appropriate to enhance immersion.",
             },
           }, null, 2),
         }],

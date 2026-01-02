@@ -6,7 +6,6 @@ import { useEntityLinker } from '../composables/useEntityLinker'
 import { useTheme } from '../composables/useTheme'
 import type { CharacterSheet, EntityImages, Breadcrumb, SessionState } from '../types'
 import HealthBar from '../components/HealthBar.vue'
-import AsciiBox from '../components/AsciiBox.vue'
 import Breadcrumbs from '../components/Breadcrumbs.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
 
@@ -147,11 +146,6 @@ onMounted(async () => {
       </div>
 
       <div>
-        <div v-if="config.showAsciiSheets" class="card">
-          <h3>ASCII Character Sheet</h3>
-          <AsciiBox :content="sheet.ascii" />
-        </div>
-
         <div v-if="sheet.inventory.length" class="card">
           <h3>Inventory</h3>
           <ul>
