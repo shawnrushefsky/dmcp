@@ -2,8 +2,8 @@ import { getCharacter } from "./character.js";
 import { getLocation } from "./world.js";
 import { getItem } from "./inventory.js";
 import { getFaction } from "./faction.js";
-import { getDefaultImagePreset } from "./session.js";
-import type { ImageGeneration, ImageGenerationPreferences, Character, Location, Item, Faction } from "../types/index.js";
+import { getDefaultImagePreset, getDefaultImagePromptTemplate } from "./session.js";
+import type { ImageGeneration, ImageGenerationPreferences, ImagePromptTemplate, Character, Location, Item, Faction } from "../types/index.js";
 
 export interface PromptBuilderResult {
   entityId: string;
@@ -16,17 +16,203 @@ export interface PromptBuilderResult {
     fromImageGen: boolean;
     fromNotes: boolean;
     fromPreset: boolean;
+    fromTemplate: boolean;
+  };
+  templateUsed?: string;  // Template name if used
+}
+
+// ============================================================================
+// Template Processing
+// ============================================================================
+
+/**
+ * Get a nested value from an object using dot notation path.
+ * E.g., getNestedValue(obj, "subject.physicalTraits.gender")
+ */
+function getNestedValue(obj: unknown, path: string): unknown {
+  const parts = path.split(".");
+  let current: unknown = obj;
+
+  for (const part of parts) {
+    if (current === null || current === undefined) return undefined;
+    if (typeof current !== "object") return undefined;
+    current = (current as Record<string, unknown>)[part];
+  }
+
+  return current;
+}
+
+/**
+ * Fill a template string with values from data object.
+ * Supports:
+ * - {{field.path}} - simple value substitution
+ * - {{field.path|"default"}} - value with default if undefined/null
+ * - {{field.path|}} - value or empty string if undefined
+ */
+export function fillTemplate(
+  template: string,
+  data: Record<string, unknown>,
+  defaults?: Record<string, string>,
+  aliases?: Record<string, string>
+): string {
+  // Pattern matches: {{path}} or {{path|"default"}} or {{path|}}
+  const pattern = /\{\{([^}|]+)(?:\|(?:"([^"]*)"|([^}]*)))?\}\}/g;
+
+  return template.replace(pattern, (match, path: string, quotedDefault?: string, bareDefault?: string) => {
+    const trimmedPath = path.trim();
+
+    // Check aliases first
+    const resolvedPath = aliases?.[trimmedPath] || trimmedPath;
+
+    // Get value from data
+    let value = getNestedValue(data, resolvedPath);
+
+    // Handle arrays by joining
+    if (Array.isArray(value)) {
+      value = value.join(", ");
+    }
+
+    // If value exists and is not empty, return it
+    if (value !== undefined && value !== null && value !== "") {
+      return String(value);
+    }
+
+    // Check template defaults
+    if (defaults?.[trimmedPath] !== undefined) {
+      return defaults[trimmedPath];
+    }
+
+    // Use inline default if provided
+    if (quotedDefault !== undefined) {
+      return quotedDefault;
+    }
+    if (bareDefault !== undefined) {
+      return bareDefault.trim();
+    }
+
+    // No value, no default - return empty string
+    return "";
+  });
+}
+
+/**
+ * Clean up a filled template by removing extra commas, spaces, etc.
+ */
+function cleanFilledTemplate(text: string): string {
+  return text
+    .replace(/,\s*,/g, ",")           // Remove double commas
+    .replace(/,\s*$/g, "")            // Remove trailing comma
+    .replace(/^\s*,/g, "")            // Remove leading comma
+    .replace(/\s+/g, " ")             // Normalize spaces
+    .replace(/\s+,/g, ",")            // Remove space before comma
+    .trim();
+}
+
+/**
+ * Build data context for template filling from entity and imageGen.
+ */
+function buildTemplateContext(
+  entity: Character | Location | Item | Faction,
+  entityType: "character" | "location" | "item" | "faction",
+  imageGen: ImageGeneration | null,
+  notes: string
+): Record<string, unknown> {
+  // Start with imageGen data (the primary source)
+  const context: Record<string, unknown> = {
+    entity: entity,
+    entityType,
+    name: (entity as { name: string }).name,
+    notes,
+    ...(imageGen || {}),
+  };
+
+  // Add convenience aliases at top level for common fields
+  if (imageGen?.subject) {
+    context.subject = imageGen.subject;
+    if (imageGen.subject.physicalTraits) {
+      context.physicalTraits = imageGen.subject.physicalTraits;
+    }
+    if (imageGen.subject.attire) {
+      context.attire = imageGen.subject.attire;
+    }
+    if (imageGen.subject.environment) {
+      context.environment = imageGen.subject.environment;
+    }
+    if (imageGen.subject.objectDetails) {
+      context.objectDetails = imageGen.subject.objectDetails;
+    }
+  }
+
+  if (imageGen?.style) {
+    context.style = imageGen.style;
+  }
+
+  if (imageGen?.composition) {
+    context.composition = imageGen.composition;
+  }
+
+  return context;
+}
+
+/**
+ * Build a prompt using a template.
+ */
+export function buildPromptFromTemplate(
+  template: ImagePromptTemplate,
+  entity: Character | Location | Item | Faction,
+  entityType: "character" | "location" | "item" | "faction",
+  imageGen: ImageGeneration | null,
+  notes: string
+): { prompt: string; negativePrompt: string } {
+  const context = buildTemplateContext(entity, entityType, imageGen, notes);
+
+  // Fill the main template
+  let prompt = fillTemplate(
+    template.promptTemplate,
+    context,
+    template.defaults,
+    template.fieldAliases
+  );
+
+  // Clean up the filled template
+  prompt = cleanFilledTemplate(prompt);
+
+  // Add prefix and suffix
+  if (template.promptPrefix) {
+    prompt = template.promptPrefix + " " + prompt;
+  }
+  if (template.promptSuffix) {
+    prompt = prompt + ", " + template.promptSuffix;
+  }
+
+  // Build negative prompt
+  let negativePrompt = "";
+  if (template.negativePromptTemplate) {
+    negativePrompt = fillTemplate(
+      template.negativePromptTemplate,
+      context,
+      template.defaults,
+      template.fieldAliases
+    );
+    negativePrompt = cleanFilledTemplate(negativePrompt);
+  }
+
+  return {
+    prompt: cleanFilledTemplate(prompt),
+    negativePrompt: negativePrompt || "low quality, blurry, distorted, deformed",
   };
 }
 
 /**
  * Build an image generation prompt from an entity's structured data.
+ * If a template exists for the entity type, uses that. Otherwise uses default logic.
  * Combines imageGen schema, notes, and session preset to create a ready-to-use prompt.
  */
 export function buildImagePrompt(
   entityId: string,
   entityType: "character" | "location" | "item" | "faction",
-  sessionId?: string
+  sessionId?: string,
+  templateId?: string
 ): PromptBuilderResult | null {
   // Get the entity
   let entity: Character | Location | Item | Faction | null = null;
@@ -75,8 +261,65 @@ export function buildImagePrompt(
 
   if (!entity) return null;
 
-  // Get session preset for style defaults
+  // Get session ID for template/preset lookup
   const effectiveSessionId = sessionId || (entity as { sessionId?: string }).sessionId;
+
+  // Check for a template to use
+  let template: ImagePromptTemplate | null = null;
+  if (effectiveSessionId) {
+    if (templateId) {
+      // Use specific template if provided
+      const { getImagePromptTemplate } = require("./session.js");
+      template = getImagePromptTemplate(effectiveSessionId, templateId);
+    } else {
+      // Try to find default template for this entity type
+      template = getDefaultImagePromptTemplate(effectiveSessionId, entityType);
+    }
+  }
+
+  // If we have a template, use template-based building
+  if (template) {
+    const { prompt, negativePrompt } = buildPromptFromTemplate(
+      template,
+      entity,
+      entityType,
+      imageGen,
+      notes
+    );
+
+    // Build summary
+    const summaryParts: string[] = [
+      `Type: ${entityType}`,
+      `Name: ${entityName}`,
+      `Template: ${template.name}`,
+    ];
+
+    if (imageGen?.subject?.physicalTraits?.gender) {
+      summaryParts.push(`Gender: ${imageGen.subject.physicalTraits.gender}`);
+    }
+    if (imageGen?.subject?.physicalTraits?.age) {
+      summaryParts.push(`Age: ${imageGen.subject.physicalTraits.age}`);
+    }
+
+    return {
+      entityId,
+      entityType,
+      entityName,
+      prompt,
+      negativePrompt,
+      summary: summaryParts.join("\n"),
+      source: {
+        fromImageGen: !!imageGen,
+        fromNotes: !!notes && !imageGen,
+        fromPreset: false,
+        fromTemplate: true,
+      },
+      templateUsed: template.name,
+    };
+  }
+
+  // No template - use default logic
+  // Get session preset for style defaults
   let preset: { config: ImageGenerationPreferences } | null = null;
   if (effectiveSessionId) {
     preset = getDefaultImagePreset(effectiveSessionId);
@@ -86,7 +329,7 @@ export function buildImagePrompt(
   const promptParts: string[] = [];
   const negativeParts: string[] = [];
   const summaryParts: string[] = [];
-  const source = { fromImageGen: false, fromNotes: false, fromPreset: false };
+  const source = { fromImageGen: false, fromNotes: false, fromPreset: false, fromTemplate: false };
 
   // 1. Start with imageGen structured data if available
   if (imageGen) {

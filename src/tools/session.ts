@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
 import { safeJsonParse } from "../utils/json.js";
-import type { Session, RuleSystem, GamePreferences, ImageGenerationPreferences, ImageGenerationPreset } from "../types/index.js";
+import type { Session, RuleSystem, GamePreferences, ImageGenerationPreferences, ImageGenerationPreset, ImagePromptTemplate } from "../types/index.js";
 
 export function createSession(params: {
   name: string;
@@ -497,4 +497,171 @@ function deepMergePreferences(
       ...updates.consistency,
     } : current.consistency,
   };
+}
+
+// ============================================================================
+// Image Prompt Templates - Template-based prompt building
+// ============================================================================
+
+export function listImagePromptTemplates(
+  sessionId: string
+): ImagePromptTemplate[] {
+  const preferences = getSessionPreferences(sessionId);
+  return preferences?.imagePromptTemplates || [];
+}
+
+export function getImagePromptTemplate(
+  sessionId: string,
+  templateId: string
+): ImagePromptTemplate | null {
+  const templates = listImagePromptTemplates(sessionId);
+  return templates.find(t => t.id === templateId) || null;
+}
+
+export function getDefaultImagePromptTemplate(
+  sessionId: string,
+  entityType: "character" | "location" | "item" | "faction"
+): ImagePromptTemplate | null {
+  const templates = listImagePromptTemplates(sessionId);
+  const entityTemplates = templates.filter(t => t.entityType === entityType);
+
+  if (entityTemplates.length === 0) return null;
+
+  // First try to find one marked as default
+  const defaultTemplate = entityTemplates.find(t => t.isDefault);
+  if (defaultTemplate) return defaultTemplate;
+
+  // Otherwise return highest priority
+  return entityTemplates.sort((a, b) => (b.priority || 0) - (a.priority || 0))[0];
+}
+
+export function createImagePromptTemplate(
+  sessionId: string,
+  params: {
+    name: string;
+    description?: string;
+    entityType: "character" | "location" | "item" | "faction";
+    promptTemplate: string;
+    negativePromptTemplate?: string;
+    promptPrefix?: string;
+    promptSuffix?: string;
+    fieldAliases?: Record<string, string>;
+    defaults?: Record<string, string>;
+    priority?: number;
+    isDefault?: boolean;
+  }
+): ImagePromptTemplate {
+  const currentPrefs = getSessionPreferences(sessionId) || {} as GamePreferences;
+  const templates = currentPrefs.imagePromptTemplates || [];
+
+  const now = new Date().toISOString();
+  const newTemplate: ImagePromptTemplate = {
+    id: uuidv4(),
+    name: params.name,
+    description: params.description,
+    entityType: params.entityType,
+    promptTemplate: params.promptTemplate,
+    negativePromptTemplate: params.negativePromptTemplate,
+    promptPrefix: params.promptPrefix,
+    promptSuffix: params.promptSuffix,
+    fieldAliases: params.fieldAliases,
+    defaults: params.defaults,
+    priority: params.priority,
+    isDefault: params.isDefault,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  // If this is marked as default, unmark others of same entity type
+  let updatedTemplates = templates;
+  if (params.isDefault) {
+    updatedTemplates = templates.map(t =>
+      t.entityType === params.entityType ? { ...t, isDefault: false } : t
+    );
+  }
+
+  const updatedPrefs: GamePreferences = {
+    ...currentPrefs,
+    imagePromptTemplates: [...updatedTemplates, newTemplate],
+  };
+
+  updateSessionPreferences(sessionId, updatedPrefs);
+  return newTemplate;
+}
+
+export function updateImagePromptTemplate(
+  sessionId: string,
+  templateId: string,
+  updates: {
+    name?: string;
+    description?: string;
+    promptTemplate?: string;
+    negativePromptTemplate?: string;
+    promptPrefix?: string;
+    promptSuffix?: string;
+    fieldAliases?: Record<string, string>;
+    defaults?: Record<string, string>;
+    priority?: number;
+    isDefault?: boolean;
+  }
+): ImagePromptTemplate | null {
+  const currentPrefs = getSessionPreferences(sessionId) || {} as GamePreferences;
+  const templates = currentPrefs.imagePromptTemplates || [];
+
+  const templateIndex = templates.findIndex(t => t.id === templateId);
+  if (templateIndex === -1) return null;
+
+  const currentTemplate = templates[templateIndex];
+  const now = new Date().toISOString();
+
+  const updatedTemplate: ImagePromptTemplate = {
+    ...currentTemplate,
+    ...(updates.name !== undefined ? { name: updates.name } : {}),
+    ...(updates.description !== undefined ? { description: updates.description } : {}),
+    ...(updates.promptTemplate !== undefined ? { promptTemplate: updates.promptTemplate } : {}),
+    ...(updates.negativePromptTemplate !== undefined ? { negativePromptTemplate: updates.negativePromptTemplate } : {}),
+    ...(updates.promptPrefix !== undefined ? { promptPrefix: updates.promptPrefix } : {}),
+    ...(updates.promptSuffix !== undefined ? { promptSuffix: updates.promptSuffix } : {}),
+    ...(updates.fieldAliases !== undefined ? { fieldAliases: updates.fieldAliases } : {}),
+    ...(updates.defaults !== undefined ? { defaults: updates.defaults } : {}),
+    ...(updates.priority !== undefined ? { priority: updates.priority } : {}),
+    ...(updates.isDefault !== undefined ? { isDefault: updates.isDefault } : {}),
+    updatedAt: now,
+  };
+
+  // If this is marked as default, unmark others of same entity type
+  let updatedTemplates = [...templates];
+  if (updates.isDefault) {
+    updatedTemplates = templates.map(t =>
+      t.entityType === currentTemplate.entityType ? { ...t, isDefault: false } : t
+    );
+  }
+  updatedTemplates[templateIndex] = updatedTemplate;
+
+  const updatedPrefs: GamePreferences = {
+    ...currentPrefs,
+    imagePromptTemplates: updatedTemplates,
+  };
+
+  updateSessionPreferences(sessionId, updatedPrefs);
+  return updatedTemplate;
+}
+
+export function deleteImagePromptTemplate(
+  sessionId: string,
+  templateId: string
+): boolean {
+  const currentPrefs = getSessionPreferences(sessionId) || {} as GamePreferences;
+  const templates = currentPrefs.imagePromptTemplates || [];
+
+  const filteredTemplates = templates.filter(t => t.id !== templateId);
+  if (filteredTemplates.length === templates.length) return false; // Not found
+
+  const updatedPrefs: GamePreferences = {
+    ...currentPrefs,
+    imagePromptTemplates: filteredTemplates,
+  };
+
+  updateSessionPreferences(sessionId, updatedPrefs);
+  return true;
 }

@@ -59,6 +59,9 @@ export interface GamePreferences {
 
   // Which preset to use by default
   defaultImagePresetId?: string;
+
+  // Image prompt templates - configurable templates for building prompts from entity data
+  imagePromptTemplates?: ImagePromptTemplate[];
 }
 
 // Image generation preset - a named collection of settings for a specific use case
@@ -69,6 +72,40 @@ export interface ImageGenerationPreset {
   entityTypes?: ("character" | "location" | "item" | "scene" | "faction")[]; // Which entity types this preset is best for
   isDefault?: boolean;                     // Whether this is the default preset
   config: ImageGenerationPreferences;      // The actual settings
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Image prompt template - configurable template for building prompts from structured data
+export interface ImagePromptTemplate {
+  id: string;
+  name: string;                              // Human-readable name (e.g., "Fantasy Character Portrait")
+  description?: string;                      // What this template is for
+  entityType: "character" | "location" | "item" | "faction"; // Which entity type this template handles
+
+  // Template strings with placeholders
+  // Placeholders use mustache-like syntax: {{field.path}} or {{field.path|"default"}}
+  // Examples: {{subject.primaryDescription}}, {{subject.physicalTraits.gender|"person"}}
+  promptTemplate: string;                    // Main positive prompt template
+  negativePromptTemplate?: string;           // Negative prompt template
+
+  // Optional prefix/suffix that wrap the filled template
+  promptPrefix?: string;                     // Added before the filled template
+  promptSuffix?: string;                     // Added after the filled template (quality tags, etc.)
+
+  // Field mappings for custom paths (optional)
+  // Allows aliasing complex paths to simple names
+  fieldAliases?: Record<string, string>;     // e.g., {"gender": "subject.physicalTraits.gender"}
+
+  // Default values for missing fields
+  defaults?: Record<string, string>;         // e.g., {"gender": "person", "mood": "neutral"}
+
+  // Priority when multiple templates match (higher = preferred)
+  priority?: number;
+
+  // Whether this is the default template for its entity type
+  isDefault?: boolean;
+
   createdAt?: string;
   updatedAt?: string;
 }
