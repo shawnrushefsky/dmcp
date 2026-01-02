@@ -3,6 +3,7 @@ import { z } from "zod";
 import * as sessionTools from "../tools/session.js";
 import * as rulesTools from "../tools/rules.js";
 import { LIMITS } from "../utils/validation.js";
+import { getSessionUrl, getWebUiBaseUrl } from "../utils/webui.js";
 
 export function registerCoreTools(server: McpServer) {
   // ============================================================================
@@ -15,8 +16,21 @@ export function registerCoreTools(server: McpServer) {
     {},
     async () => {
       const menu = sessionTools.getGameMenu();
+      const menuWithUrls = {
+        ...menu,
+        sessions: menu.sessions.map((s) => ({
+          ...s,
+          webUiUrl: getSessionUrl(s.id),
+        })),
+        webUi: {
+          baseUrl: getWebUiBaseUrl(),
+          message: menu.hasExistingGames
+            ? `Web UI available at: ${getWebUiBaseUrl()}`
+            : `Web UI will be available at: ${getWebUiBaseUrl()}`,
+        },
+      };
       return {
-        content: [{ type: "text", text: JSON.stringify(menu, null, 2) }],
+        content: [{ type: "text", text: JSON.stringify(menuWithUrls, null, 2) }],
       };
     }
   );
@@ -31,8 +45,18 @@ export function registerCoreTools(server: McpServer) {
     },
     async ({ name, setting, style }) => {
       const session = sessionTools.createSession({ name, setting, style });
+      const webUiUrl = getSessionUrl(session.id);
       return {
-        content: [{ type: "text", text: JSON.stringify(session, null, 2) }],
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            ...session,
+            webUi: {
+              url: webUiUrl,
+              message: `View game at: ${webUiUrl}`,
+            },
+          }, null, 2),
+        }],
       };
     }
   );
@@ -51,8 +75,18 @@ export function registerCoreTools(server: McpServer) {
           isError: true,
         };
       }
+      const webUiUrl = getSessionUrl(session.id);
       return {
-        content: [{ type: "text", text: JSON.stringify(session, null, 2) }],
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            ...session,
+            webUi: {
+              url: webUiUrl,
+              message: `View game at: ${webUiUrl}`,
+            },
+          }, null, 2),
+        }],
       };
     }
   );
@@ -63,8 +97,20 @@ export function registerCoreTools(server: McpServer) {
     {},
     async () => {
       const sessions = sessionTools.listSessions();
+      const sessionsWithUrls = sessions.map((s) => ({
+        ...s,
+        webUiUrl: getSessionUrl(s.id),
+      }));
       return {
-        content: [{ type: "text", text: JSON.stringify(sessions, null, 2) }],
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            sessions: sessionsWithUrls,
+            webUi: {
+              baseUrl: getWebUiBaseUrl(),
+            },
+          }, null, 2),
+        }],
       };
     }
   );
@@ -83,11 +129,16 @@ export function registerCoreTools(server: McpServer) {
           isError: true,
         };
       }
+      const webUiUrl = getSessionUrl(sessionId);
       return {
         content: [{
           type: "text",
           text: JSON.stringify({
             ...state,
+            webUi: {
+              url: webUiUrl,
+              message: `View game at: ${webUiUrl}`,
+            },
             tips: {
               visualization: "Use render_map to show the world. If no image generation is available, use ASCII art liberally for character portraits, items, scene illustrations, and combat layouts to enhance immersion.",
               mapRecommendation: state.locationCount > 0 ? "Consider showing a map with render_map" : null,

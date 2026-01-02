@@ -203,6 +203,7 @@ Or use Docker:
       "command": "docker",
       "args": [
         "run", "-i", "--rm",
+        "-p", "3000:3000",
         "-v", "dmcp-data:/app/data",
         "ghcr.io/shawnrushefsky/dmcp:latest"
       ]
@@ -289,6 +290,7 @@ For Docker-based MCP clients, use the ghcr.io image:
       "command": "docker",
       "args": [
         "run", "-i", "--rm",
+        "-p", "3000:3000",
         "-v", "dmcp-data:/app/data",
         "ghcr.io/shawnrushefsky/dmcp:latest"
       ]
@@ -297,7 +299,11 @@ For Docker-based MCP clients, use the ghcr.io image:
 }
 ```
 
-The `-v dmcp-data:/app/data` flag persists game data across container restarts.
+**Flags:**
+- `-p 3000:3000` exposes the HTTP web UI at http://localhost:3000
+- `-v dmcp-data:/app/data` persists game data across container restarts
+
+To use a different port, add `-e DMCP_HTTP_PORT=8080` and change `-p 8080:8080`.
 
 ---
 
@@ -391,7 +397,7 @@ Please help me configure this MCP server for my system. Here's what I need you t
    - For source setup: Help me clone the repo, run npm install && npm run build, and configure
 
 3. The configuration should use these settings:
-   - Docker: command "docker" with args ["run", "-i", "--rm", "-v", "dmcp-data:/app/data", "ghcr.io/shawnrushefsky/dmcp:latest"]
+   - Docker: command "docker" with args ["run", "-i", "--rm", "-p", "3000:3000", "-v", "dmcp-data:/app/data", "ghcr.io/shawnrushefsky/dmcp:latest"]
    - Source: command "node" with args pointing to the dist/index.js file
 
 4. After configuration, tell me to restart my AI application, then we can start playing!
