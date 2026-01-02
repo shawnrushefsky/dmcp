@@ -91,12 +91,47 @@ export function registerImageTools(server: McpServer) {
 
   server.tool(
     "get_image_data",
-    "Get image with base64 data included (for displaying or processing)",
+    "Get image with base64 data included (for displaying or processing). Supports format conversion, resizing, and quality control.",
     {
       imageId: z.string().max(100).describe("The image ID"),
+      format: z
+        .enum(["jpeg", "webp", "png"])
+        .optional()
+        .describe("Output format. If not specified, returns original format."),
+      width: z
+        .number()
+        .int()
+        .positive()
+        .max(4096)
+        .optional()
+        .describe("Target width in pixels. Image will be resized proportionally if only width is specified."),
+      height: z
+        .number()
+        .int()
+        .positive()
+        .max(4096)
+        .optional()
+        .describe("Target height in pixels. Image will be resized proportionally if only height is specified."),
+      quality: z
+        .number()
+        .int()
+        .min(1)
+        .max(100)
+        .optional()
+        .describe("Quality for JPEG/WebP (1-100). Default is 80. For PNG, controls compression level."),
+      fit: z
+        .enum(["cover", "contain", "fill", "inside", "outside"])
+        .optional()
+        .describe("How to fit the image when both width and height are specified. Default is 'inside' (preserve aspect ratio, fit within dimensions)."),
     },
-    async ({ imageId }) => {
-      const result = imageTools.getImageData(imageId);
+    async ({ imageId, format, width, height, quality, fit }) => {
+      const result = await imageTools.getImageData(imageId, {
+        format,
+        width,
+        height,
+        quality,
+        fit,
+      });
       if (!result) {
         return {
           content: [{ type: "text", text: "Image not found" }],

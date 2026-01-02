@@ -230,19 +230,76 @@ export function getImage(imageId: string): StoredImage | null {
   return mapRowToStoredImage(row);
 }
 
-export function getImageData(
-  imageId: string
-): { image: StoredImage; base64: string } | null {
+export interface GetImageDataOptions {
+  format?: "jpeg" | "webp" | "png";
+  width?: number;
+  height?: number;
+  quality?: number; // 1-100
+  fit?: "cover" | "contain" | "fill" | "inside" | "outside";
+}
+
+export async function getImageData(
+  imageId: string,
+  options?: GetImageDataOptions
+): Promise<{ image: StoredImage; base64: string; outputFormat: string; outputSize: number } | null> {
   const image = getImage(imageId);
   if (!image) return null;
 
   const fullPath = join(IMAGES_DIR, image.filePath);
   if (!existsSync(fullPath)) return null;
 
-  const buffer = readFileSync(fullPath);
-  const base64 = `data:${image.mimeType};base64,${buffer.toString("base64")}`;
+  const originalBuffer = readFileSync(fullPath);
 
-  return { image, base64 };
+  // If no processing options, return original
+  if (!options || (!options.format && !options.width && !options.height && !options.quality)) {
+    const base64 = `data:${image.mimeType};base64,${originalBuffer.toString("base64")}`;
+    return { image, base64, outputFormat: image.mimeType, outputSize: originalBuffer.length };
+  }
+
+  // Process with Sharp
+  let pipeline = sharp(originalBuffer);
+
+  // Resize if dimensions specified
+  if (options.width || options.height) {
+    pipeline = pipeline.resize({
+      width: options.width,
+      height: options.height,
+      fit: options.fit || "inside",
+      withoutEnlargement: true,
+    });
+  }
+
+  // Convert format and apply quality
+  let outputMimeType: string;
+  const quality = options.quality ?? 80;
+
+  switch (options.format) {
+    case "jpeg":
+      pipeline = pipeline.jpeg({ quality });
+      outputMimeType = "image/jpeg";
+      break;
+    case "webp":
+      pipeline = pipeline.webp({ quality });
+      outputMimeType = "image/webp";
+      break;
+    case "png":
+      pipeline = pipeline.png({ compressionLevel: Math.floor((100 - quality) / 10) });
+      outputMimeType = "image/png";
+      break;
+    default:
+      // Keep original format but apply quality if it's a lossy format
+      if (image.mimeType === "image/jpeg") {
+        pipeline = pipeline.jpeg({ quality });
+      } else if (image.mimeType === "image/webp") {
+        pipeline = pipeline.webp({ quality });
+      }
+      outputMimeType = image.mimeType;
+  }
+
+  const processedBuffer = await pipeline.toBuffer();
+  const base64 = `data:${outputMimeType};base64,${processedBuffer.toString("base64")}`;
+
+  return { image, base64, outputFormat: outputMimeType, outputSize: processedBuffer.length };
 }
 
 export function listEntityImages(
