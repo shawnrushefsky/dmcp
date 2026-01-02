@@ -164,6 +164,45 @@ export function registerCoreTools(server: McpServer) {
     }
   );
 
+  server.tool(
+    "update_session",
+    "Update a game session's name, setting, or style",
+    {
+      sessionId: z.string().describe("The session ID to update"),
+      name: z.string().min(1).max(LIMITS.NAME_MAX).optional().describe("New name for the session"),
+      setting: z.string().min(1).max(LIMITS.DESCRIPTION_MAX).optional().describe("New setting description"),
+      style: z.string().min(1).max(LIMITS.NAME_MAX).optional().describe("New narrative style"),
+    },
+    async ({ sessionId, name, setting, style }) => {
+      if (!name && !setting && !style) {
+        return {
+          content: [{ type: "text", text: "No updates provided" }],
+          isError: true,
+        };
+      }
+      const session = sessionTools.updateSession(sessionId, { name, setting, style });
+      if (!session) {
+        return {
+          content: [{ type: "text", text: "Session not found" }],
+          isError: true,
+        };
+      }
+      const webUiUrl = getSessionUrl(session.id);
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            ...session,
+            webUi: {
+              url: webUiUrl,
+              message: `View game at: ${webUiUrl}`,
+            },
+          }, null, 2),
+        }],
+      };
+    }
+  );
+
   // ============================================================================
   // GAME SETUP INTERVIEW TOOLS
   // ============================================================================

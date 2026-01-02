@@ -117,6 +117,33 @@ export function updateSessionLocation(
   return result.changes > 0;
 }
 
+export function updateSession(
+  sessionId: string,
+  updates: { name?: string; setting?: string; style?: string }
+): Session | null {
+  const db = getDatabase();
+  const session = loadSession(sessionId);
+  if (!session) return null;
+
+  const now = new Date().toISOString();
+  const newName = updates.name ?? session.name;
+  const newSetting = updates.setting ?? session.setting;
+  const newStyle = updates.style ?? session.style;
+
+  const stmt = db.prepare(`
+    UPDATE sessions SET name = ?, setting = ?, style = ?, updated_at = ? WHERE id = ?
+  `);
+  stmt.run(newName, newSetting, newStyle, now, sessionId);
+
+  return {
+    ...session,
+    name: newName,
+    setting: newSetting,
+    style: newStyle,
+    updatedAt: now,
+  };
+}
+
 export interface GameMenuResult {
   hasExistingGames: boolean;
   sessions: Array<{

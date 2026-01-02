@@ -19,8 +19,8 @@ An MCP (Model Context Protocol) server that enables AI agents to act as dynamic 
     - [Testing with MCP Inspector](#testing-with-mcp-inspector)
     - [HTTP Web UI](#http-web-ui)
     - [AI Self-Configuration Prompt](#ai-self-configuration-prompt)
-  - [Available Tools (173 total)](#available-tools-173-total)
-    - [Session Management](#session-management-6-tools)
+  - [Available Tools (183 total)](#available-tools-183-total)
+    - [Session Management](#session-management-7-tools)
     - [Game Setup Interview](#game-setup-interview-3-tools)
     - [Rules System](#rules-system-3-tools)
     - [World Management](#world-management-6-tools)
@@ -415,9 +415,9 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 
 </details>
 
-## Available Tools (182 total)
+## Available Tools (183 total)
 
-### Session Management (6 tools)
+### Session Management (7 tools)
 | Tool | Description |
 |------|-------------|
 | `get_game_menu` | **Call first** - returns existing games or starts new |
@@ -425,6 +425,7 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `load_session` | Resume an existing game |
 | `list_sessions` | Show all saved games |
 | `get_session_state` | Full game state overview |
+| `update_session` | Rename or update session name/setting/style |
 | `delete_session` | Remove a saved game |
 
 ### Game Setup Interview (3 tools)
