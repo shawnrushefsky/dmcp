@@ -19,11 +19,11 @@ An MCP (Model Context Protocol) server that enables AI agents to act as dynamic 
     - [Testing with MCP Inspector](#testing-with-mcp-inspector)
     - [HTTP Web UI](#http-web-ui)
     - [AI Self-Configuration Prompt](#ai-self-configuration-prompt)
-  - [Available Tools (169 total)](#available-tools-169-total)
+  - [Available Tools (170 total)](#available-tools-170-total)
     - [Session Management](#session-management-8-tools)
     - [Game Setup Interview](#game-setup-interview-3-tools)
     - [Rules System](#rules-system-3-tools)
-    - [World Management](#world-management-5-tools)
+    - [World Management](#world-management-6-tools)
     - [Character Management](#character-management-7-tools)
     - [Dice \& Checks](#dice--checks-3-tools)
     - [Combat](#combat-7-tools)
@@ -419,7 +419,7 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 
 </details>
 
-## Available Tools (169 total)
+## Available Tools (170 total)
 
 ### Session Management (8 tools)
 | Tool | Description |
@@ -447,11 +447,12 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `get_rules` | Retrieve current rules |
 | `update_rules` | Modify rules mid-game |
 
-### World Management (5 tools)
+### World Management (6 tools)
 | Tool | Description |
 |------|-------------|
 | `create_location` | Add a new location |
 | `get_location` | Get location details |
+| `get_location_by_name` | Look up location by name (fuzzy matching) |
 | `update_location` | Modify a location |
 | `list_locations` | All locations in session |
 | `connect_locations` | Create paths between locations |
