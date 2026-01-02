@@ -4,6 +4,7 @@ import * as sessionTools from "../tools/session.js";
 import * as rulesTools from "../tools/rules.js";
 import { LIMITS } from "../utils/validation.js";
 import { getSessionUrl, getWebUiBaseUrl } from "../utils/webui.js";
+import { ANNOTATIONS } from "../utils/tool-annotations.js";
 
 export function registerCoreTools(server: McpServer) {
   // ============================================================================
@@ -149,16 +150,31 @@ export function registerCoreTools(server: McpServer) {
     }
   );
 
-  server.tool(
+  // delete_session - DESTRUCTIVE operation with annotation
+  server.registerTool(
     "delete_session",
-    "Delete a game session and all its data",
     {
-      sessionId: z.string().describe("The session ID to delete"),
+      description: "Delete a game session and all its data. This is IRREVERSIBLE and removes all characters, locations, quests, and history.",
+      inputSchema: {
+        sessionId: z.string().describe("The session ID to delete"),
+      },
+      outputSchema: {
+        deleted: z.boolean(),
+        sessionId: z.string(),
+        message: z.string(),
+      },
+      annotations: ANNOTATIONS.DESTRUCTIVE,
     },
     async ({ sessionId }) => {
       const success = sessionTools.deleteSession(sessionId);
+      const output = {
+        deleted: success,
+        sessionId,
+        message: success ? "Session deleted successfully" : "Session not found",
+      };
       return {
         content: [{ type: "text", text: success ? "Session deleted" : "Session not found" }],
+        structuredContent: output,
         isError: !success,
       };
     }

@@ -2,18 +2,75 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import * as tagTools from "../tools/tags.js";
 import { LIMITS } from "../utils/validation.js";
+import { ANNOTATIONS } from "../utils/tool-annotations.js";
+import { tagModifyOutputSchema } from "../utils/output-schemas.js";
 
 export function registerTagTools(server: McpServer) {
-  server.tool(
-    "add_tag",
-    "Add a tag to any entity (character, location, item, quest, etc.)",
+  // ============================================================================
+  // CONSOLIDATED: MODIFY TAGS (add and/or remove in a single call)
+  // ============================================================================
+  server.registerTool(
+    "modify_tags",
     {
-      sessionId: z.string().max(100).describe("The session ID"),
-      entityId: z.string().max(100).describe("The entity ID to tag"),
-      entityType: z.string().max(100).describe("Type of entity (e.g., 'character', 'location', 'item', 'quest')"),
-      tag: z.string().min(1).max(LIMITS.NAME_MAX).describe("The tag to add"),
-      color: z.string().max(50).optional().describe("Optional color hint for the tag"),
-      notes: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("Optional notes about this tag"),
+      description: "Add and/or remove tags from an entity in a single call. More efficient than separate add/remove calls.",
+      inputSchema: {
+        sessionId: z.string().max(100).describe("The session ID"),
+        entityId: z.string().max(100).describe("The entity ID to modify tags on"),
+        entityType: z.string().max(100).describe("Type of entity (e.g., 'character', 'location', 'item', 'quest')"),
+        add: z.array(z.object({
+          tag: z.string().min(1).max(LIMITS.NAME_MAX),
+          color: z.string().max(50).optional(),
+          notes: z.string().max(LIMITS.DESCRIPTION_MAX).optional(),
+        })).max(LIMITS.ARRAY_MAX).optional().describe("Tags to add with optional color/notes"),
+        remove: z.array(z.string().max(LIMITS.NAME_MAX)).max(LIMITS.ARRAY_MAX).optional().describe("Tags to remove"),
+      },
+      outputSchema: tagModifyOutputSchema,
+      annotations: ANNOTATIONS.UPDATE,
+    },
+    async ({ sessionId, entityId, entityType, add, remove }) => {
+      if (!add?.length && !remove?.length) {
+        return {
+          content: [{ type: "text", text: "No tags to add or remove" }],
+          isError: true,
+        };
+      }
+
+      const result = tagTools.modifyTags({ sessionId, entityId, entityType, add, remove });
+      const output = {
+        entityId: result.entityId,
+        entityType: result.entityType,
+        tags: result.tags,
+        action: result.added.length > 0 && result.removed.length > 0
+          ? "modified" as const
+          : result.added.length > 0
+          ? "added" as const
+          : "removed" as const,
+        tag: result.added[0] || result.removed[0] || "",
+      };
+
+      return {
+        content: [{ type: "text", text: JSON.stringify(output, null, 2) }],
+        structuredContent: output as unknown as Record<string, unknown>,
+      };
+    }
+  );
+
+  // ============================================================================
+  // LEGACY: ADD TAG (kept for backwards compatibility)
+  // ============================================================================
+  server.registerTool(
+    "add_tag",
+    {
+      description: "Add a tag to any entity. Consider using modify_tags for batch operations.",
+      inputSchema: {
+        sessionId: z.string().max(100).describe("The session ID"),
+        entityId: z.string().max(100).describe("The entity ID to tag"),
+        entityType: z.string().max(100).describe("Type of entity (e.g., 'character', 'location', 'item', 'quest')"),
+        tag: z.string().min(1).max(LIMITS.NAME_MAX).describe("The tag to add"),
+        color: z.string().max(50).optional().describe("Optional color hint for the tag"),
+        notes: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("Optional notes about this tag"),
+      },
+      annotations: ANNOTATIONS.CREATE,
     },
     async (params) => {
       const tag = tagTools.addTag(params);
@@ -23,14 +80,20 @@ export function registerTagTools(server: McpServer) {
     }
   );
 
-  server.tool(
+  // ============================================================================
+  // LEGACY: REMOVE TAG (kept for backwards compatibility)
+  // ============================================================================
+  server.registerTool(
     "remove_tag",
-    "Remove a tag from an entity",
     {
-      sessionId: z.string().max(100).describe("The session ID"),
-      entityId: z.string().max(100).describe("The entity ID"),
-      entityType: z.string().max(100).describe("Type of entity"),
-      tag: z.string().max(LIMITS.NAME_MAX).describe("The tag to remove"),
+      description: "Remove a tag from an entity. Consider using modify_tags for batch operations.",
+      inputSchema: {
+        sessionId: z.string().max(100).describe("The session ID"),
+        entityId: z.string().max(100).describe("The entity ID"),
+        entityType: z.string().max(100).describe("Type of entity"),
+        tag: z.string().max(LIMITS.NAME_MAX).describe("The tag to remove"),
+      },
+      annotations: ANNOTATIONS.DESTRUCTIVE,
     },
     async (params) => {
       const success = tagTools.removeTag(params);
@@ -41,11 +104,17 @@ export function registerTagTools(server: McpServer) {
     }
   );
 
-  server.tool(
+  // ============================================================================
+  // LIST TAGS - read-only
+  // ============================================================================
+  server.registerTool(
     "list_tags",
-    "List all unique tags in a session with counts",
     {
-      sessionId: z.string().max(100).describe("The session ID"),
+      description: "List all unique tags in a session with counts",
+      inputSchema: {
+        sessionId: z.string().max(100).describe("The session ID"),
+      },
+      annotations: ANNOTATIONS.READ_ONLY,
     },
     async ({ sessionId }) => {
       const tags = tagTools.listTags(sessionId);
@@ -55,12 +124,18 @@ export function registerTagTools(server: McpServer) {
     }
   );
 
-  server.tool(
+  // ============================================================================
+  // GET ENTITY TAGS - read-only
+  // ============================================================================
+  server.registerTool(
     "get_entity_tags",
-    "Get all tags for a specific entity",
     {
-      entityId: z.string().max(100).describe("The entity ID"),
-      entityType: z.string().max(100).describe("Type of entity"),
+      description: "Get all tags for a specific entity",
+      inputSchema: {
+        entityId: z.string().max(100).describe("The entity ID"),
+        entityType: z.string().max(100).describe("Type of entity"),
+      },
+      annotations: ANNOTATIONS.READ_ONLY,
     },
     async ({ entityId, entityType }) => {
       const tags = tagTools.getEntityTags(entityId, entityType);
@@ -70,13 +145,19 @@ export function registerTagTools(server: McpServer) {
     }
   );
 
-  server.tool(
+  // ============================================================================
+  // FIND BY TAG - read-only
+  // ============================================================================
+  server.registerTool(
     "find_by_tag",
-    "Find all entities with a specific tag",
     {
-      sessionId: z.string().max(100).describe("The session ID"),
-      tag: z.string().max(LIMITS.NAME_MAX).describe("The tag to search for"),
-      entityType: z.string().max(100).optional().describe("Filter by entity type"),
+      description: "Find all entities with a specific tag",
+      inputSchema: {
+        sessionId: z.string().max(100).describe("The session ID"),
+        tag: z.string().max(LIMITS.NAME_MAX).describe("The tag to search for"),
+        entityType: z.string().max(100).optional().describe("Filter by entity type"),
+      },
+      annotations: ANNOTATIONS.READ_ONLY,
     },
     async ({ sessionId, tag, entityType }) => {
       const entities = tagTools.findByTag(sessionId, tag, entityType);
@@ -86,13 +167,19 @@ export function registerTagTools(server: McpServer) {
     }
   );
 
-  server.tool(
+  // ============================================================================
+  // RENAME TAG - update
+  // ============================================================================
+  server.registerTool(
     "rename_tag",
-    "Rename a tag across all entities in a session",
     {
-      sessionId: z.string().max(100).describe("The session ID"),
-      oldTag: z.string().max(LIMITS.NAME_MAX).describe("The current tag name"),
-      newTag: z.string().min(1).max(LIMITS.NAME_MAX).describe("The new tag name"),
+      description: "Rename a tag across all entities in a session",
+      inputSchema: {
+        sessionId: z.string().max(100).describe("The session ID"),
+        oldTag: z.string().max(LIMITS.NAME_MAX).describe("The current tag name"),
+        newTag: z.string().min(1).max(LIMITS.NAME_MAX).describe("The new tag name"),
+      },
+      annotations: ANNOTATIONS.UPDATE,
     },
     async ({ sessionId, oldTag, newTag }) => {
       const count = tagTools.renameTag(sessionId, oldTag, newTag);

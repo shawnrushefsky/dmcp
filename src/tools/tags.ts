@@ -181,3 +181,59 @@ export function deleteTagById(id: string): boolean {
   const result = db.prepare(`DELETE FROM tags WHERE id = ?`).run(id);
   return result.changes > 0;
 }
+
+/**
+ * Modify tags on an entity - add and/or remove in a single call.
+ * This consolidated function reduces the number of tool calls needed.
+ */
+export function modifyTags(params: {
+  sessionId: string;
+  entityId: string;
+  entityType: string;
+  add?: Array<{ tag: string; color?: string; notes?: string }>;
+  remove?: string[];
+}): { entityId: string; entityType: string; tags: string[]; added: string[]; removed: string[] } {
+  const added: string[] = [];
+  const removed: string[] = [];
+
+  // Remove tags first
+  if (params.remove) {
+    for (const tag of params.remove) {
+      const success = removeTag({
+        sessionId: params.sessionId,
+        entityId: params.entityId,
+        entityType: params.entityType,
+        tag,
+      });
+      if (success) {
+        removed.push(tag);
+      }
+    }
+  }
+
+  // Add new tags
+  if (params.add) {
+    for (const tagData of params.add) {
+      addTag({
+        sessionId: params.sessionId,
+        entityId: params.entityId,
+        entityType: params.entityType,
+        tag: tagData.tag,
+        color: tagData.color,
+        notes: tagData.notes,
+      });
+      added.push(tagData.tag);
+    }
+  }
+
+  // Get final tag list
+  const finalTags = getEntityTags(params.entityId, params.entityType);
+
+  return {
+    entityId: params.entityId,
+    entityType: params.entityType,
+    tags: finalTags.map(t => t.tag),
+    added,
+    removed,
+  };
+}

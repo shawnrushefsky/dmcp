@@ -3,12 +3,14 @@ import { z } from "zod";
 import * as inventoryTools from "../tools/inventory.js";
 import { imageGenSchema } from "../schemas/index.js";
 import { LIMITS } from "../utils/validation.js";
+import { ANNOTATIONS } from "../utils/tool-annotations.js";
 
 export function registerInventoryTools(server: McpServer) {
-  server.tool(
+  server.registerTool(
     "create_item",
-    "Create a new item",
     {
+      description: "Create a new item",
+      inputSchema: {
       sessionId: z.string().max(100).describe("The session ID"),
       ownerId: z.string().max(100).describe("Character or location ID that owns the item"),
       ownerType: z.enum(["character", "location"]).describe("Owner type"),
@@ -21,6 +23,8 @@ export function registerInventoryTools(server: McpServer) {
         effects: z.array(z.string().max(LIMITS.NAME_MAX)).max(LIMITS.ARRAY_MAX).optional(),
       }).optional().describe("Item properties"),
       imageGen: imageGenSchema.optional().describe("Image generation metadata for item art"),
+      },
+      annotations: ANNOTATIONS.CREATE,
     },
     async (params) => {
       const item = inventoryTools.createItem(params);
@@ -30,11 +34,14 @@ export function registerInventoryTools(server: McpServer) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "get_item",
-    "Get item details",
     {
-      itemId: z.string().max(100).describe("The item ID"),
+      description: "Get item details",
+      inputSchema: {
+        itemId: z.string().max(100).describe("The item ID"),
+      },
+      annotations: ANNOTATIONS.READ_ONLY,
     },
     async ({ itemId }) => {
       const item = inventoryTools.getItem(itemId);
@@ -50,14 +57,17 @@ export function registerInventoryTools(server: McpServer) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "update_item",
-    "Update an item",
     {
-      itemId: z.string().max(100).describe("The item ID"),
-      name: z.string().max(LIMITS.NAME_MAX).optional().describe("New name"),
-      properties: z.record(z.string(), z.unknown()).optional().describe("Property updates"),
-      imageGen: imageGenSchema.nullable().optional().describe("Image generation metadata (null to remove)"),
+      description: "Update an item",
+      inputSchema: {
+        itemId: z.string().max(100).describe("The item ID"),
+        name: z.string().max(LIMITS.NAME_MAX).optional().describe("New name"),
+        properties: z.record(z.string(), z.unknown()).optional().describe("Property updates"),
+        imageGen: imageGenSchema.nullable().optional().describe("Image generation metadata (null to remove)"),
+      },
+      annotations: ANNOTATIONS.UPDATE,
     },
     async ({ itemId, name, properties, imageGen }) => {
       const item = inventoryTools.updateItem(itemId, { name, properties, imageGen });
@@ -73,11 +83,14 @@ export function registerInventoryTools(server: McpServer) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "delete_item",
-    "Delete an item",
     {
-      itemId: z.string().max(100).describe("The item ID"),
+      description: "Delete an item permanently",
+      inputSchema: {
+        itemId: z.string().max(100).describe("The item ID"),
+      },
+      annotations: ANNOTATIONS.DESTRUCTIVE,
     },
     async ({ itemId }) => {
       const success = inventoryTools.deleteItem(itemId);
@@ -88,13 +101,16 @@ export function registerInventoryTools(server: McpServer) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "transfer_item",
-    "Transfer an item to a new owner",
     {
-      itemId: z.string().max(100).describe("The item ID"),
-      newOwnerId: z.string().max(100).describe("New owner ID"),
-      newOwnerType: z.enum(["character", "location"]).describe("New owner type"),
+      description: "Transfer an item to a new owner",
+      inputSchema: {
+        itemId: z.string().max(100).describe("The item ID"),
+        newOwnerId: z.string().max(100).describe("New owner ID"),
+        newOwnerType: z.enum(["character", "location"]).describe("New owner type"),
+      },
+      annotations: ANNOTATIONS.UPDATE,
     },
     async ({ itemId, newOwnerId, newOwnerType }) => {
       const item = inventoryTools.transferItem(itemId, newOwnerId, newOwnerType);
@@ -110,12 +126,15 @@ export function registerInventoryTools(server: McpServer) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "get_inventory",
-    "Get inventory for a character or location",
     {
-      ownerId: z.string().max(100).describe("Owner ID"),
-      ownerType: z.enum(["character", "location"]).describe("Owner type"),
+      description: "Get inventory for a character or location",
+      inputSchema: {
+        ownerId: z.string().max(100).describe("Owner ID"),
+        ownerType: z.enum(["character", "location"]).describe("Owner type"),
+      },
+      annotations: ANNOTATIONS.READ_ONLY,
     },
     async ({ ownerId, ownerType }) => {
       const items = inventoryTools.getInventory(ownerId, ownerType);

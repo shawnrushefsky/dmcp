@@ -311,8 +311,9 @@ export const conditionModifyOutputSchema = {
   characterId: z.string(),
   characterName: z.string(),
   conditions: z.array(z.string()),
-  action: z.enum(["added", "removed"]),
-  condition: z.string(),
+  action: z.enum(["added", "removed", "modified"]),
+  added: z.array(z.string()),
+  removed: z.array(z.string()),
 };
 
 export const statusEffectOutputSchema = {
