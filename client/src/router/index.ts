@@ -24,6 +24,21 @@ const router = createRouter({
       component: () => import('../views/SessionImagesView.vue'),
     },
     {
+      path: '/sessions/:sessionId/characters',
+      name: 'session-characters',
+      component: () => import('../views/SessionCharactersView.vue'),
+    },
+    {
+      path: '/sessions/:sessionId/locations',
+      name: 'session-locations',
+      component: () => import('../views/SessionLocationsView.vue'),
+    },
+    {
+      path: '/sessions/:sessionId/quests',
+      name: 'session-quests',
+      component: () => import('../views/SessionQuestsView.vue'),
+    },
+    {
       path: '/sessions/:sessionId/history',
       name: 'session-history',
       component: () => import('../views/SessionHistoryView.vue'),

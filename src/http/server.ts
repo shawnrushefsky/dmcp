@@ -58,7 +58,26 @@ export function createHttpServer(port: number = 3000): express.Application {
     const characters = listCharacters(req.params.sessionId);
     const locations = listLocations(req.params.sessionId);
     const quests = listQuests(req.params.sessionId);
-    res.json({ session, characters, locations, quests });
+
+    // Add primary image IDs to characters and locations
+    const charactersWithImages = characters.map((c: Character) => {
+      const result = listEntityImages(c.id, "character");
+      const primary = result.primaryImage || result.images[0];
+      return { ...c, primaryImageId: primary?.id || null };
+    });
+
+    const locationsWithImages = locations.map((l: Location) => {
+      const result = listEntityImages(l.id, "location");
+      const primary = result.primaryImage || result.images[0];
+      return { ...l, primaryImageId: primary?.id || null };
+    });
+
+    res.json({
+      session,
+      characters: charactersWithImages,
+      locations: locationsWithImages,
+      quests,
+    });
   });
 
   app.get("/api/sessions/:sessionId/map", (req: Request, res: Response) => {

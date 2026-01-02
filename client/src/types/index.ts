@@ -26,6 +26,7 @@ export interface Character {
   skills: Record<string, number>
   status: CharacterStatus
   notes: string
+  primaryImageId?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -48,6 +49,7 @@ export interface Location {
   name: string
   description: string
   properties: LocationProperties
+  primaryImageId?: string | null
   createdAt: string
   updatedAt: string
 }
