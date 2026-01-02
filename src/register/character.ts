@@ -17,7 +17,7 @@ export function registerCharacterTools(server: McpServer) {
   server.registerTool(
     "create_character",
     {
-      description: "Create a new character (PC or NPC)",
+      description: "Create a new character (PC or NPC). IMPORTANT: Call this IMMEDIATELY when introducing any named NPC in narrative, BEFORE continuing the scene. Every named character mentioned in dialogue or description should exist in the database.",
       inputSchema: {
         sessionId: z.string().max(100).describe("The session ID"),
         name: z.string().min(1).max(LIMITS.NAME_MAX).describe("Character name"),

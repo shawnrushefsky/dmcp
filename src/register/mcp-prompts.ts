@@ -84,9 +84,41 @@ export function registerMcpPrompts(server: McpServer) {
       promptText += `\n## DM Guidelines\n`;
       promptText += `1. Stay consistent with the established tone and setting\n`;
       promptText += `2. Honor player preferences and avoid restricted content\n`;
-      promptText += `3. Use the DMCP tools to track all game state changes\n`;
-      promptText += `4. Create immersive descriptions that match the genre\n`;
-      promptText += `5. Use ASCII art for maps, character portraits, and scene illustrations when image generation is unavailable\n`;
+      promptText += `3. Create immersive descriptions that match the genre\n`;
+      promptText += `4. Use ASCII art for maps, character portraits, and scene illustrations when image generation is unavailable\n`;
+
+      promptText += `\n## CRITICAL: State Persistence Rules\n`;
+      promptText += `The database IS the game state. Persist entities IMMEDIATELY as you introduce them in narrative:\n\n`;
+
+      promptText += `### Before Narrating, Persist:\n`;
+      promptText += `| Narrative Element | Tool to Call | When |\n`;
+      promptText += `|-------------------|--------------|------|\n`;
+      promptText += `| Named NPC | \`create_character\` | BEFORE their first dialogue/action |\n`;
+      promptText += `| New location | \`create_location\` + \`connect_locations\` | BEFORE describing what's there |\n`;
+      promptText += `| Item introduced | \`create_item\` | BEFORE player can interact with it |\n`;
+      promptText += `| Quest/mission given | \`create_quest\` | When objectives become clear |\n`;
+      promptText += `| NPC attitude established | \`create_relationship\` | When feelings toward player are shown |\n`;
+      promptText += `| Hidden information | \`create_secret\` | Even if revealed immediately |\n\n`;
+
+      promptText += `### After Every Narrative Beat:\n`;
+      promptText += `- Call \`log_event\` to record what happened (dialogue, action, discovery, combat, travel, decision)\n`;
+      promptText += `- Update relationships if interactions changed how NPCs feel\n`;
+      promptText += `- Transfer items if ownership changed\n`;
+      promptText += `- Mark quest objectives complete when achieved\n`;
+      promptText += `- Reveal secrets when characters learn information\n\n`;
+
+      promptText += `### Periodic Context Preservation:\n`;
+      promptText += `- Call \`check_context_freshness\` every 5-10 turns\n`;
+      promptText += `- Call \`save_context_snapshot\` after significant story beats\n`;
+      promptText += `- Never let more than 10-15 turns pass without a snapshot\n\n`;
+
+      promptText += `### Persistence Checklist (Mental Check After Each Response):\n`;
+      promptText += `- [ ] Did I mention anyone new? → create_character\n`;
+      promptText += `- [ ] Did I describe a new place? → create_location\n`;
+      promptText += `- [ ] Did items change hands? → create_item/transfer_item\n`;
+      promptText += `- [ ] Did relationships change? → create/update_relationship\n`;
+      promptText += `- [ ] Did anyone learn something? → create_secret/modify_secret_visibility\n`;
+      promptText += `- [ ] What happened? → log_event\n`;
 
       return {
         messages: [
@@ -434,6 +466,127 @@ export function registerMcpPrompts(server: McpServer) {
       }
 
       promptText += `\n---\n\nWhen voicing ${character.name}, embody these characteristics in dialogue and narration.`;
+
+      return {
+        messages: [
+          {
+            role: "user",
+            content: { type: "text", text: promptText },
+          },
+        ],
+      };
+    }
+  );
+
+  // ============================================================================
+  // PERSISTENCE RULES - Standalone reminder of state persistence best practices
+  // ============================================================================
+
+  server.registerPrompt(
+    "persistence-rules",
+    {
+      description: "Get a reminder of state persistence best practices - call this when you need guidance on what to persist and when",
+      argsSchema: {},
+    },
+    async () => {
+      let promptText = `# DMCP State Persistence Rules\n\n`;
+      promptText += `The database IS the game state. Everything mentioned in narrative should exist in the database.\n\n`;
+
+      promptText += `## The Golden Rule\n`;
+      promptText += `**Persist BEFORE you narrate.** Create entities in the database before describing them to the player.\n\n`;
+
+      promptText += `## Entity Persistence Guide\n\n`;
+
+      promptText += `### Characters (NPCs)\n`;
+      promptText += `**Trigger**: Any named character mentioned in dialogue or description\n`;
+      promptText += `**Tool**: \`create_character\` with \`isPlayer: false\`\n`;
+      promptText += `**When**: IMMEDIATELY when you decide to introduce them, BEFORE their first line of dialogue\n`;
+      promptText += `**Include**: name, initial location, basic attributes, notes about their role\n`;
+      promptText += `**Example flow**:\n`;
+      promptText += `1. Decide to introduce a blacksmith named Greta\n`;
+      promptText += `2. Call \`create_character\` for Greta\n`;
+      promptText += `3. THEN narrate: "A burly woman looks up from her anvil..."\n\n`;
+
+      promptText += `### Locations\n`;
+      promptText += `**Trigger**: Any place the player visits, hears about, or could travel to\n`;
+      promptText += `**Tools**: \`create_location\` then \`connect_locations\`\n`;
+      promptText += `**When**: BEFORE describing what the player sees there\n`;
+      promptText += `**Include**: name, atmospheric description, notable features\n`;
+      promptText += `**Example flow**:\n`;
+      promptText += `1. Player says "I go to the tavern"\n`;
+      promptText += `2. Call \`create_location\` for "The Rusty Nail Tavern"\n`;
+      promptText += `3. Call \`connect_locations\` to link it to current location\n`;
+      promptText += `4. THEN narrate the tavern scene\n\n`;
+
+      promptText += `### Items\n`;
+      promptText += `**Trigger**: Any item mentioned that could be picked up, used, or is plot-relevant\n`;
+      promptText += `**Tools**: \`create_item\`, \`transfer_item\`\n`;
+      promptText += `**When**: When the item first appears in narrative\n`;
+      promptText += `**Include**: name, description, owner (character or location), properties\n`;
+      promptText += `**Example flow**:\n`;
+      promptText += `1. Shopkeeper offers a magic sword for sale\n`;
+      promptText += `2. Call \`create_item\` with owner = shopkeeper's character ID\n`;
+      promptText += `3. If player buys it, call \`transfer_item\` to player\n\n`;
+
+      promptText += `### Relationships\n`;
+      promptText += `**Trigger**: NPC shows attitude toward player, alliances form, enmities established\n`;
+      promptText += `**Tools**: \`create_relationship\`, \`update_relationship_value\`\n`;
+      promptText += `**When**: When feelings/attitudes are expressed or implied\n`;
+      promptText += `**Include**: source, target, type (attitude, bond, rivalry), value (-100 to 100), label\n`;
+      promptText += `**Example flow**:\n`;
+      promptText += `1. NPC thanks player warmly for help\n`;
+      promptText += `2. Call \`create_relationship\` or \`update_relationship_value\` with positive delta\n`;
+      promptText += `3. Consider value ranges: -100 (hatred) to 0 (neutral) to +100 (devotion)\n\n`;
+
+      promptText += `### Quests\n`;
+      promptText += `**Trigger**: Player receives mission, discovers objective, or sets personal goal\n`;
+      promptText += `**Tools**: \`create_quest\`, \`modify_objectives\`\n`;
+      promptText += `**When**: When quest objectives become clear\n`;
+      promptText += `**Include**: name, description, clear trackable objectives\n`;
+      promptText += `**Example flow**:\n`;
+      promptText += `1. Village elder asks player to clear the mine\n`;
+      promptText += `2. Call \`create_quest\` with objectives like "Defeat the goblin chief", "Report back"\n`;
+      promptText += `3. When player defeats chief, call \`modify_objectives\` to mark complete\n\n`;
+
+      promptText += `### Secrets\n`;
+      promptText += `**Trigger**: Hidden information exists, even if revealed immediately\n`;
+      promptText += `**Tools**: \`create_secret\`, \`modify_secret_visibility\`, \`add_clue\`\n`;
+      promptText += `**When**: When you introduce information that could be discovered\n`;
+      promptText += `**Include**: name (DM reference), description (the actual secret), category, clues\n`;
+      promptText += `**Example flow**:\n`;
+      promptText += `1. You decide the innkeeper is secretly a spy\n`;
+      promptText += `2. Call \`create_secret\` with this information\n`;
+      promptText += `3. Add clues as you drop hints\n`;
+      promptText += `4. Call \`modify_secret_visibility\` when player discovers it\n\n`;
+
+      promptText += `### Narrative Events\n`;
+      promptText += `**Trigger**: EVERY significant narrative beat\n`;
+      promptText += `**Tool**: \`log_event\`\n`;
+      promptText += `**When**: After each narrative response, or during for long sequences\n`;
+      promptText += `**Event types**: dialogue, action, discovery, combat, travel, decision, scene_transition\n`;
+      promptText += `**Include**: eventType, content (what happened), optional metadata\n`;
+      promptText += `**Example**: After player negotiates with a merchant, log a "dialogue" event summarizing the exchange\n\n`;
+
+      promptText += `## Context Preservation\n\n`;
+
+      promptText += `### Regular Snapshots\n`;
+      promptText += `- Call \`check_context_freshness\` every 5-10 narrative turns\n`;
+      promptText += `- Call \`save_context_snapshot\` after significant story beats\n`;
+      promptText += `- Never let more than 10-15 turns pass without a snapshot\n\n`;
+
+      promptText += `### End of Session\n`;
+      promptText += `- Use the \`save-game-checklist\` prompt to verify all state is persisted\n`;
+      promptText += `- Call \`prepare_pause\` then \`save_pause_state\` with detailed context\n\n`;
+
+      promptText += `## Post-Response Checklist\n`;
+      promptText += `After EVERY narrative response, mentally verify:\n`;
+      promptText += `- [ ] Did I introduce anyone new? → \`create_character\`\n`;
+      promptText += `- [ ] Did I describe a new place? → \`create_location\` + \`connect_locations\`\n`;
+      promptText += `- [ ] Did items appear or change hands? → \`create_item\` / \`transfer_item\`\n`;
+      promptText += `- [ ] Did relationships change? → \`create_relationship\` / \`update_relationship_value\`\n`;
+      promptText += `- [ ] Did anyone learn something new? → \`create_secret\` / \`modify_secret_visibility\`\n`;
+      promptText += `- [ ] Did quest progress happen? → \`modify_objectives\`\n`;
+      promptText += `- [ ] What happened narratively? → \`log_event\`\n`;
 
       return {
         messages: [

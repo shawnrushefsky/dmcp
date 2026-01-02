@@ -335,13 +335,14 @@ Use this to get up to speed quickly and resume exactly where the game left off.`
     {
       description: `Quick lightweight context save - use this DURING play to preserve context incrementally.
 
-WHEN TO USE:
-- After significant story beats
+CRITICAL: Call this regularly to prevent context loss:
+- After EVERY significant story beat
 - After important NPC interactions
 - When player makes major decisions
 - Every 10-15 turns as a safety net
+- Before any potentially long narrative sequence
 
-This is faster than full save_pause_state but captures less detail.
+This is faster than full save_pause_state but captures essential state.
 For end-of-session, use prepare_pause + save_pause_state instead.`,
       inputSchema: {
         sessionId: z.string().max(100).describe("The session ID"),
@@ -381,7 +382,7 @@ For end-of-session, use prepare_pause + save_pause_state instead.`,
     {
       description: `Check if context needs to be saved. Returns a reminder if it's been too long since last save.
 
-Use this periodically during long sessions to get nudged about saving context.`,
+IMPORTANT: Call this every 5-10 narrative turns to ensure context is being preserved. If stale, immediately call save_context_snapshot.`,
       inputSchema: {
         sessionId: z.string().max(100).describe("The session ID"),
       },

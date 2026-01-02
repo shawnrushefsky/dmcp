@@ -8,7 +8,7 @@ export function registerQuestTools(server: McpServer) {
   server.registerTool(
     "create_quest",
     {
-      description: "Create a new quest",
+      description: "Create a new quest. Call this whenever the player receives a mission, task, or goal - whether from an NPC, discovered through exploration, or self-initiated. Include clear objectives that can be tracked.",
       inputSchema: {
         sessionId: z.string().max(100).describe("The session ID"),
         name: z.string().min(1).max(LIMITS.NAME_MAX).describe("Quest name"),
@@ -93,7 +93,7 @@ export function registerQuestTools(server: McpServer) {
   server.registerTool(
     "modify_objectives",
     {
-      description: "Add new objectives and/or mark existing objectives as completed in a single call. More efficient than separate add/complete calls.",
+      description: "Add new objectives and/or mark existing objectives as completed in a single call. Call this immediately when: (1) player completes a quest step, (2) new sub-tasks are discovered, (3) objectives change based on player choices.",
       inputSchema: {
         questId: z.string().max(100).describe("The quest ID"),
         add: z.array(z.object({

@@ -9,7 +9,7 @@ export function registerInventoryTools(server: McpServer) {
   server.registerTool(
     "create_item",
     {
-      description: "Create a new item",
+      description: "Create a new item. IMPORTANT: Call this IMMEDIATELY when introducing any item in narrative - whether found, given, purchased, or mentioned. Items must exist in the database before being referenced in dialogue or description.",
       inputSchema: {
       sessionId: z.string().max(100).describe("The session ID"),
       ownerId: z.string().max(100).describe("Character or location ID that owns the item"),
@@ -104,7 +104,7 @@ export function registerInventoryTools(server: McpServer) {
   server.registerTool(
     "transfer_item",
     {
-      description: "Transfer an item to a new owner",
+      description: "Transfer an item to a new owner. Call this whenever an item changes hands - given, dropped, picked up, stolen, purchased, etc. The database should always reflect current item ownership.",
       inputSchema: {
         itemId: z.string().max(100).describe("The item ID"),
         newOwnerId: z.string().max(100).describe("New owner ID"),

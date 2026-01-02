@@ -9,7 +9,7 @@ export function registerWorldTools(server: McpServer) {
   server.registerTool(
     "create_location",
     {
-      description: "Create a new location in the game world",
+      description: "Create a new location in the game world. IMPORTANT: Call this IMMEDIATELY when describing any new place, BEFORE narrating what happens there. Every location the player visits or hears about should exist in the database.",
       inputSchema: {
         sessionId: z.string().max(100).describe("The session ID"),
         name: z.string().min(1).max(LIMITS.NAME_MAX).describe("Location name"),
@@ -100,7 +100,7 @@ export function registerWorldTools(server: McpServer) {
   server.registerTool(
     "connect_locations",
     {
-      description: "Create exits/paths between two locations",
+      description: "Create exits/paths between two locations. Call this whenever you describe how locations connect to each other - the player should be able to navigate based on database connections.",
       inputSchema: {
         fromLocationId: z.string().describe("First location ID"),
         toLocationId: z.string().describe("Second location ID"),

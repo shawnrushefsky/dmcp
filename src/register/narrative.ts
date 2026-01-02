@@ -8,7 +8,7 @@ export function registerNarrativeTools(server: McpServer) {
   server.registerTool(
     "log_event",
     {
-      description: "Log a narrative event",
+      description: "Log a narrative event. CRITICAL: Call this after EVERY significant narrative beat - dialogue exchanges, player actions, combat rounds, discoveries, travel, decisions. This is the primary way to preserve game history. Event types: 'dialogue', 'action', 'discovery', 'combat', 'travel', 'decision', 'scene_transition'.",
       inputSchema: {
         sessionId: z.string().max(100).describe("The session ID"),
         eventType: z.string().max(100).describe("Type of event (e.g., 'dialogue', 'action', 'discovery', 'combat')"),

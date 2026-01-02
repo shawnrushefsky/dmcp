@@ -8,7 +8,7 @@ export function registerRelationshipTools(server: McpServer) {
   server.registerTool(
     "create_relationship",
     {
-      description: "Create a relationship between two entities (characters, factions, etc.)",
+      description: "Create a relationship between two entities (characters, factions, etc.). Call this when establishing NPC attitudes toward the player, alliances, enmities, or any significant social connection mentioned in narrative.",
       inputSchema: {
         sessionId: z.string().max(100).describe("The session ID"),
         sourceId: z.string().max(100).describe("Source entity ID"),
@@ -84,7 +84,7 @@ export function registerRelationshipTools(server: McpServer) {
   server.registerTool(
     "update_relationship_value",
     {
-      description: "Update a relationship value and/or metadata. Use mode 'delta' to change by amount with history logging, or 'set' to set absolute value.",
+      description: "Update a relationship value and/or metadata. Use mode 'delta' to change by amount with history logging, or 'set' to set absolute value. Call this after any interaction that would affect how characters feel about each other - helpful actions, betrayals, gifts, insults, etc.",
       inputSchema: {
         relationshipId: z.string().max(100).describe("The relationship ID"),
         mode: z.enum(["delta", "set"]).describe("'delta' to change by amount, 'set' to set absolute value"),

@@ -11,7 +11,7 @@ export function registerSecretTools(server: McpServer) {
   server.registerTool(
     "create_secret",
     {
-      description: "Create a secret that can be revealed to specific characters",
+      description: "Create a secret that can be revealed to specific characters. Call this whenever you introduce plot-relevant hidden information - NPC backstories, hidden motives, location history, quest twists. Even if revealed immediately, secrets should be tracked.",
       inputSchema: {
         sessionId: z.string().max(100).describe("The session ID"),
         name: z.string().min(1).max(LIMITS.NAME_MAX).describe("Secret name (for DM reference)"),
@@ -139,7 +139,7 @@ export function registerSecretTools(server: McpServer) {
   server.registerTool(
     "modify_secret_visibility",
     {
-      description: "Modify secret visibility. Reveal to specific characters and/or make public in a single call.",
+      description: "Modify secret visibility. Reveal to specific characters and/or make public in a single call. Call this immediately when a character learns something - through dialogue, investigation, or discovery. Track what each character knows.",
       inputSchema: {
         secretId: z.string().max(100).describe("The secret ID"),
         revealTo: z.array(z.string().max(100)).max(LIMITS.ARRAY_MAX).optional().describe("Character IDs to reveal to"),
