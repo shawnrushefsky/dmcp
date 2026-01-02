@@ -67,9 +67,26 @@ onMounted(async () => {
 
   <!-- Content -->
   <div v-else-if="state" class="animate-fade-in">
-    <Breadcrumbs :items="breadcrumbs" />
-    <h2>{{ state.session.name }}</h2>
-    <p class="setting-description">{{ state.session.setting }}</p>
+    <!-- Hero Image -->
+    <div v-if="state.session.titleImageId" class="hero-image-container">
+      <img
+        :src="`/images/${state.session.titleImageId}/file?width=1200`"
+        :alt="state.session.name"
+        class="hero-image"
+      />
+      <div class="hero-overlay">
+        <Breadcrumbs :items="breadcrumbs" class="hero-breadcrumbs" />
+        <h2 class="hero-title">{{ state.session.name }}</h2>
+        <p class="hero-setting">{{ state.session.setting }}</p>
+      </div>
+    </div>
+
+    <!-- No Hero Image - Standard Header -->
+    <template v-else>
+      <Breadcrumbs :items="breadcrumbs" />
+      <h2>{{ state.session.name }}</h2>
+      <p class="setting-description">{{ state.session.setting }}</p>
+    </template>
 
     <SessionTabs :session-id="sessionId" active="overview" />
 
@@ -167,6 +184,71 @@ onMounted(async () => {
   display: flex;
   gap: var(--space-2);
   margin: var(--space-4) 0;
+}
+
+/* Hero Image Styles */
+.hero-image-container {
+  position: relative;
+  margin: calc(-1 * var(--space-6)) calc(-1 * var(--space-6)) var(--space-6);
+  border-radius: 0 0 var(--border-radius) var(--border-radius);
+  overflow: hidden;
+}
+
+.hero-image {
+  width: 100%;
+  height: 300px;
+  object-fit: cover;
+  display: block;
+}
+
+.hero-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: var(--space-8) var(--space-6) var(--space-6);
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.4) 60%, transparent 100%);
+}
+
+.hero-breadcrumbs {
+  margin-bottom: var(--space-2);
+}
+
+.hero-breadcrumbs :deep(a),
+.hero-breadcrumbs :deep(span) {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.hero-breadcrumbs :deep(a:hover) {
+  color: white;
+}
+
+.hero-title {
+  color: white;
+  margin: 0 0 var(--space-2);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.hero-setting {
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0;
+  font-size: var(--text-lg);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  max-width: 700px;
+}
+
+@media (max-width: 768px) {
+  .hero-image-container {
+    margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-4)) var(--space-4);
+  }
+
+  .hero-image {
+    height: 200px;
+  }
+
+  .hero-overlay {
+    padding: var(--space-6) var(--space-4) var(--space-4);
+  }
 }
 
 .setting-description {
