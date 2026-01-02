@@ -2,14 +2,15 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
-import type { StoredImage, Breadcrumb } from '../types'
+import type { StoredImage, SessionState, Breadcrumb } from '../types'
 import Breadcrumbs from '../components/Breadcrumbs.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
 
 const route = useRoute()
-const { getImage, loading } = useApi()
+const { getImage, getSession, loading } = useApi()
 
 const image = ref<StoredImage | null>(null)
+const sessionState = ref<SessionState | null>(null)
 
 const imageId = computed(() => route.params.imageId as string)
 
@@ -22,13 +23,16 @@ const breadcrumbs = computed<Breadcrumb[]>(() => {
   if (!image.value) return []
   return [
     { label: 'Games', href: '/' },
-    { label: 'Session', href: `/sessions/${image.value.sessionId}` },
+    { label: sessionState.value?.session.name || 'Session', href: `/sessions/${image.value.sessionId}` },
     { label: image.value.label || 'Image' },
   ]
 })
 
 onMounted(async () => {
   image.value = await getImage(imageId.value)
+  if (image.value) {
+    sessionState.value = await getSession(image.value.sessionId)
+  }
 })
 </script>
 
