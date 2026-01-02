@@ -1,8 +1,9 @@
-import { getCharacter } from "./character.js";
+import { getCharacter, listCharacters } from "./character.js";
 import { getLocation } from "./world.js";
 import { getItem } from "./inventory.js";
 import { getFaction } from "./faction.js";
-import { getDefaultImagePreset, getDefaultImagePromptTemplate } from "./session.js";
+import { getDefaultImagePreset, getDefaultImagePromptTemplate, getImagePromptTemplate } from "./session.js";
+import { listEntityImages } from "./images.js";
 import type { ImageGeneration, ImageGenerationPreferences, ImagePromptTemplate, Character, Location, Item, Faction } from "../types/index.js";
 
 export interface PromptBuilderResult {
@@ -269,7 +270,6 @@ export function buildImagePrompt(
   if (effectiveSessionId) {
     if (templateId) {
       // Use specific template if provided
-      const { getImagePromptTemplate } = require("./session.js");
       template = getImagePromptTemplate(effectiveSessionId, templateId);
     } else {
       // Try to find default template for this entity type
@@ -450,16 +450,22 @@ export function buildImagePrompt(
   // 2. Fall back to notes if no imageGen or very sparse
   if (promptParts.length < 3 && notes) {
     source.fromNotes = true;
-    // Extract visual descriptors from notes
+
+    // Clean and truncate notes for use as prompt
     const cleanNotes = notes
       .replace(/\n/g, " ")
       .replace(/\s+/g, " ")
       .trim()
-      .slice(0, 500); // Limit notes length
+      .slice(0, 500);
 
     if (cleanNotes) {
       promptParts.push(cleanNotes);
     }
+
+    // Warn that we're using notes which may lack visual specificity
+    summaryParts.push("⚠️ WARNING: Using notes/description as prompt source");
+    summaryParts.push("Notes may contain biographical info rather than visual description.");
+    summaryParts.push("Consider populating imageGen schema or writing a custom prompt.");
   }
 
   // 3. Apply preset style defaults
@@ -520,11 +526,7 @@ export interface CharacterSummary {
 }
 
 export function listCharacterSummaries(sessionId: string): CharacterSummary[] {
-  // Import here to avoid circular dependency
-  const { listCharacters } = require("./character.js");
-  const { listEntityImages } = require("./images.js");
-
-  const characters = listCharacters(sessionId) as Character[];
+  const characters = listCharacters(sessionId);
 
   return characters.map(char => {
     // Build summary from imageGen or notes

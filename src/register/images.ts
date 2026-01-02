@@ -176,6 +176,30 @@ export function registerImageTools(server: McpServer) {
   );
 
   server.registerTool(
+    "list_entities_missing_images",
+    {
+      description: "List all entities in a session that don't have a primary image. Useful for batch image generation workflows. Returns entities grouped by type with counts.",
+      inputSchema: {
+        sessionId: z.string().max(100).describe("The session ID"),
+        entityType: z
+          .enum(["character", "location", "item", "faction"])
+          .optional()
+          .describe("Filter by entity type (optional, returns all types if not specified)"),
+      },
+      annotations: ANNOTATIONS.READ_ONLY,
+    },
+    async ({ sessionId, entityType }) => {
+      const result = imageTools.listEntitiesMissingImages(sessionId, entityType);
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify(result, null, 2),
+        }],
+      };
+    }
+  );
+
+  server.registerTool(
     "delete_image",
     {
       description: "Delete a stored image (removes file and database record)",
@@ -314,16 +338,6 @@ export function registerImageTools(server: McpServer) {
       inputSchema: {
         sessionId: z.string().max(100).describe("The session ID"),
       },
-      outputSchema: {
-        templates: z.array(z.object({
-          id: z.string(),
-          name: z.string(),
-          entityType: z.enum(["character", "location", "item", "faction"]),
-          description: z.string().optional(),
-          isDefault: z.boolean().optional(),
-          priority: z.number().optional(),
-        })),
-      },
       annotations: ANNOTATIONS.READ_ONLY,
     },
     async ({ sessionId }) => {
@@ -337,8 +351,13 @@ export function registerImageTools(server: McpServer) {
         priority: t.priority,
       }));
       return {
-        content: [{ type: "text", text: JSON.stringify(summary, null, 2) }],
-        structuredContent: { templates: summary } as unknown as Record<string, unknown>,
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            count: templates.length,
+            templates: summary,
+          }, null, 2),
+        }],
       };
     }
   );

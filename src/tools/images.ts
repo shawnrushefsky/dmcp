@@ -25,11 +25,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const IMAGES_DIR = join(__dirname, "..", "..", "data", "images");
 
-// Helper: Validate entity exists
-function validateEntityExists(
+// Helper: Validate entity exists and return its name
+function validateEntityAndGetName(
   entityId: string,
   entityType: "character" | "location" | "item" | "scene" | "faction"
-): void {
+): string {
   let entity = null;
   switch (entityType) {
     case "character":
@@ -46,11 +46,20 @@ function validateEntityExists(
       break;
     case "scene":
       // Scenes don't have a dedicated table - they're ad-hoc, so skip validation
-      return;
+      return "Scene";
   }
   if (!entity) {
     throw new Error(`${entityType} not found: ${entityId}`);
   }
+  return (entity as { name: string }).name;
+}
+
+// Helper: Validate entity exists (legacy wrapper)
+function validateEntityExists(
+  entityId: string,
+  entityType: "character" | "location" | "item" | "scene" | "faction"
+): void {
+  validateEntityAndGetName(entityId, entityType);
 }
 
 // Helper: Ensure directory exists
@@ -117,8 +126,8 @@ function mapRowToStoredImage(row: Record<string, unknown>): StoredImage {
 }
 
 export async function storeImage(params: StoreImageParams): Promise<StoredImage> {
-  // Validate entity exists before storing image
-  validateEntityExists(params.entityId, params.entityType);
+  // Validate entity exists and get its name for confirmation
+  const entityName = validateEntityAndGetName(params.entityId, params.entityType);
 
   const db = getDatabase();
   const id = uuidv4();
@@ -240,6 +249,7 @@ export async function storeImage(params: StoreImageParams): Promise<StoredImage>
     sessionId: params.sessionId,
     entityId: params.entityId,
     entityType: params.entityType,
+    entityName,
     filePath: relativePath,
     fileSize: imageBuffer.length,
     mimeType,
@@ -356,6 +366,129 @@ export function listEntityImages(
   const primaryImage = images.find((img) => img.isPrimary) || null;
 
   return { entityId, entityType, images, primaryImage };
+}
+
+export interface EntityMissingImage {
+  id: string;
+  name: string;
+  entityType: "character" | "location" | "item" | "faction";
+  hasImageGen: boolean;
+  isPlayer?: boolean;  // For characters
+}
+
+export interface EntitiesMissingImagesResult {
+  sessionId: string;
+  entities: EntityMissingImage[];
+  totalMissing: number;
+  byType: {
+    characters: number;
+    locations: number;
+    items: number;
+    factions: number;
+  };
+}
+
+export function listEntitiesMissingImages(
+  sessionId: string,
+  entityType?: "character" | "location" | "item" | "faction"
+): EntitiesMissingImagesResult {
+  const db = getDatabase();
+  const result: EntitiesMissingImagesResult = {
+    sessionId,
+    entities: [],
+    totalMissing: 0,
+    byType: { characters: 0, locations: 0, items: 0, factions: 0 },
+  };
+
+  // Helper to check if entity has a primary image
+  const hasPrimaryImage = (entityId: string, type: string): boolean => {
+    const row = db.prepare(`
+      SELECT 1 FROM stored_images
+      WHERE entity_id = ? AND entity_type = ? AND is_primary = 1
+      LIMIT 1
+    `).get(entityId, type);
+    return !!row;
+  };
+
+  // Check characters
+  if (!entityType || entityType === "character") {
+    const characters = db.prepare(`
+      SELECT id, name, is_player, image_gen FROM characters WHERE session_id = ?
+    `).all(sessionId) as { id: string; name: string; is_player: number; image_gen: string | null }[];
+
+    for (const char of characters) {
+      if (!hasPrimaryImage(char.id, "character")) {
+        result.entities.push({
+          id: char.id,
+          name: char.name,
+          entityType: "character",
+          hasImageGen: !!char.image_gen,
+          isPlayer: char.is_player === 1,
+        });
+        result.byType.characters++;
+      }
+    }
+  }
+
+  // Check locations
+  if (!entityType || entityType === "location") {
+    const locations = db.prepare(`
+      SELECT id, name, image_gen FROM locations WHERE session_id = ?
+    `).all(sessionId) as { id: string; name: string; image_gen: string | null }[];
+
+    for (const loc of locations) {
+      if (!hasPrimaryImage(loc.id, "location")) {
+        result.entities.push({
+          id: loc.id,
+          name: loc.name,
+          entityType: "location",
+          hasImageGen: !!loc.image_gen,
+        });
+        result.byType.locations++;
+      }
+    }
+  }
+
+  // Check items
+  if (!entityType || entityType === "item") {
+    const items = db.prepare(`
+      SELECT id, name, image_gen FROM items WHERE session_id = ?
+    `).all(sessionId) as { id: string; name: string; image_gen: string | null }[];
+
+    for (const item of items) {
+      if (!hasPrimaryImage(item.id, "item")) {
+        result.entities.push({
+          id: item.id,
+          name: item.name,
+          entityType: "item",
+          hasImageGen: !!item.image_gen,
+        });
+        result.byType.items++;
+      }
+    }
+  }
+
+  // Check factions
+  if (!entityType || entityType === "faction") {
+    const factions = db.prepare(`
+      SELECT id, name FROM factions WHERE session_id = ?
+    `).all(sessionId) as { id: string; name: string }[];
+
+    for (const faction of factions) {
+      if (!hasPrimaryImage(faction.id, "faction")) {
+        result.entities.push({
+          id: faction.id,
+          name: faction.name,
+          entityType: "faction",
+          hasImageGen: false,  // Factions don't have imageGen column
+        });
+        result.byType.factions++;
+      }
+    }
+  }
+
+  result.totalMissing = result.entities.length;
+  return result;
 }
 
 export function deleteImage(imageId: string): boolean {

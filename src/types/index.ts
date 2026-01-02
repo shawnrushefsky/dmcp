@@ -1072,6 +1072,7 @@ export interface StoredImage {
   sessionId: string;
   entityId: string;
   entityType: "character" | "location" | "item" | "scene" | "faction";
+  entityName?: string;  // Populated at runtime for confirmation, not stored in DB
 
   // File information
   filePath: string;           // Relative path from data/images/
