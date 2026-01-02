@@ -17,8 +17,9 @@ An MCP (Model Context Protocol) server that enables AI agents to act as dynamic 
     - [Generic MCP Client](#generic-mcp-client)
     - [Docker Configuration](#docker-configuration)
     - [Testing with MCP Inspector](#testing-with-mcp-inspector)
+    - [HTTP Web UI](#http-web-ui)
     - [AI Self-Configuration Prompt](#ai-self-configuration-prompt)
-  - [Available Tools (151 total)](#available-tools-151-total)
+  - [Available Tools (173 total)](#available-tools-173-total)
     - [Session Management](#session-management-6-tools)
     - [Game Setup Interview](#game-setup-interview-3-tools)
     - [Rules System](#rules-system-3-tools)
@@ -43,6 +44,8 @@ An MCP (Model Context Protocol) server that enables AI agents to act as dynamic 
     - [Session Notes](#session-notes-10-tools)
     - [Pause \& Resume](#pause--resume-7-tools)
     - [Multi-Agent Collaboration](#multi-agent-collaboration-8-tools)
+    - [Image Storage](#image-storage-7-tools)
+  - [MCP Prompts (6 total)](#mcp-prompts-6-total)
   - [Example Usage](#example-usage)
     - [Starting a New Game](#starting-a-new-game)
     - [NPC with Voice](#npc-with-voice)
@@ -59,8 +62,9 @@ An MCP (Model Context Protocol) server that enables AI agents to act as dynamic 
 
 - **Dynamic Rule Systems** - Agent designs rules appropriate to the setting (fantasy, sci-fi, horror, etc.)
 - **Full Game State Management** - Sessions, characters, locations, items, quests, combat
+- **HTTP Web UI** - Built-in web interface for viewing character sheets, maps, images, and game state
 - **Voice Descriptions** - NPC voice characteristics for TTS/voice mode integration
-- **Image Generation Metadata** - Structured visual descriptions for characters, locations, and items adaptable to any image generation tool (DALL-E, SDXL, ComfyUI, Midjourney, Flux)
+- **Image Storage & Generation** - Store images with metadata, serve via HTTP, structured visual descriptions for any image generator
 - **Player Choice System** - Structured choices with multi-select and free-form input
 - **Narrative Logging** - Event history for story continuity and export
 - **Dice & Checks** - Flexible dice rolling and skill resolution
@@ -77,6 +81,7 @@ An MCP (Model Context Protocol) server that enables AI agents to act as dynamic 
 - **Session Notes** - Searchable DM notes with auto-generated recaps
 - **Pause & Resume** - Save agent context for seamless game continuation across sessions
 - **Multi-Agent Collaboration** - External agents can push updates for DM incorporation
+- **MCP Prompts** - Reusable prompt templates for game setup, resume, and save verification
 
 ## Installation
 
@@ -305,6 +310,35 @@ npx @modelcontextprotocol/inspector node dist/index.js
 
 ---
 
+### HTTP Web UI
+
+DMCP includes a built-in HTTP server for viewing game content in a browser. It runs automatically alongside the MCP server.
+
+- **Default URL**: http://localhost:3000
+- **Configure Port**: Set `DMCP_HTTP_PORT` environment variable
+
+**Available Pages:**
+- `/` - Home page with all game sessions
+- `/sessions/:id` - Session overview with characters, locations, quests
+- `/sessions/:id/map` - ASCII world map
+- `/sessions/:id/images` - Image gallery
+- `/sessions/:id/history` - Narrative event history
+- `/characters/:id` - Character sheet with stats, inventory, images
+- `/locations/:id` - Location details with exits and NPCs
+- `/quests/:id` - Quest objectives and progress
+- `/images/:id` - Full image view with metadata
+- `/images/:id/file` - Raw image file (supports `?width=200&height=200` resize)
+
+**JSON API:**
+- `GET /api/sessions` - List all sessions
+- `GET /api/sessions/:id` - Full session state
+- `GET /api/sessions/:id/map` - Map data structure
+- `GET /api/characters/:id` - Character data
+- `GET /api/characters/:id/sheet` - Character sheet with ASCII art
+- `GET /api/locations/:id` - Location data
+
+---
+
 ### AI Self-Configuration Prompt
 
 Copy and paste this prompt to any MCP-compatible AI assistant to have it guide you through setup:
@@ -345,7 +379,7 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 
 </details>
 
-## Available Tools (166 total)
+## Available Tools (173 total)
 
 ### Session Management (6 tools)
 | Tool | Description |
@@ -608,6 +642,30 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `list_external_updates` | List all updates with status filter |
 | `get_external_update` | Get specific update by ID |
 | `delete_external_update` | Delete an update |
+
+### Image Storage (7 tools)
+| Tool | Description |
+|------|-------------|
+| `store_image` | Store image from base64, URL, or file path |
+| `get_image` | Get image metadata |
+| `get_image_data` | Get image with base64 data (supports resize/format conversion) |
+| `list_entity_images` | List all images for an entity |
+| `delete_image` | Delete stored image |
+| `set_primary_image` | Set image as primary for entity |
+| `update_image_metadata` | Update image label/description |
+
+## MCP Prompts (6 total)
+
+Reusable prompt templates accessible via MCP `prompts/get`:
+
+| Prompt | Description |
+|--------|-------------|
+| `dm-persona` | Initialize DM with full game context and player preferences |
+| `session-recap` | Generate narrative summary of game so far |
+| `new-game-setup` | Interview template for creating a new game |
+| `continue-game` | Resume paused game with full context restoration |
+| `character-voice` | Get NPC voice characteristics for roleplay |
+| `save-game-checklist` | Comprehensive pre-save verification checklist |
 
 ## Example Usage
 
