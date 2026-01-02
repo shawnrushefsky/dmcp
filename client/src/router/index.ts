@@ -67,6 +67,11 @@ const router = createRouter({
       component: () => import('../views/SessionNotesView.vue'),
     },
     {
+      path: '/sessions/:sessionId/settings',
+      name: 'session-settings',
+      component: () => import('../views/SessionSettingsView.vue'),
+    },
+    {
       path: '/characters/:characterId',
       name: 'character',
       component: () => import('../views/CharacterView.vue'),

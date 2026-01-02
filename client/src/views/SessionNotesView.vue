@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
+import { useEntityLinker } from '../composables/useEntityLinker'
 import type { SessionState, Note, Breadcrumb } from '../types'
 import SessionTabs from '../components/SessionTabs.vue'
 import Breadcrumbs from '../components/Breadcrumbs.vue'
@@ -9,6 +10,7 @@ import SkeletonLoader from '../components/SkeletonLoader.vue'
 
 const route = useRoute()
 const { getSession, loading } = useApi()
+const { linkText, setSessionState } = useEntityLinker()
 const state = ref<SessionState | null>(null)
 
 const sessionId = computed(() => route.params.sessionId as string)
@@ -43,6 +45,9 @@ const notesByCategory = computed(() => {
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString()
 }
+
+// Update entity linker when session state changes
+watch(state, (newState) => setSessionState(newState))
 
 onMounted(async () => {
   state.value = await getSession(sessionId.value)
@@ -80,7 +85,7 @@ onMounted(async () => {
             <h4>{{ note.title }}</h4>
           </div>
           <span v-if="note.category" class="note-category">{{ note.category }}</span>
-          <div class="note-content" v-html="formatContent(note.content)" />
+          <div class="note-content linked-content" v-html="linkText(note.content)" />
           <div v-if="note.tags.length" class="note-tags">
             <span v-for="tag in note.tags" :key="tag" class="tag">{{ tag }}</span>
           </div>
@@ -101,7 +106,7 @@ onMounted(async () => {
           <div class="note-header">
             <h4>{{ note.title }}</h4>
           </div>
-          <div class="note-content" v-html="formatContent(note.content)" />
+          <div class="note-content linked-content" v-html="linkText(note.content)" />
           <div v-if="note.tags.length" class="note-tags">
             <span v-for="tag in note.tags" :key="tag" class="tag">{{ tag }}</span>
           </div>
@@ -117,18 +122,6 @@ onMounted(async () => {
   <p v-else class="empty">Session not found.</p>
 </template>
 
-<script lang="ts">
-// Helper to format markdown-like content (basic)
-function formatContent(content: string): string {
-  // Convert line breaks
-  let formatted = content.replace(/\n/g, '<br>')
-  // Basic bold
-  formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-  // Basic italic
-  formatted = formatted.replace(/\*(.+?)\*/g, '<em>$1</em>')
-  return formatted
-}
-</script>
 
 <style scoped>
 .notes-grid {

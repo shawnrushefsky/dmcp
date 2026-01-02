@@ -1,15 +1,18 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
-import type { Location, Character, Item, EntityImages, Breadcrumb } from '../types'
+import { useEntityLinker } from '../composables/useEntityLinker'
+import type { Location, Character, Item, EntityImages, Breadcrumb, SessionState } from '../types'
 import Breadcrumbs from '../components/Breadcrumbs.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
 
 const route = useRoute()
-const { getLocation, getCharactersAtLocation, getInventory, getEntityImages, loading } = useApi()
+const { getLocation, getSession, getCharactersAtLocation, getInventory, getEntityImages, loading } = useApi()
+const { linkText, setSessionState, setItems } = useEntityLinker()
 
 const location = ref<Location | null>(null)
+const sessionState = ref<SessionState | null>(null)
 const characters = ref<Character[]>([])
 const items = ref<Item[]>([])
 const images = ref<EntityImages>({ images: [], primaryImage: null })
@@ -20,20 +23,26 @@ const breadcrumbs = computed<Breadcrumb[]>(() => {
   if (!location.value) return []
   return [
     { label: 'Games', href: '/' },
-    { label: 'Session', href: `/sessions/${location.value.sessionId}` },
+    { label: sessionState.value?.session.name || 'Session', href: `/sessions/${location.value.sessionId}` },
     { label: location.value.name },
   ]
 })
+
+// Update entity linker when session state changes
+watch(sessionState, (newState) => setSessionState(newState))
+watch(items, (newItems) => setItems(newItems))
 
 onMounted(async () => {
   const loc = await getLocation(locationId.value)
   location.value = loc
   if (loc) {
-    const [chars, inv, imgs] = await Promise.all([
+    const [state, chars, inv, imgs] = await Promise.all([
+      getSession(loc.sessionId),
       getCharactersAtLocation(loc.sessionId, locationId.value),
       getInventory(locationId.value, 'location'),
       getEntityImages(locationId.value, 'location'),
     ])
+    sessionState.value = state
     characters.value = chars
     items.value = inv
     images.value = imgs
@@ -65,9 +74,9 @@ onMounted(async () => {
 
     <div class="card">
       <h3>Description</h3>
-      <p>{{ location.description }}</p>
-      <p v-if="location.properties.atmosphere" class="muted mt-20">
-        <em>{{ location.properties.atmosphere }}</em>
+      <p class="linked-content" v-html="linkText(location.description)"></p>
+      <p v-if="location.properties.atmosphere" class="muted mt-20 linked-content">
+        <em v-html="linkText(location.properties.atmosphere)"></em>
       </p>
     </div>
 

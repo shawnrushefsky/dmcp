@@ -229,3 +229,92 @@ export interface Breadcrumb {
   href?: string
   icon?: 'home' | 'session' | 'character' | 'location' | 'quest' | 'image'
 }
+
+// Image Generation Preferences
+export interface ImageGenerationPreferences {
+  defaultTool?: 'dalle' | 'sdxl' | 'midjourney' | 'comfyui' | 'flux' | 'other'
+  defaultStyle?: {
+    artisticStyle?: string
+    mood?: string
+    colorScheme?: string
+    qualityTags?: string[]
+    negativePrompts?: string[]
+    influences?: string[]
+  }
+  comfyui?: {
+    endpoint?: string
+    checkpoint?: string
+    loras?: Array<{ name: string; weight: number }>
+    samplerSettings?: {
+      sampler?: string
+      scheduler?: string
+      steps?: number
+      cfg?: number
+    }
+    // Full workflow templates
+    workflows?: Record<string, {
+      name: string
+      description?: string
+      workflow: Record<string, unknown>
+      inputNodes?: {
+        positivePrompt?: string
+        negativePrompt?: string
+        checkpoint?: string
+        seed?: string
+        width?: string
+        height?: string
+        steps?: string
+        cfg?: string
+        sampler?: string
+        scheduler?: string
+      }
+    }>
+    defaultWorkflowId?: string
+    defaultWorkflow?: string
+    workflowOverrides?: Record<string, unknown>
+  }
+  dalle?: {
+    model?: string
+    quality?: 'standard' | 'hd'
+    style?: 'vivid' | 'natural'
+    size?: '1024x1024' | '1792x1024' | '1024x1792'
+  }
+  midjourney?: {
+    version?: string
+    stylize?: number
+    chaos?: number
+    quality?: number
+    aspectRatio?: string
+  }
+  sdxl?: {
+    model?: string
+    samplerName?: string
+    steps?: number
+    cfg?: number
+    width?: number
+    height?: number
+    negativePrompt?: string
+  }
+  flux?: {
+    model?: string
+    steps?: number
+    guidance?: number
+  }
+  defaults?: {
+    aspectRatio?: string
+    generateOnCreate?: boolean
+    savePrompts?: boolean
+    framing?: {
+      character?: string
+      location?: string
+      item?: string
+    }
+  }
+  consistency?: {
+    maintainColorPalette?: boolean
+    characterSeedImages?: Record<string, string>
+    styleReferenceImage?: string
+    useCharacterRefs?: boolean
+  }
+  notes?: string
+}

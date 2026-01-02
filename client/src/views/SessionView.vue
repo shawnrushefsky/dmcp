@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
+import { useEntityLinker } from '../composables/useEntityLinker'
 import type { SessionState, Character, Breadcrumb } from '../types'
 import SessionTabs from '../components/SessionTabs.vue'
 import CharacterCard from '../components/CharacterCard.vue'
@@ -12,6 +13,7 @@ import SkeletonLoader from '../components/SkeletonLoader.vue'
 
 const route = useRoute()
 const { getSession, loading } = useApi()
+const { linkText, setSessionState } = useEntityLinker()
 const state = ref<SessionState | null>(null)
 
 const sessionId = computed(() => route.params.sessionId as string)
@@ -32,6 +34,9 @@ const npcs = computed(() =>
 const locations = computed(() => state.value?.locations.slice(0, 6) || [])
 
 const quests = computed(() => state.value?.quests.slice(0, 5) || [])
+
+// Update entity linker when session state changes
+watch(state, (newState) => setSessionState(newState))
 
 onMounted(async () => {
   state.value = await getSession(sessionId.value)
@@ -77,7 +82,7 @@ onMounted(async () => {
       <div class="hero-overlay">
         <Breadcrumbs :items="breadcrumbs" class="hero-breadcrumbs" />
         <h2 class="hero-title">{{ state.session.name }}</h2>
-        <p class="hero-setting">{{ state.session.setting }}</p>
+        <p class="hero-setting linked-content" v-html="linkText(state.session.setting)"></p>
       </div>
     </div>
 
@@ -85,7 +90,7 @@ onMounted(async () => {
     <template v-else>
       <Breadcrumbs :items="breadcrumbs" />
       <h2>{{ state.session.name }}</h2>
-      <p class="setting-description">{{ state.session.setting }}</p>
+      <p class="setting-description linked-content" v-html="linkText(state.session.setting)"></p>
     </template>
 
     <SessionTabs :session-id="sessionId" active="overview" :counts="state.counts" />

@@ -52,6 +52,132 @@ export interface GamePreferences {
 
   // Custom notes
   additionalNotes: string;
+
+  // Image generation preferences (optional)
+  imageGeneration?: ImageGenerationPreferences;
+}
+
+// Image generation preferences for the session
+export interface ImageGenerationPreferences {
+  // Default tool/service to use
+  defaultTool?: "dalle" | "sdxl" | "midjourney" | "comfyui" | "flux" | "other";
+
+  // Default style settings (applied to all images unless overridden)
+  defaultStyle?: {
+    artisticStyle?: string;     // "digital painting", "oil painting", "anime", etc.
+    mood?: string;              // "dark", "epic", "whimsical", etc.
+    colorScheme?: string;       // "warm", "cold", "muted", "vibrant"
+    qualityTags?: string[];     // ["highly detailed", "8k", "masterpiece"]
+    negativePrompts?: string[]; // Things to avoid globally
+    influences?: string[];      // Artist/game/movie style references
+  };
+
+  // ComfyUI-specific settings
+  comfyui?: {
+    // Endpoint configuration
+    endpoint?: string;          // ComfyUI server URL
+
+    // Model settings
+    checkpoint?: string;        // Default checkpoint model
+    loras?: Array<{
+      name: string;
+      weight: number;
+    }>;
+
+    // Sampler defaults
+    samplerSettings?: {
+      sampler?: string;         // "euler_a", "dpm++_2m_sde", etc.
+      scheduler?: string;       // "karras", "normal", etc.
+      steps?: number;
+      cfg?: number;
+    };
+
+    // Workflow templates - full ComfyUI workflow JSON
+    // These can be exported from ComfyUI and stored here for reuse
+    workflows?: Record<string, {
+      name: string;                           // Human-readable name
+      description?: string;                   // What this workflow does
+      workflow: Record<string, unknown>;      // The full ComfyUI workflow JSON (API format)
+      // Node IDs for dynamic value injection
+      inputNodes?: {
+        positivePrompt?: string;              // Node ID for positive prompt input
+        negativePrompt?: string;              // Node ID for negative prompt input
+        checkpoint?: string;                  // Node ID for checkpoint loader
+        seed?: string;                        // Node ID for seed/noise
+        width?: string;                       // Node ID for width
+        height?: string;                      // Node ID for height
+        steps?: string;                       // Node ID for steps
+        cfg?: string;                         // Node ID for CFG scale
+        sampler?: string;                     // Node ID for sampler
+        scheduler?: string;                   // Node ID for scheduler
+      };
+    }>;
+
+    // Which workflow to use by default
+    defaultWorkflowId?: string;
+
+    // Legacy: simple workflow name reference
+    defaultWorkflow?: string;   // Workflow name or ID
+    workflowOverrides?: Record<string, unknown>; // Custom workflow node values
+  };
+
+  // DALL-E specific settings
+  dalle?: {
+    model?: string;             // "dall-e-3", "dall-e-2"
+    quality?: "standard" | "hd";
+    style?: "vivid" | "natural";
+    size?: "1024x1024" | "1792x1024" | "1024x1792";
+  };
+
+  // Midjourney specific settings
+  midjourney?: {
+    version?: string;           // "v5", "v6", "niji"
+    stylize?: number;           // 0-1000
+    chaos?: number;             // 0-100
+    quality?: number;           // 0.25, 0.5, 1, 2
+    aspectRatio?: string;       // "1:1", "16:9", "2:3", etc.
+  };
+
+  // Stable Diffusion / SDXL settings
+  sdxl?: {
+    model?: string;             // Model ID or path
+    samplerName?: string;
+    steps?: number;
+    cfg?: number;
+    width?: number;
+    height?: number;
+    negativePrompt?: string;
+  };
+
+  // Flux settings
+  flux?: {
+    model?: string;             // "schnell", "dev", "pro"
+    steps?: number;
+    guidance?: number;
+  };
+
+  // Generation defaults
+  defaults?: {
+    aspectRatio?: string;       // Default aspect ratio for images
+    generateOnCreate?: boolean; // Auto-generate images when entities are created
+    savePrompts?: boolean;      // Store prompts with entities
+    framing?: {
+      character?: string;       // Default framing for character portraits
+      location?: string;        // Default framing for location scenes
+      item?: string;            // Default framing for item images
+    };
+  };
+
+  // Consistency settings
+  consistency?: {
+    maintainColorPalette?: boolean;
+    characterSeedImages?: Record<string, string>; // characterId -> seed image
+    styleReferenceImage?: string; // Session-wide style reference
+    useCharacterRefs?: boolean;  // Use existing character images as reference
+  };
+
+  // Custom notes for the DM
+  notes?: string;
 }
 
 export interface PreferenceValue<T> {

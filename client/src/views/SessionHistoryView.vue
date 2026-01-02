@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
+import { useEntityLinker } from '../composables/useEntityLinker'
 import type { NarrativeEvent, SessionState } from '../types'
 import SessionTabs from '../components/SessionTabs.vue'
 import EventCard from '../components/EventCard.vue'
@@ -9,10 +10,14 @@ import SkeletonLoader from '../components/SkeletonLoader.vue'
 
 const route = useRoute()
 const { getSession, getHistory, loading } = useApi()
+const { linkText, setSessionState } = useEntityLinker()
 const state = ref<SessionState | null>(null)
 const events = ref<NarrativeEvent[]>([])
 
 const sessionId = computed(() => route.params.sessionId as string)
+
+// Update entity linker when session state changes
+watch(state, (newState) => setSessionState(newState))
 
 onMounted(async () => {
   const [sessionResult, historyResult] = await Promise.all([
@@ -44,7 +49,7 @@ onMounted(async () => {
     <SessionTabs :session-id="sessionId" active="history" :counts="state.counts" />
 
     <template v-if="events.length">
-      <EventCard v-for="event in events" :key="event.id" :event="event" />
+      <EventCard v-for="event in events" :key="event.id" :event="event" :link-text="linkText" />
     </template>
     <p v-else class="empty">No events recorded yet.</p>
   </div>

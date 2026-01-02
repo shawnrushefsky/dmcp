@@ -5,7 +5,7 @@ import { fileURLToPath } from "url";
 import { dirname } from "path";
 
 // Import tool functions
-import { listSessions, loadSession } from "../tools/session.js";
+import { listSessions, loadSession, getImageGenerationPreferences } from "../tools/session.js";
 import {
   getCharacter,
   listCharacters,
@@ -59,6 +59,12 @@ export function createHttpServer(port: number = 3456): express.Application {
   // Per-session theme endpoint
   app.get("/api/sessions/:sessionId/theme", (req: Request, res: Response) => {
     res.json(getSessionDisplayConfig(req.params.sessionId));
+  });
+
+  // Image generation preferences
+  app.get("/api/sessions/:sessionId/image-preferences", (req: Request, res: Response) => {
+    const prefs = getImageGenerationPreferences(req.params.sessionId);
+    res.json(prefs || {});
   });
 
   // Sessions

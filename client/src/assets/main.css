@@ -1192,3 +1192,92 @@ hr {
 .fade-leave-to {
   opacity: 0;
 }
+
+/* ============================================================================
+   Entity Links (Wiki-style auto-linking)
+   ============================================================================ */
+.entity-link {
+  text-decoration: none;
+  border-bottom: 1px dotted currentColor;
+  transition:
+    color var(--transition-fast),
+    border-color var(--transition-fast),
+    background var(--transition-fast);
+  padding: 0 2px;
+  margin: 0 -2px;
+  border-radius: 2px;
+}
+
+.entity-link:hover {
+  border-bottom-style: solid;
+  background: rgba(var(--accent-rgb), 0.1);
+}
+
+/* Character links - purple (accent) */
+.entity-link.entity-character {
+  color: var(--accent);
+}
+
+.entity-link.entity-character:hover {
+  color: var(--accent-hover);
+}
+
+/* Location links - blue-green */
+.entity-link.entity-location {
+  color: #22d3ee;
+}
+
+.entity-link.entity-location:hover {
+  color: #67e8f9;
+  background: rgba(34, 211, 238, 0.1);
+}
+
+/* Quest links - gold/yellow */
+.entity-link.entity-quest {
+  color: #fbbf24;
+}
+
+.entity-link.entity-quest:hover {
+  color: #fcd34d;
+  background: rgba(251, 191, 36, 0.1);
+}
+
+/* Faction links - orange */
+.entity-link.entity-faction {
+  color: #fb923c;
+}
+
+.entity-link.entity-faction:hover {
+  color: #fdba74;
+  background: rgba(251, 146, 60, 0.1);
+}
+
+/* Item links - green */
+.entity-link.entity-item {
+  color: #4ade80;
+}
+
+.entity-link.entity-item:hover {
+  color: #86efac;
+  background: rgba(74, 222, 128, 0.1);
+}
+
+/* Linked content container - ensure links are visible in various contexts */
+.linked-content {
+  line-height: 1.7;
+}
+
+.linked-content strong {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.linked-content em {
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+/* Legacy content spacing */
+.mt-20 { margin-top: 20px; }
+.mb-20 { margin-bottom: 20px; }
+.mt-30 { margin-top: 30px; }

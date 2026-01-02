@@ -11,6 +11,7 @@ import type {
   StoredImage,
   EntityImages,
   Item,
+  ImageGenerationPreferences,
 } from '../types'
 
 const API_BASE = '/api'
@@ -246,6 +247,25 @@ export function useApi() {
     }
   }
 
+  async function getImageGenerationPreferences(
+    sessionId: string
+  ): Promise<ImageGenerationPreferences | null> {
+    loading.value = true
+    error.value = null
+    try {
+      const prefs = await fetchJson<ImageGenerationPreferences>(
+        `${API_BASE}/sessions/${sessionId}/image-preferences`
+      )
+      // Return null if empty object
+      return Object.keys(prefs).length > 0 ? prefs : null
+    } catch (e) {
+      error.value = (e as Error).message
+      return null
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     loading,
     error,
@@ -263,5 +283,6 @@ export function useApi() {
     getInventory,
     getCharactersAtLocation,
     search,
+    getImageGenerationPreferences,
   }
 }

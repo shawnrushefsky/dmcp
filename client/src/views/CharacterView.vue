@@ -1,19 +1,22 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
+import { useEntityLinker } from '../composables/useEntityLinker'
 import { useTheme } from '../composables/useTheme'
-import type { CharacterSheet, EntityImages, Breadcrumb } from '../types'
+import type { CharacterSheet, EntityImages, Breadcrumb, SessionState } from '../types'
 import HealthBar from '../components/HealthBar.vue'
 import AsciiBox from '../components/AsciiBox.vue'
 import Breadcrumbs from '../components/Breadcrumbs.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
 
 const route = useRoute()
-const { getCharacterSheet, getEntityImages, loading } = useApi()
+const { getCharacterSheet, getSession, getEntityImages, loading } = useApi()
+const { linkText, setSessionState, setItems } = useEntityLinker()
 const { config } = useTheme()
 
 const sheet = ref<CharacterSheet | null>(null)
+const sessionState = ref<SessionState | null>(null)
 const images = ref<EntityImages>({ images: [], primaryImage: null })
 
 const characterId = computed(() => route.params.characterId as string)
@@ -22,10 +25,15 @@ const breadcrumbs = computed<Breadcrumb[]>(() => {
   if (!sheet.value) return []
   return [
     { label: 'Games', href: '/' },
-    { label: 'Session', href: `/sessions/${sheet.value.character.sessionId}` },
+    { label: sessionState.value?.session.name || 'Session', href: `/sessions/${sheet.value.character.sessionId}` },
     { label: sheet.value.character.name },
   ]
 })
+
+// Update entity linker when session state changes
+watch(sessionState, (newState) => setSessionState(newState))
+// Also include inventory items as linkable
+watch(() => sheet.value?.inventory, (inv) => setItems(inv || []))
 
 onMounted(async () => {
   const [sheetResult, imagesResult] = await Promise.all([
@@ -34,6 +42,11 @@ onMounted(async () => {
   ])
   sheet.value = sheetResult
   images.value = imagesResult
+
+  // Fetch session state for entity linking
+  if (sheetResult) {
+    sessionState.value = await getSession(sheetResult.character.sessionId)
+  }
 })
 </script>
 
@@ -150,7 +163,7 @@ onMounted(async () => {
 
         <div v-if="sheet.character.notes" class="card">
           <h3>Notes</h3>
-          <p>{{ sheet.character.notes }}</p>
+          <p class="linked-content" v-html="linkText(sheet.character.notes)"></p>
         </div>
 
         <div v-if="images.images.length" class="card">

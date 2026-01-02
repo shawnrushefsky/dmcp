@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
 import { safeJsonParse } from "../utils/json.js";
-import type { Session, RuleSystem, GamePreferences } from "../types/index.js";
+import type { Session, RuleSystem, GamePreferences, ImageGenerationPreferences } from "../types/index.js";
 
 export function createSession(params: {
   name: string;
@@ -260,4 +260,78 @@ export function getSessionState(sessionId: string): {
     activeQuests: questCount.count,
     activeCombat: combat.count > 0,
   };
+}
+
+export function getImageGenerationPreferences(
+  sessionId: string
+): ImageGenerationPreferences | null {
+  const preferences = getSessionPreferences(sessionId);
+  return preferences?.imageGeneration || null;
+}
+
+export function setImageGenerationPreferences(
+  sessionId: string,
+  imagePrefs: ImageGenerationPreferences
+): boolean {
+  const currentPrefs = getSessionPreferences(sessionId) || {} as GamePreferences;
+  const updatedPrefs: GamePreferences = {
+    ...currentPrefs,
+    imageGeneration: imagePrefs,
+  };
+  return updateSessionPreferences(sessionId, updatedPrefs);
+}
+
+export function updateImageGenerationPreferences(
+  sessionId: string,
+  updates: Partial<ImageGenerationPreferences>
+): ImageGenerationPreferences | null {
+  const currentImagePrefs = getImageGenerationPreferences(sessionId) || {};
+  const updatedImagePrefs: ImageGenerationPreferences = {
+    ...currentImagePrefs,
+    ...updates,
+    // Deep merge for nested objects
+    defaultStyle: {
+      ...currentImagePrefs.defaultStyle,
+      ...updates.defaultStyle,
+    },
+    comfyui: updates.comfyui !== undefined ? {
+      ...currentImagePrefs.comfyui,
+      ...updates.comfyui,
+      samplerSettings: {
+        ...currentImagePrefs.comfyui?.samplerSettings,
+        ...updates.comfyui?.samplerSettings,
+      },
+    } : currentImagePrefs.comfyui,
+    dalle: updates.dalle !== undefined ? {
+      ...currentImagePrefs.dalle,
+      ...updates.dalle,
+    } : currentImagePrefs.dalle,
+    midjourney: updates.midjourney !== undefined ? {
+      ...currentImagePrefs.midjourney,
+      ...updates.midjourney,
+    } : currentImagePrefs.midjourney,
+    sdxl: updates.sdxl !== undefined ? {
+      ...currentImagePrefs.sdxl,
+      ...updates.sdxl,
+    } : currentImagePrefs.sdxl,
+    flux: updates.flux !== undefined ? {
+      ...currentImagePrefs.flux,
+      ...updates.flux,
+    } : currentImagePrefs.flux,
+    defaults: updates.defaults !== undefined ? {
+      ...currentImagePrefs.defaults,
+      ...updates.defaults,
+      framing: {
+        ...currentImagePrefs.defaults?.framing,
+        ...updates.defaults?.framing,
+      },
+    } : currentImagePrefs.defaults,
+    consistency: updates.consistency !== undefined ? {
+      ...currentImagePrefs.consistency,
+      ...updates.consistency,
+    } : currentImagePrefs.consistency,
+  };
+
+  const success = setImageGenerationPreferences(sessionId, updatedImagePrefs);
+  return success ? updatedImagePrefs : null;
 }

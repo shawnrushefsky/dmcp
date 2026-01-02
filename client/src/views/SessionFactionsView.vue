@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
+import { useEntityLinker } from '../composables/useEntityLinker'
 import type { SessionState, Faction, Breadcrumb } from '../types'
 import SessionTabs from '../components/SessionTabs.vue'
 import Breadcrumbs from '../components/Breadcrumbs.vue'
@@ -9,6 +10,7 @@ import SkeletonLoader from '../components/SkeletonLoader.vue'
 
 const route = useRoute()
 const { getSession, loading } = useApi()
+const { linkText, setSessionState } = useEntityLinker()
 const state = ref<SessionState | null>(null)
 
 const sessionId = computed(() => route.params.sessionId as string)
@@ -30,6 +32,9 @@ const hiddenFactions = computed(() =>
 const disbandedFactions = computed(() =>
   state.value?.factions.filter((f: Faction) => f.status === 'disbanded') || []
 )
+
+// Update entity linker when session state changes
+watch(state, (newState) => setSessionState(newState))
 
 onMounted(async () => {
   state.value = await getSession(sessionId.value)
@@ -61,7 +66,7 @@ onMounted(async () => {
     <div v-if="activeFactions.length" class="faction-grid">
       <div v-for="faction in activeFactions" :key="faction.id" class="card faction-card">
         <h4>{{ faction.name }}</h4>
-        <p v-if="faction.description" class="faction-description">{{ faction.description }}</p>
+        <p v-if="faction.description" class="faction-description linked-content" v-html="linkText(faction.description)"></p>
 
         <div v-if="faction.traits.length" class="faction-traits">
           <span v-for="trait in faction.traits" :key="trait" class="tag">{{ trait }}</span>
@@ -77,7 +82,7 @@ onMounted(async () => {
         <div v-if="faction.goals.length" class="faction-goals">
           <div class="stat-label">Goals</div>
           <ul>
-            <li v-for="(goal, idx) in faction.goals" :key="idx">{{ goal }}</li>
+            <li v-for="(goal, idx) in faction.goals" :key="idx" class="linked-content" v-html="linkText(goal)"></li>
           </ul>
         </div>
       </div>
@@ -89,7 +94,7 @@ onMounted(async () => {
       <div class="faction-grid">
         <div v-for="faction in hiddenFactions" :key="faction.id" class="card faction-card muted">
           <h4>{{ faction.name }}</h4>
-          <p v-if="faction.description" class="faction-description">{{ faction.description }}</p>
+          <p v-if="faction.description" class="faction-description linked-content" v-html="linkText(faction.description)"></p>
           <span class="tag tag-muted">Hidden</span>
         </div>
       </div>
