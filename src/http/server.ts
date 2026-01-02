@@ -207,7 +207,8 @@ export function createHttpServer(port: number = 3000): express.Application {
     app.use(express.static(CLIENT_DIST));
 
     // SPA fallback - serve index.html for all non-API routes
-    app.get("*", (req: Request, res: Response, next: NextFunction) => {
+    // Express 5 requires named wildcards: /{*path}
+    app.get("/{*path}", (req: Request, res: Response, next: NextFunction) => {
       // Skip API routes and image routes
       if (req.path.startsWith("/api/") || req.path.startsWith("/images/")) {
         next();
