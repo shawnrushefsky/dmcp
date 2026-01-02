@@ -71,16 +71,21 @@ export function preparePause(sessionId: string): PauseChecklist | null {
   // Locations
   const locationStats = db
     .prepare(`SELECT COUNT(*) as total FROM locations WHERE session_id = ?`)
-    .get(sessionId) as { count: number };
+    .get(sessionId) as { total: number };
 
-  const connectedLocations = db
-    .prepare(`
-      SELECT COUNT(DISTINCT l.id) as count
-      FROM locations l
-      JOIN location_exits le ON le.from_location_id = l.id OR le.to_location_id = l.id
-      WHERE l.session_id = ?
-    `)
-    .get(sessionId) as { count: number };
+  // Count locations that have exits (exits are stored in properties JSON)
+  const locationRows = db
+    .prepare(`SELECT properties FROM locations WHERE session_id = ?`)
+    .all(sessionId) as { properties: string }[];
+
+  let connectedCount = 0;
+  for (const row of locationRows) {
+    const props = safeJsonParse<{ exits?: unknown[] }>(row.properties, { exits: [] });
+    if (props.exits && props.exits.length > 0) {
+      connectedCount++;
+    }
+  }
+  const connectedLocations = { count: connectedCount };
 
   // Quests
   const questStats = db
@@ -218,12 +223,12 @@ export function preparePause(sessionId: string): PauseChecklist | null {
 
   // Images
   const imageCount = db
-    .prepare(`SELECT COUNT(*) as count FROM images WHERE session_id = ?`)
+    .prepare(`SELECT COUNT(*) as count FROM stored_images WHERE session_id = ?`)
     .get(sessionId) as { count: number };
 
   // Calendar/Time
   const calendarRow = db
-    .prepare(`SELECT * FROM calendars WHERE session_id = ?`)
+    .prepare(`SELECT * FROM game_time WHERE session_id = ?`)
     .get(sessionId) as Record<string, unknown> | undefined;
 
   // Get current location name
@@ -245,7 +250,7 @@ export function preparePause(sessionId: string): PauseChecklist | null {
       withConditions: charactersWithConditions.count || 0,
     },
     locations: {
-      total: locationStats.count || 0,
+      total: locationStats.total || 0,
       connected: connectedLocations.count || 0,
     },
     quests: {
