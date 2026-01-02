@@ -1,27 +1,20 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-
-interface TabCounts {
-  characters?: number
-  locations?: number
-  quests?: number
-  images?: number
-  events?: number
-}
+import type { SessionCounts } from '../types'
 
 const props = withDefaults(
   defineProps<{
     sessionId: string
-    active: 'overview' | 'characters' | 'locations' | 'quests' | 'map' | 'images' | 'history'
-    counts?: TabCounts
+    active: 'overview' | 'characters' | 'locations' | 'quests' | 'map' | 'images' | 'history' | 'factions' | 'resources' | 'notes'
+    counts?: Partial<SessionCounts>
   }>(),
   {
     counts: () => ({}),
   }
 )
 
-// Tab configuration with icons (SVG paths), shortcuts, and count keys
-const tabs = computed(() => [
+// Core tabs (always shown)
+const coreTabs = computed(() => [
   {
     id: 'overview',
     label: 'Overview',
@@ -53,6 +46,50 @@ const tabs = computed(() => [
     count: props.counts?.quests,
     icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01',
   },
+])
+
+// Conditional tabs (only shown when count > 0)
+const conditionalTabs = computed(() => {
+  const tabs = []
+
+  if ((props.counts?.factions ?? 0) > 0) {
+    tabs.push({
+      id: 'factions',
+      label: 'Factions',
+      to: `/sessions/${props.sessionId}/factions`,
+      shortcut: 'g f',
+      count: props.counts?.factions,
+      icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
+    })
+  }
+
+  if ((props.counts?.resources ?? 0) > 0) {
+    tabs.push({
+      id: 'resources',
+      label: 'Resources',
+      to: `/sessions/${props.sessionId}/resources`,
+      shortcut: 'g r',
+      count: props.counts?.resources,
+      icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+    })
+  }
+
+  if ((props.counts?.notes ?? 0) > 0) {
+    tabs.push({
+      id: 'notes',
+      label: 'Notes',
+      to: `/sessions/${props.sessionId}/notes`,
+      shortcut: 'g n',
+      count: props.counts?.notes,
+      icon: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',
+    })
+  }
+
+  return tabs
+})
+
+// Utility tabs (always at end)
+const utilityTabs = computed(() => [
   {
     id: 'map',
     label: 'Map',
@@ -76,6 +113,13 @@ const tabs = computed(() => [
     count: props.counts?.events,
     icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
   },
+])
+
+// Combined tabs: core + conditional + utility
+const tabs = computed(() => [
+  ...coreTabs.value,
+  ...conditionalTabs.value,
+  ...utilityTabs.value,
 ])
 </script>
 

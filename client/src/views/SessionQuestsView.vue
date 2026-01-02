@@ -58,7 +58,7 @@ onMounted(async () => {
     <h2>{{ state.session.name }}</h2>
     <p class="mb-20">{{ state.session.setting }}</p>
 
-    <SessionTabs :session-id="sessionId" active="quests" />
+    <SessionTabs :session-id="sessionId" active="quests" :counts="state.counts" />
 
     <h3>Active Quests ({{ activeQuests.length }})</h3>
     <QuestTable v-if="activeQuests.length" :quests="activeQuests" />

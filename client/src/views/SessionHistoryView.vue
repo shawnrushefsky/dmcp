@@ -41,7 +41,7 @@ onMounted(async () => {
   <div v-else-if="state" class="animate-fade-in">
     <h2>Narrative History</h2>
 
-    <SessionTabs :session-id="sessionId" active="history" />
+    <SessionTabs :session-id="sessionId" active="history" :counts="state.counts" />
 
     <template v-if="events.length">
       <EventCard v-for="event in events" :key="event.id" :event="event" />

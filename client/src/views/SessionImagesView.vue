@@ -40,7 +40,7 @@ onMounted(async () => {
   <div v-else-if="state" class="animate-fade-in">
     <h2>Images</h2>
 
-    <SessionTabs :session-id="sessionId" active="images" />
+    <SessionTabs :session-id="sessionId" active="images" :counts="state.counts" />
 
     <div v-if="images.length" class="image-grid">
       <ImageCard v-for="img in images" :key="img.id" :image="img" />

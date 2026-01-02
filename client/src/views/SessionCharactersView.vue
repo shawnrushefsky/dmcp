@@ -62,7 +62,7 @@ onMounted(async () => {
     <h2>{{ state.session.name }}</h2>
     <p class="mb-20">{{ state.session.setting }}</p>
 
-    <SessionTabs :session-id="sessionId" active="characters" />
+    <SessionTabs :session-id="sessionId" active="characters" :counts="state.counts" />
 
     <div class="two-col">
       <div>

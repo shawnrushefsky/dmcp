@@ -42,7 +42,7 @@ onMounted(async () => {
   <div v-else-if="state" class="animate-fade-in">
     <h2>World Map</h2>
 
-    <SessionTabs :session-id="sessionId" active="map" />
+    <SessionTabs :session-id="sessionId" active="map" :counts="state.counts" />
 
     <div class="map-container">
       <AsciiBox v-if="mapData?.ascii" :content="mapData.ascii" />

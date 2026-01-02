@@ -52,6 +52,21 @@ const router = createRouter({
       component: () => import('../views/SessionHistoryView.vue'),
     },
     {
+      path: '/sessions/:sessionId/factions',
+      name: 'session-factions',
+      component: () => import('../views/SessionFactionsView.vue'),
+    },
+    {
+      path: '/sessions/:sessionId/resources',
+      name: 'session-resources',
+      component: () => import('../views/SessionResourcesView.vue'),
+    },
+    {
+      path: '/sessions/:sessionId/notes',
+      name: 'session-notes',
+      component: () => import('../views/SessionNotesView.vue'),
+    },
+    {
       path: '/characters/:characterId',
       name: 'character',
       component: () => import('../views/CharacterView.vue'),

@@ -18,13 +18,22 @@ import {
   listEntityImages,
   listSessionImages,
 } from "../tools/images.js";
-import { getInventory } from "../tools/inventory.js";
+import { getInventory, listSessionItems } from "../tools/inventory.js";
 import { listQuests, getQuest } from "../tools/quest.js";
 import { getHistory } from "../tools/narrative.js";
 import {
   getDisplayConfig,
   getSessionDisplayConfig,
 } from "../tools/display.js";
+import { listFactions, getFaction } from "../tools/faction.js";
+import { listResources, getResource } from "../tools/resource.js";
+import { listNotes, getNote } from "../tools/notes.js";
+import { listRelationships } from "../tools/relationship.js";
+import { listAbilities, getAbility } from "../tools/ability.js";
+import { listTimers, getTimer } from "../tools/timers.js";
+import { listSecrets } from "../tools/secrets.js";
+import { getTime, listScheduledEvents } from "../tools/time.js";
+import { getActiveCombat } from "../tools/combat.js";
 import type { Character, Location } from "../types/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -58,14 +67,15 @@ export function createHttpServer(port: number = 3456): express.Application {
   });
 
   app.get("/api/sessions/:sessionId", (req: Request, res: Response) => {
-    const session = loadSession(req.params.sessionId);
+    const sessionId = req.params.sessionId;
+    const session = loadSession(sessionId);
     if (!session) {
       res.status(404).json({ error: "Session not found" });
       return;
     }
-    const characters = listCharacters(req.params.sessionId);
-    const locations = listLocations(req.params.sessionId);
-    const quests = listQuests(req.params.sessionId);
+    const characters = listCharacters(sessionId);
+    const locations = listLocations(sessionId);
+    const quests = listQuests(sessionId);
 
     // Add primary image IDs to characters and locations
     const charactersWithImages = characters.map((c: Character) => {
@@ -80,11 +90,48 @@ export function createHttpServer(port: number = 3456): express.Application {
       return { ...l, primaryImageId: primary?.id || null };
     });
 
+    // Get counts for all entity types (for conditional UI display)
+    const factions = listFactions(sessionId);
+    const resources = listResources(sessionId);
+    const notes = listNotes(sessionId);
+    const relationships = listRelationships(sessionId);
+    const abilities = listAbilities(sessionId);
+    const timers = listTimers(sessionId);
+    const secrets = listSecrets(sessionId);
+    const images = listSessionImages(sessionId);
+    const items = listSessionItems(sessionId);
+    const events = getHistory(sessionId, { limit: 1 });
+    const activeCombat = getActiveCombat(sessionId);
+    const gameTime = getTime(sessionId);
+
     res.json({
       session,
       characters: charactersWithImages,
       locations: locationsWithImages,
       quests,
+      // Include full data for populated entity types
+      factions,
+      resources,
+      notes,
+      // Include counts for UI tab visibility
+      counts: {
+        characters: characters.length,
+        locations: locations.length,
+        quests: quests.length,
+        factions: factions.length,
+        resources: resources.length,
+        notes: notes.length,
+        relationships: relationships.length,
+        abilities: abilities.length,
+        timers: timers.length,
+        secrets: secrets.length,
+        images: images.length,
+        items: items.length,
+        events: events.length > 0 ? 1 : 0, // Just indicate if there's history
+      },
+      // Include active state info
+      activeCombat: activeCombat || null,
+      gameTime: gameTime || null,
     });
   });
 
@@ -161,6 +208,56 @@ export function createHttpServer(port: number = 3456): express.Application {
       return;
     }
     res.json(quest);
+  });
+
+  // Factions
+  app.get("/api/factions/:factionId", (req: Request, res: Response) => {
+    const faction = getFaction(req.params.factionId);
+    if (!faction) {
+      res.status(404).json({ error: "Faction not found" });
+      return;
+    }
+    res.json(faction);
+  });
+
+  // Resources
+  app.get("/api/resources/:resourceId", (req: Request, res: Response) => {
+    const resource = getResource(req.params.resourceId);
+    if (!resource) {
+      res.status(404).json({ error: "Resource not found" });
+      return;
+    }
+    res.json(resource);
+  });
+
+  // Notes
+  app.get("/api/notes/:noteId", (req: Request, res: Response) => {
+    const note = getNote(req.params.noteId);
+    if (!note) {
+      res.status(404).json({ error: "Note not found" });
+      return;
+    }
+    res.json(note);
+  });
+
+  // Abilities
+  app.get("/api/abilities/:abilityId", (req: Request, res: Response) => {
+    const ability = getAbility(req.params.abilityId);
+    if (!ability) {
+      res.status(404).json({ error: "Ability not found" });
+      return;
+    }
+    res.json(ability);
+  });
+
+  // Timers
+  app.get("/api/timers/:timerId", (req: Request, res: Response) => {
+    const timer = getTimer(req.params.timerId);
+    if (!timer) {
+      res.status(404).json({ error: "Timer not found" });
+      return;
+    }
+    res.json(timer);
   });
 
   // Images

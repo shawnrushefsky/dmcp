@@ -92,6 +92,68 @@ export interface Item {
   properties?: Record<string, unknown>
 }
 
+export interface Faction {
+  id: string
+  sessionId: string
+  name: string
+  description?: string
+  status: 'active' | 'disbanded' | 'hidden'
+  leaderId?: string
+  headquartersId?: string
+  resources: Record<string, number>
+  goals: string[]
+  traits: string[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface Resource {
+  id: string
+  sessionId: string
+  ownerType: 'session' | 'character'
+  ownerId?: string
+  name: string
+  description?: string
+  category?: string
+  value: number
+  minValue?: number
+  maxValue?: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface Note {
+  id: string
+  sessionId: string
+  title: string
+  content: string
+  category?: string
+  tags: string[]
+  pinned: boolean
+  relatedEntityType?: string
+  relatedEntityId?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface GameTime {
+  year: number
+  month: number
+  day: number
+  hour: number
+  minute: number
+  formatted?: string
+}
+
+export interface Combat {
+  id: string
+  sessionId: string
+  locationId: string
+  status: 'active' | 'ended'
+  round: number
+  currentTurnIndex: number
+}
+
 export interface StoredImage {
   id: string
   sessionId: string
@@ -128,11 +190,33 @@ export interface CharacterSheet {
   ascii: string
 }
 
+export interface SessionCounts {
+  characters: number
+  locations: number
+  quests: number
+  factions: number
+  resources: number
+  notes: number
+  relationships: number
+  abilities: number
+  timers: number
+  secrets: number
+  images: number
+  items: number
+  events: number
+}
+
 export interface SessionState {
   session: Session
   characters: Character[]
   locations: Location[]
   quests: Quest[]
+  factions: Faction[]
+  resources: Resource[]
+  notes: Note[]
+  counts: SessionCounts
+  activeCombat: Combat | null
+  gameTime: GameTime | null
 }
 
 export interface EntityImages {
