@@ -143,4 +143,5 @@ export interface EntityImages {
 export interface Breadcrumb {
   label: string
   href?: string
+  icon?: 'home' | 'session' | 'character' | 'location' | 'quest' | 'image'
 }

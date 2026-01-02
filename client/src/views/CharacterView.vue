@@ -7,6 +7,7 @@ import type { CharacterSheet, EntityImages, Breadcrumb } from '../types'
 import HealthBar from '../components/HealthBar.vue'
 import AsciiBox from '../components/AsciiBox.vue'
 import Breadcrumbs from '../components/Breadcrumbs.vue'
+import SkeletonLoader from '../components/SkeletonLoader.vue'
 
 const route = useRoute()
 const { getCharacterSheet, getEntityImages, loading } = useApi()
@@ -37,8 +38,25 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div v-if="loading" class="loading">Loading...</div>
-  <div v-else-if="sheet">
+  <!-- Loading State -->
+  <div v-if="loading" class="character-loading">
+    <SkeletonLoader variant="text" width="200px" />
+    <SkeletonLoader variant="title" width="250px" />
+    <div class="two-col">
+      <div>
+        <SkeletonLoader variant="image" height="250px" />
+        <SkeletonLoader variant="card" class="mt-4" />
+        <SkeletonLoader variant="card" class="mt-4" />
+      </div>
+      <div>
+        <SkeletonLoader variant="card" />
+        <SkeletonLoader variant="card" class="mt-4" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div v-else-if="sheet" class="animate-fade-in">
     <Breadcrumbs :items="breadcrumbs" />
     <h2>
       {{ sheet.character.name }}

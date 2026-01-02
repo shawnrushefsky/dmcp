@@ -5,6 +5,7 @@ import { useApi } from '../composables/useApi'
 import type { MapData, SessionState } from '../types'
 import SessionTabs from '../components/SessionTabs.vue'
 import AsciiBox from '../components/AsciiBox.vue'
+import SkeletonLoader from '../components/SkeletonLoader.vue'
 
 const route = useRoute()
 const { getSession, getMap, loading } = useApi()
@@ -24,8 +25,21 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div v-if="loading" class="loading">Loading...</div>
-  <div v-else-if="state">
+  <!-- Loading State -->
+  <div v-if="loading" class="map-loading">
+    <SkeletonLoader variant="title" width="200px" />
+    <div class="tabs-skeleton">
+      <SkeletonLoader variant="button" v-for="i in 5" :key="i" width="80px" />
+    </div>
+    <SkeletonLoader variant="card" height="300px" class="mt-4" />
+    <SkeletonLoader variant="title" width="150px" class="mt-6" />
+    <div class="grid">
+      <SkeletonLoader variant="card" v-for="i in 4" :key="i" />
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div v-else-if="state" class="animate-fade-in">
     <h2>World Map</h2>
 
     <SessionTabs :session-id="sessionId" active="map" />

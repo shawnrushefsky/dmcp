@@ -6,6 +6,7 @@ import type { SessionState, Breadcrumb } from '../types'
 import SessionTabs from '../components/SessionTabs.vue'
 import LocationCard from '../components/LocationCard.vue'
 import Breadcrumbs from '../components/Breadcrumbs.vue'
+import SkeletonLoader from '../components/SkeletonLoader.vue'
 
 const route = useRoute()
 const { getSession, loading } = useApi()
@@ -25,8 +26,29 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div v-if="loading" class="loading">Loading...</div>
-  <div v-else-if="state">
+  <!-- Loading State -->
+  <div v-if="loading" class="session-loading">
+    <SkeletonLoader variant="text" width="200px" />
+    <SkeletonLoader variant="title" width="300px" />
+    <SkeletonLoader variant="text" width="80%" />
+    <div class="tabs-skeleton">
+      <SkeletonLoader variant="button" v-for="i in 5" :key="i" width="80px" />
+    </div>
+    <SkeletonLoader variant="title" width="180px" class="mt-6" />
+    <div class="two-col">
+      <div>
+        <SkeletonLoader variant="card" />
+        <SkeletonLoader variant="card" class="mt-4" />
+      </div>
+      <div>
+        <SkeletonLoader variant="card" />
+        <SkeletonLoader variant="card" class="mt-4" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div v-else-if="state" class="animate-fade-in">
     <Breadcrumbs :items="breadcrumbs" />
     <h2>{{ state.session.name }}</h2>
     <p class="mb-20">{{ state.session.setting }}</p>

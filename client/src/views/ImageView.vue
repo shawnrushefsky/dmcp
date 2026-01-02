@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
 import type { StoredImage, Breadcrumb } from '../types'
 import Breadcrumbs from '../components/Breadcrumbs.vue'
+import SkeletonLoader from '../components/SkeletonLoader.vue'
 
 const route = useRoute()
 const { getImage, loading } = useApi()
@@ -32,8 +33,16 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div v-if="loading" class="loading">Loading...</div>
-  <div v-else-if="image">
+  <!-- Loading State -->
+  <div v-if="loading" class="image-loading">
+    <SkeletonLoader variant="text" width="200px" />
+    <SkeletonLoader variant="title" width="200px" />
+    <SkeletonLoader variant="image" height="400px" />
+    <SkeletonLoader variant="card" class="mt-4" />
+  </div>
+
+  <!-- Content -->
+  <div v-else-if="image" class="animate-fade-in">
     <Breadcrumbs :items="breadcrumbs" />
     <h2>{{ image.label || 'Image' }}</h2>
 

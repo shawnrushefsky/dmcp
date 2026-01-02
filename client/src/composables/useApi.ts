@@ -213,6 +213,39 @@ export function useApi() {
     }
   }
 
+  interface SearchResult {
+    characters: Array<{
+      id: string
+      name: string
+      type: 'character'
+      isPlayer: boolean
+      primaryImageId: string | null
+    }>
+    locations: Array<{
+      id: string
+      name: string
+      type: 'location'
+      primaryImageId: string | null
+    }>
+    quests: Array<{
+      id: string
+      name: string
+      type: 'quest'
+      status: string
+    }>
+  }
+
+  async function search(sessionId: string, query: string): Promise<SearchResult> {
+    // Don't set loading for search (it's non-blocking)
+    try {
+      return await fetchJson<SearchResult>(
+        `${API_BASE}/sessions/${sessionId}/search?q=${encodeURIComponent(query)}`
+      )
+    } catch {
+      return { characters: [], locations: [], quests: [] }
+    }
+  }
+
   return {
     loading,
     error,
@@ -229,5 +262,6 @@ export function useApi() {
     getEntityImages,
     getInventory,
     getCharactersAtLocation,
+    search,
   }
 }

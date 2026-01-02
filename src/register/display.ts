@@ -10,7 +10,31 @@ import {
   setThemeColors,
   setAppTitle,
   setFonts,
+  setVisualStyle,
+  getSessionDisplayConfig,
+  setSessionDisplayConfig,
+  applySessionThemePreset,
+  resetSessionTheme,
+  inferAndApplyTheme,
+  type BorderRadiusStyle,
+  type CardStyle,
 } from "../tools/display.js";
+
+// All available theme presets
+const themePresetNames = [
+  "high-fantasy",
+  "dark-fantasy",
+  "sci-fi",
+  "cyberpunk",
+  "western",
+  "noir",
+  "cosmic-horror",
+  "steampunk",
+  "post-apocalyptic",
+  "pirate",
+  "modern",
+  "superhero",
+] as const;
 
 export function registerDisplayTools(server: McpServer): void {
   // Get display configuration
@@ -38,20 +62,32 @@ export function registerDisplayTools(server: McpServer): void {
     {
       bgColor: z.string().optional().describe("Background color (e.g., '#1a1a2e')"),
       bgSecondary: z.string().optional().describe("Secondary background color"),
+      bgElevated: z.string().optional().describe("Elevated surface background"),
       textColor: z.string().optional().describe("Main text color"),
       textMuted: z.string().optional().describe("Muted text color"),
       accentColor: z.string().optional().describe("Accent color for links and highlights"),
+      accentHover: z.string().optional().describe("Accent color on hover"),
       borderColor: z.string().optional().describe("Border color"),
       successColor: z.string().optional().describe("Success/positive color"),
       warningColor: z.string().optional().describe("Warning/caution color"),
-      asciiBackground: z.string().optional().describe("ASCII box background color"),
-      asciiText: z.string().optional().describe("ASCII box text color"),
+      dangerColor: z.string().optional().describe("Danger/error color"),
+      codeBackground: z.string().optional().describe("Code/monospace block background"),
+      codeText: z.string().optional().describe("Code/monospace text color"),
+      borderRadius: z
+        .enum(["sharp", "rounded", "soft"])
+        .optional()
+        .describe("Border radius style: sharp (0px), rounded (12px), soft (24px)"),
+      cardStyle: z
+        .enum(["clean", "grungy", "tech", "parchment", "metallic", "wooden"])
+        .optional()
+        .describe("Card visual style"),
+      fontDisplay: z.string().optional().describe("Display/heading font (Google Font name)"),
+      fontBody: z.string().optional().describe("Body text font (Google Font name)"),
+      fontMono: z.string().optional().describe("Monospace font (Google Font name)"),
       showHealthBars: z.boolean().optional().describe("Show health bars on character cards"),
-      showAsciiSheets: z.boolean().optional().describe("Show ASCII character sheets"),
+      showAsciiSheets: z.boolean().optional().describe("Show ASCII character sheets (supplemental)"),
       showConditionTags: z.boolean().optional().describe("Show condition tags"),
       showImages: z.boolean().optional().describe("Show images in the viewer"),
-      fontFamily: z.string().optional().describe("Main font family"),
-      asciiFontFamily: z.string().optional().describe("Font for ASCII art"),
       appTitle: z.string().optional().describe("Custom title for the web viewer"),
     },
     async (args) => {
@@ -85,21 +121,13 @@ export function registerDisplayTools(server: McpServer): void {
     }
   );
 
-  // Apply theme preset
+  // Apply theme preset (global)
   server.tool(
     "apply_theme_preset",
-    "Apply a predefined theme preset (dark-fantasy, cyberpunk, cosmic-horror, high-fantasy, noir, steampunk, post-apocalyptic)",
+    "Apply a predefined theme preset globally. Available presets include genre-specific themes with appropriate colors, fonts, and styles.",
     {
       preset: z
-        .enum([
-          "dark-fantasy",
-          "cyberpunk",
-          "cosmic-horror",
-          "high-fantasy",
-          "noir",
-          "steampunk",
-          "post-apocalyptic",
-        ])
+        .enum(themePresetNames)
         .describe("Theme preset name"),
     },
     async ({ preset }) => {
@@ -124,7 +152,7 @@ export function registerDisplayTools(server: McpServer): void {
   // List theme presets
   server.tool(
     "list_theme_presets",
-    "List all available theme presets with their colors",
+    "List all available theme presets with their colors and styles",
     {},
     async () => {
       const presets = listThemePresets();
@@ -169,14 +197,17 @@ export function registerDisplayTools(server: McpServer): void {
     {
       bgColor: z.string().optional().describe("Background color"),
       bgSecondary: z.string().optional().describe("Secondary background"),
+      bgElevated: z.string().optional().describe("Elevated surface color"),
       textColor: z.string().optional().describe("Text color"),
       textMuted: z.string().optional().describe("Muted text"),
       accentColor: z.string().optional().describe("Accent color"),
+      accentHover: z.string().optional().describe("Accent hover color"),
       borderColor: z.string().optional().describe("Border color"),
       successColor: z.string().optional().describe("Success color"),
       warningColor: z.string().optional().describe("Warning color"),
-      asciiBackground: z.string().optional().describe("ASCII background"),
-      asciiText: z.string().optional().describe("ASCII text color"),
+      dangerColor: z.string().optional().describe("Danger color"),
+      codeBackground: z.string().optional().describe("Code block background"),
+      codeText: z.string().optional().describe("Code text color"),
     },
     async (args) => {
       const config = setThemeColors(args);
@@ -214,10 +245,11 @@ export function registerDisplayTools(server: McpServer): void {
   // Set fonts
   server.tool(
     "set_fonts",
-    "Set custom fonts for the web viewer",
+    "Set custom fonts for the web viewer (Google Fonts names)",
     {
-      fontFamily: z.string().optional().describe("Main font (e.g., 'Georgia, serif')"),
-      asciiFontFamily: z.string().optional().describe("Monospace font for ASCII art"),
+      fontDisplay: z.string().optional().describe("Display/heading font"),
+      fontBody: z.string().optional().describe("Body text font"),
+      fontMono: z.string().optional().describe("Monospace font"),
     },
     async (args) => {
       const config = setFonts(args);
@@ -225,7 +257,170 @@ export function registerDisplayTools(server: McpServer): void {
         content: [
           {
             type: "text",
-            text: `Fonts updated:\n- Main: ${config.fontFamily}\n- ASCII: ${config.asciiFontFamily}`,
+            text: `Fonts updated:\n- Display: ${config.fontDisplay}\n- Body: ${config.fontBody}\n- Mono: ${config.fontMono}`,
+          },
+        ],
+      };
+    }
+  );
+
+  // Set visual style
+  server.tool(
+    "set_visual_style",
+    "Set visual style options (border radius and card style)",
+    {
+      borderRadius: z
+        .enum(["sharp", "rounded", "soft"])
+        .optional()
+        .describe("Border radius: sharp (0px), rounded (12px), soft (24px)"),
+      cardStyle: z
+        .enum(["clean", "grungy", "tech", "parchment", "metallic", "wooden"])
+        .optional()
+        .describe("Card visual style"),
+    },
+    async (args) => {
+      const config = setVisualStyle(args as { borderRadius?: BorderRadiusStyle; cardStyle?: CardStyle });
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Visual style updated:\n- Border Radius: ${config.borderRadius}\n- Card Style: ${config.cardStyle}`,
+          },
+        ],
+      };
+    }
+  );
+
+  // ============================================
+  // Per-Session Theme Tools
+  // ============================================
+
+  // Get session theme
+  server.tool(
+    "get_session_theme",
+    "Get the display configuration for a specific game session",
+    {
+      sessionId: z.string().describe("The session ID"),
+    },
+    async ({ sessionId }) => {
+      const config = getSessionDisplayConfig(sessionId);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(config, null, 2),
+          },
+        ],
+      };
+    }
+  );
+
+  // Set session theme
+  server.tool(
+    "set_session_theme",
+    "Set display configuration for a specific game session. Each session can have its own visual theme.",
+    {
+      sessionId: z.string().describe("The session ID"),
+      bgColor: z.string().optional().describe("Background color"),
+      bgSecondary: z.string().optional().describe("Secondary background"),
+      bgElevated: z.string().optional().describe("Elevated surface background"),
+      textColor: z.string().optional().describe("Text color"),
+      textMuted: z.string().optional().describe("Muted text"),
+      accentColor: z.string().optional().describe("Accent color"),
+      accentHover: z.string().optional().describe("Accent hover color"),
+      borderColor: z.string().optional().describe("Border color"),
+      successColor: z.string().optional().describe("Success color"),
+      warningColor: z.string().optional().describe("Warning color"),
+      dangerColor: z.string().optional().describe("Danger color"),
+      codeBackground: z.string().optional().describe("Code block background"),
+      codeText: z.string().optional().describe("Code text color"),
+      borderRadius: z.enum(["sharp", "rounded", "soft"]).optional().describe("Border radius style"),
+      cardStyle: z.enum(["clean", "grungy", "tech", "parchment", "metallic", "wooden"]).optional().describe("Card style"),
+      fontDisplay: z.string().optional().describe("Display font"),
+      fontBody: z.string().optional().describe("Body font"),
+      fontMono: z.string().optional().describe("Mono font"),
+      showHealthBars: z.boolean().optional().describe("Show health bars"),
+      showAsciiSheets: z.boolean().optional().describe("Show ASCII sheets"),
+      showConditionTags: z.boolean().optional().describe("Show condition tags"),
+      showImages: z.boolean().optional().describe("Show images"),
+      appTitle: z.string().optional().describe("App title"),
+    },
+    async ({ sessionId, ...config }) => {
+      const updated = setSessionDisplayConfig(sessionId, config);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Session theme updated for ${sessionId}:\n${JSON.stringify(updated, null, 2)}`,
+          },
+        ],
+      };
+    }
+  );
+
+  // Apply preset to session
+  server.tool(
+    "apply_session_theme_preset",
+    "Apply a predefined theme preset to a specific game session. This allows different games to have completely different visual themes.",
+    {
+      sessionId: z.string().describe("The session ID"),
+      preset: z.enum(themePresetNames).describe("Theme preset name"),
+    },
+    async ({ sessionId, preset }) => {
+      const config = applySessionThemePreset(sessionId, preset);
+      if (!config) {
+        return {
+          content: [{ type: "text", text: `Unknown preset: ${preset}` }],
+          isError: true,
+        };
+      }
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Applied '${preset}' theme to session ${sessionId}:\n${JSON.stringify(config, null, 2)}`,
+          },
+        ],
+      };
+    }
+  );
+
+  // Reset session theme
+  server.tool(
+    "reset_session_theme",
+    "Remove a session's custom theme, reverting to the global theme",
+    {
+      sessionId: z.string().describe("The session ID"),
+    },
+    async ({ sessionId }) => {
+      resetSessionTheme(sessionId);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Session theme reset. Session ${sessionId} will now use the global theme.`,
+          },
+        ],
+      };
+    }
+  );
+
+  // Auto-apply theme based on genre
+  server.tool(
+    "auto_theme_session",
+    "Automatically apply an appropriate theme to a session based on its genre and setting. Call this when creating a new game to set up the visual style.",
+    {
+      sessionId: z.string().describe("The session ID"),
+      genre: z.string().describe("Game genre (e.g., 'fantasy', 'sci-fi', 'western', 'noir')"),
+      setting: z.string().optional().describe("Optional setting description for more accurate theme matching"),
+    },
+    async ({ sessionId, genre, setting }) => {
+      const config = inferAndApplyTheme(sessionId, genre, setting);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Auto-themed session ${sessionId} based on genre "${genre}":\n${JSON.stringify(config, null, 2)}`,
           },
         ],
       };

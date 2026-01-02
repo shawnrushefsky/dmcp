@@ -264,6 +264,53 @@ export function removeCondition(
   });
 }
 
+/**
+ * Modify conditions on a character - add or remove in a single call.
+ * This consolidated function reduces the number of tool calls needed.
+ */
+export function modifyConditions(
+  characterId: string,
+  params: {
+    add?: string[];
+    remove?: string[];
+  }
+): { character: Character; added: string[]; removed: string[] } | null {
+  const character = getCharacter(characterId);
+  if (!character) return null;
+
+  let conditions = [...character.status.conditions];
+  const added: string[] = [];
+  const removed: string[] = [];
+
+  // Remove conditions first (so we can re-add if needed)
+  if (params.remove) {
+    for (const condition of params.remove) {
+      if (conditions.includes(condition)) {
+        conditions = conditions.filter((c) => c !== condition);
+        removed.push(condition);
+      }
+    }
+  }
+
+  // Add new conditions
+  if (params.add) {
+    for (const condition of params.add) {
+      if (!conditions.includes(condition)) {
+        conditions.push(condition);
+        added.push(condition);
+      }
+    }
+  }
+
+  const updated = updateCharacter(characterId, {
+    status: { conditions },
+  });
+
+  if (!updated) return null;
+
+  return { character: updated, added, removed };
+}
+
 export interface CharacterSheetData {
   character: Character;
   locationName: string | null;

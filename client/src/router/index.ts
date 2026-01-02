@@ -1,5 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
+// Extend route meta type
+declare module 'vue-router' {
+  interface RouteMeta {
+    transition?: 'page-fade' | 'page-slide' | 'page-slide-back'
+  }
+}
+
 const router = createRouter({
   history: createWebHistory(),
   routes: [
@@ -12,6 +19,7 @@ const router = createRouter({
       path: '/sessions/:sessionId',
       name: 'session',
       component: () => import('../views/SessionView.vue'),
+      meta: { transition: 'page-slide' },
     },
     {
       path: '/sessions/:sessionId/map',
@@ -47,21 +55,25 @@ const router = createRouter({
       path: '/characters/:characterId',
       name: 'character',
       component: () => import('../views/CharacterView.vue'),
+      meta: { transition: 'page-slide' },
     },
     {
       path: '/locations/:locationId',
       name: 'location',
       component: () => import('../views/LocationView.vue'),
+      meta: { transition: 'page-slide' },
     },
     {
       path: '/quests/:questId',
       name: 'quest',
       component: () => import('../views/QuestView.vue'),
+      meta: { transition: 'page-slide' },
     },
     {
       path: '/images/:imageId',
       name: 'image',
       component: () => import('../views/ImageView.vue'),
+      meta: { transition: 'page-slide' },
     },
   ],
 })

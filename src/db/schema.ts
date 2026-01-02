@@ -505,6 +505,16 @@ export function initializeSchema(): void {
     )
   `);
 
+  // Per-session theme configuration
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS session_themes (
+      session_id TEXT PRIMARY KEY,
+      config TEXT NOT NULL DEFAULT '{}',
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+    )
+  `);
+
   // Create indexes for common queries
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_characters_session ON characters(session_id);

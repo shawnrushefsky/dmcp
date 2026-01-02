@@ -5,6 +5,7 @@ import { useApi } from '../composables/useApi'
 import type { NarrativeEvent, SessionState } from '../types'
 import SessionTabs from '../components/SessionTabs.vue'
 import EventCard from '../components/EventCard.vue'
+import SkeletonLoader from '../components/SkeletonLoader.vue'
 
 const route = useRoute()
 const { getSession, getHistory, loading } = useApi()
@@ -24,8 +25,20 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div v-if="loading" class="loading">Loading...</div>
-  <div v-else-if="state">
+  <!-- Loading State -->
+  <div v-if="loading" class="history-loading">
+    <SkeletonLoader variant="title" width="250px" />
+    <div class="tabs-skeleton">
+      <SkeletonLoader variant="button" v-for="i in 5" :key="i" width="80px" />
+    </div>
+    <SkeletonLoader variant="card" class="mt-4" />
+    <SkeletonLoader variant="card" class="mt-4" />
+    <SkeletonLoader variant="card" class="mt-4" />
+    <SkeletonLoader variant="card" class="mt-4" />
+  </div>
+
+  <!-- Content -->
+  <div v-else-if="state" class="animate-fade-in">
     <h2>Narrative History</h2>
 
     <SessionTabs :session-id="sessionId" active="history" />

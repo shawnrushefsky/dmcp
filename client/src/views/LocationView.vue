@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
 import type { Location, Character, Item, EntityImages, Breadcrumb } from '../types'
 import Breadcrumbs from '../components/Breadcrumbs.vue'
+import SkeletonLoader from '../components/SkeletonLoader.vue'
 
 const route = useRoute()
 const { getLocation, getCharactersAtLocation, getInventory, getEntityImages, loading } = useApi()
@@ -41,8 +42,17 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div v-if="loading" class="loading">Loading...</div>
-  <div v-else-if="location">
+  <!-- Loading State -->
+  <div v-if="loading" class="location-loading">
+    <SkeletonLoader variant="text" width="200px" />
+    <SkeletonLoader variant="title" width="300px" />
+    <SkeletonLoader variant="image" height="300px" />
+    <SkeletonLoader variant="card" class="mt-4" />
+    <SkeletonLoader variant="card" class="mt-4" />
+  </div>
+
+  <!-- Content -->
+  <div v-else-if="location" class="animate-fade-in">
     <Breadcrumbs :items="breadcrumbs" />
     <h2>{{ location.name }}</h2>
 

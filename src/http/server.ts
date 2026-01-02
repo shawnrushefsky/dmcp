@@ -21,7 +21,10 @@ import {
 import { getInventory } from "../tools/inventory.js";
 import { listQuests, getQuest } from "../tools/quest.js";
 import { getHistory } from "../tools/narrative.js";
-import { getDisplayConfig } from "../tools/display.js";
+import {
+  getDisplayConfig,
+  getSessionDisplayConfig,
+} from "../tools/display.js";
 import type { Character, Location } from "../types/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -39,9 +42,14 @@ export function createHttpServer(port: number = 3000): express.Application {
   // API ROUTES (JSON)
   // ============================================================================
 
-  // Theme/Display config endpoint
+  // Theme/Display config endpoint (global)
   app.get("/api/theme", (_req: Request, res: Response) => {
     res.json(getDisplayConfig());
+  });
+
+  // Per-session theme endpoint
+  app.get("/api/sessions/:sessionId/theme", (req: Request, res: Response) => {
+    res.json(getSessionDisplayConfig(req.params.sessionId));
   });
 
   // Sessions
@@ -188,6 +196,75 @@ export function createHttpServer(port: number = 3000): express.Application {
       res.json(items);
     }
   );
+
+  // Search within a session
+  app.get("/api/sessions/:sessionId/search", (req: Request, res: Response) => {
+    const { sessionId } = req.params;
+    const query = (req.query.q as string || "").toLowerCase().trim();
+
+    if (!query || query.length < 2) {
+      res.json({ characters: [], locations: [], quests: [] });
+      return;
+    }
+
+    const session = loadSession(sessionId);
+    if (!session) {
+      res.status(404).json({ error: "Session not found" });
+      return;
+    }
+
+    const characters = listCharacters(sessionId);
+    const locations = listLocations(sessionId);
+    const quests = listQuests(sessionId);
+
+    // Filter by fuzzy name match
+    const matchingCharacters = characters
+      .filter((c: Character) => c.name.toLowerCase().includes(query))
+      .slice(0, 5)
+      .map((c: Character) => {
+        const result = listEntityImages(c.id, "character");
+        const primary = result.primaryImage || result.images[0];
+        return {
+          id: c.id,
+          name: c.name,
+          type: "character" as const,
+          isPlayer: c.isPlayer,
+          primaryImageId: primary?.id || null,
+        };
+      });
+
+    const matchingLocations = locations
+      .filter((l: Location) => l.name.toLowerCase().includes(query))
+      .slice(0, 5)
+      .map((l: Location) => {
+        const result = listEntityImages(l.id, "location");
+        const primary = result.primaryImage || result.images[0];
+        return {
+          id: l.id,
+          name: l.name,
+          type: "location" as const,
+          primaryImageId: primary?.id || null,
+        };
+      });
+
+    const matchingQuests = quests
+      .filter(
+        (q: { name: string }) => q.name.toLowerCase().includes(query)
+      )
+      .slice(0, 5)
+      .map((q: { id: string; name: string; status: string }) => ({
+        id: q.id,
+        name: q.name,
+        type: "quest" as const,
+        status: q.status,
+      }));
+
+    res.json({
+      characters: matchingCharacters,
+      locations: matchingLocations,
+      quests: matchingQuests,
+    });
+  });
 
   // ============================================================================
   // IMAGE FILE ROUTES
