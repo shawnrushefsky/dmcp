@@ -2,15 +2,16 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
-import type { SessionState, ImageGenerationPreferences, Breadcrumb } from '../types'
+import type { SessionState, ImagePresetsResponse, Breadcrumb } from '../types'
 import SessionTabs from '../components/SessionTabs.vue'
 import Breadcrumbs from '../components/Breadcrumbs.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
 
 const route = useRoute()
-const { getSession, getImageGenerationPreferences, loading } = useApi()
+const { getSession, getImageGenerationPresets, loading } = useApi()
 const state = ref<SessionState | null>(null)
-const imagePrefs = ref<ImageGenerationPreferences | null>(null)
+const presetsData = ref<ImagePresetsResponse>({ presets: [], defaultPresetId: null })
+const expandedPresets = ref<Set<string>>(new Set())
 
 const sessionId = computed(() => route.params.sessionId as string)
 
@@ -29,13 +30,32 @@ const toolLabels: Record<string, string> = {
   other: 'Other',
 }
 
+const entityTypeLabels: Record<string, string> = {
+  character: 'Characters',
+  location: 'Locations',
+  item: 'Items',
+  scene: 'Scenes',
+}
+
+function togglePreset(presetId: string) {
+  if (expandedPresets.value.has(presetId)) {
+    expandedPresets.value.delete(presetId)
+  } else {
+    expandedPresets.value.add(presetId)
+  }
+}
+
+function isExpanded(presetId: string): boolean {
+  return expandedPresets.value.has(presetId)
+}
+
 onMounted(async () => {
-  const [sessionResult, prefsResult] = await Promise.all([
+  const [sessionResult, presetsResult] = await Promise.all([
     getSession(sessionId.value),
-    getImageGenerationPreferences(sessionId.value),
+    getImageGenerationPresets(sessionId.value),
   ])
   state.value = sessionResult
-  imagePrefs.value = prefsResult
+  presetsData.value = presetsResult
 })
 </script>
 
@@ -58,298 +78,329 @@ onMounted(async () => {
 
     <SessionTabs :session-id="sessionId" active="settings" :counts="state.counts" />
 
-    <!-- Image Generation Preferences -->
+    <!-- Image Generation Presets -->
     <section class="settings-section">
-      <h3>Image Generation</h3>
+      <h3>Image Generation Presets</h3>
+      <p class="section-description">
+        Different presets for different use cases - character portraits, location art, items with text, etc.
+      </p>
 
-      <template v-if="imagePrefs">
-        <!-- Default Tool -->
-        <div v-if="imagePrefs.defaultTool" class="card">
-          <h4>Default Tool</h4>
-          <div class="setting-value">{{ toolLabels[imagePrefs.defaultTool] || imagePrefs.defaultTool }}</div>
-        </div>
-
-        <!-- Default Style -->
-        <div v-if="imagePrefs.defaultStyle" class="card">
-          <h4>Default Style</h4>
-          <div class="settings-grid">
-            <div v-if="imagePrefs.defaultStyle.artisticStyle" class="stat">
-              <span class="stat-label">Artistic Style</span>
-              <span>{{ imagePrefs.defaultStyle.artisticStyle }}</span>
-            </div>
-            <div v-if="imagePrefs.defaultStyle.mood" class="stat">
-              <span class="stat-label">Mood</span>
-              <span>{{ imagePrefs.defaultStyle.mood }}</span>
-            </div>
-            <div v-if="imagePrefs.defaultStyle.colorScheme" class="stat">
-              <span class="stat-label">Color Scheme</span>
-              <span>{{ imagePrefs.defaultStyle.colorScheme }}</span>
-            </div>
-          </div>
-          <div v-if="imagePrefs.defaultStyle.qualityTags?.length" class="mt-20">
-            <strong>Quality Tags:</strong>
-            <span v-for="tag in imagePrefs.defaultStyle.qualityTags" :key="tag" class="tag">{{ tag }}</span>
-          </div>
-          <div v-if="imagePrefs.defaultStyle.influences?.length" class="mt-20">
-            <strong>Influences:</strong>
-            <span v-for="inf in imagePrefs.defaultStyle.influences" :key="inf" class="tag">{{ inf }}</span>
-          </div>
-          <div v-if="imagePrefs.defaultStyle.negativePrompts?.length" class="mt-20">
-            <strong>Negative Prompts:</strong>
-            <span v-for="neg in imagePrefs.defaultStyle.negativePrompts" :key="neg" class="tag tag-danger">{{ neg }}</span>
-          </div>
-        </div>
-
-        <!-- ComfyUI Settings -->
-        <div v-if="imagePrefs.comfyui" class="card">
-          <h4>ComfyUI Configuration</h4>
-          <div class="settings-grid">
-            <div v-if="imagePrefs.comfyui.endpoint" class="stat">
-              <span class="stat-label">Endpoint</span>
-              <span class="mono">{{ imagePrefs.comfyui.endpoint }}</span>
-            </div>
-            <div v-if="imagePrefs.comfyui.checkpoint" class="stat">
-              <span class="stat-label">Checkpoint</span>
-              <span>{{ imagePrefs.comfyui.checkpoint }}</span>
-            </div>
-            <div v-if="imagePrefs.comfyui.defaultWorkflow" class="stat">
-              <span class="stat-label">Workflow</span>
-              <span>{{ imagePrefs.comfyui.defaultWorkflow }}</span>
-            </div>
-          </div>
-          <div v-if="imagePrefs.comfyui.loras?.length" class="mt-20">
-            <strong>LoRAs:</strong>
-            <div v-for="lora in imagePrefs.comfyui.loras" :key="lora.name" class="stat">
-              <span class="stat-label">{{ lora.name }}</span>
-              <span>Weight: {{ lora.weight }}</span>
-            </div>
-          </div>
-          <div v-if="imagePrefs.comfyui.samplerSettings" class="mt-20">
-            <strong>Sampler Settings:</strong>
-            <div class="settings-grid">
-              <div v-if="imagePrefs.comfyui.samplerSettings.sampler" class="stat">
-                <span class="stat-label">Sampler</span>
-                <span>{{ imagePrefs.comfyui.samplerSettings.sampler }}</span>
+      <template v-if="presetsData.presets.length > 0">
+        <div class="presets-list">
+          <div
+            v-for="preset in presetsData.presets"
+            :key="preset.id"
+            class="preset-card"
+            :class="{ 'is-default': preset.id === presetsData.defaultPresetId }"
+          >
+            <!-- Preset Header -->
+            <div class="preset-header" @click="togglePreset(preset.id)">
+              <div class="preset-info">
+                <span class="preset-name">{{ preset.name }}</span>
+                <span v-if="preset.id === presetsData.defaultPresetId" class="preset-badge">Default</span>
+                <span v-if="preset.config.defaultTool" class="preset-tool">
+                  {{ toolLabels[preset.config.defaultTool] || preset.config.defaultTool }}
+                </span>
               </div>
-              <div v-if="imagePrefs.comfyui.samplerSettings.scheduler" class="stat">
-                <span class="stat-label">Scheduler</span>
-                <span>{{ imagePrefs.comfyui.samplerSettings.scheduler }}</span>
-              </div>
-              <div v-if="imagePrefs.comfyui.samplerSettings.steps" class="stat">
-                <span class="stat-label">Steps</span>
-                <span>{{ imagePrefs.comfyui.samplerSettings.steps }}</span>
-              </div>
-              <div v-if="imagePrefs.comfyui.samplerSettings.cfg" class="stat">
-                <span class="stat-label">CFG</span>
-                <span>{{ imagePrefs.comfyui.samplerSettings.cfg }}</span>
+              <div class="preset-meta">
+                <span v-if="preset.entityTypes?.length" class="entity-types">
+                  {{ preset.entityTypes.map(t => entityTypeLabels[t]).join(', ') }}
+                </span>
+                <span class="expand-icon">{{ isExpanded(preset.id) ? '▼' : '▶' }}</span>
               </div>
             </div>
-          </div>
 
-          <!-- Workflow Templates -->
-          <div v-if="imagePrefs.comfyui.workflows && Object.keys(imagePrefs.comfyui.workflows).length > 0" class="mt-20">
-            <strong>Workflow Templates:</strong>
-            <div class="workflow-list">
-              <div
-                v-for="(workflow, id) in imagePrefs.comfyui.workflows"
-                :key="id"
-                class="workflow-card"
-                :class="{ 'is-default': imagePrefs.comfyui.defaultWorkflowId === id }"
-              >
-                <div class="workflow-header">
-                  <span class="workflow-name">{{ workflow.name }}</span>
-                  <span v-if="imagePrefs.comfyui.defaultWorkflowId === id" class="workflow-badge">Default</span>
-                </div>
-                <p v-if="workflow.description" class="workflow-description">{{ workflow.description }}</p>
-                <div v-if="workflow.inputNodes" class="workflow-nodes">
-                  <span class="stat-label">Input Nodes:</span>
-                  <div class="node-tags">
-                    <span v-if="workflow.inputNodes.positivePrompt" class="node-tag">Positive: {{ workflow.inputNodes.positivePrompt }}</span>
-                    <span v-if="workflow.inputNodes.negativePrompt" class="node-tag">Negative: {{ workflow.inputNodes.negativePrompt }}</span>
-                    <span v-if="workflow.inputNodes.checkpoint" class="node-tag">Checkpoint: {{ workflow.inputNodes.checkpoint }}</span>
-                    <span v-if="workflow.inputNodes.seed" class="node-tag">Seed: {{ workflow.inputNodes.seed }}</span>
-                    <span v-if="workflow.inputNodes.steps" class="node-tag">Steps: {{ workflow.inputNodes.steps }}</span>
-                    <span v-if="workflow.inputNodes.cfg" class="node-tag">CFG: {{ workflow.inputNodes.cfg }}</span>
+            <p v-if="preset.description" class="preset-description">{{ preset.description }}</p>
+
+            <!-- Expanded Content -->
+            <div v-if="isExpanded(preset.id)" class="preset-details">
+              <!-- Config Content -->
+              <template v-if="preset.config">
+                <!-- Default Style -->
+                <div v-if="preset.config.defaultStyle" class="config-section">
+                  <h5>Default Style</h5>
+                  <div class="settings-grid">
+                    <div v-if="preset.config.defaultStyle.artisticStyle" class="stat">
+                      <span class="stat-label">Artistic Style</span>
+                      <span>{{ preset.config.defaultStyle.artisticStyle }}</span>
+                    </div>
+                    <div v-if="preset.config.defaultStyle.mood" class="stat">
+                      <span class="stat-label">Mood</span>
+                      <span>{{ preset.config.defaultStyle.mood }}</span>
+                    </div>
+                    <div v-if="preset.config.defaultStyle.colorScheme" class="stat">
+                      <span class="stat-label">Color Scheme</span>
+                      <span>{{ preset.config.defaultStyle.colorScheme }}</span>
+                    </div>
+                  </div>
+                  <div v-if="preset.config.defaultStyle.qualityTags?.length" class="mt-20">
+                    <strong>Quality Tags:</strong>
+                    <span v-for="tag in preset.config.defaultStyle.qualityTags" :key="tag" class="tag">{{ tag }}</span>
+                  </div>
+                  <div v-if="preset.config.defaultStyle.influences?.length" class="mt-20">
+                    <strong>Influences:</strong>
+                    <span v-for="inf in preset.config.defaultStyle.influences" :key="inf" class="tag">{{ inf }}</span>
+                  </div>
+                  <div v-if="preset.config.defaultStyle.negativePrompts?.length" class="mt-20">
+                    <strong>Negative Prompts:</strong>
+                    <span v-for="neg in preset.config.defaultStyle.negativePrompts" :key="neg" class="tag tag-danger">{{ neg }}</span>
                   </div>
                 </div>
-                <details class="workflow-json">
-                  <summary>View Workflow JSON</summary>
-                  <pre class="mono text-sm">{{ JSON.stringify(workflow.workflow, null, 2) }}</pre>
-                </details>
-              </div>
-            </div>
-          </div>
-        </div>
 
-        <!-- DALL-E Settings -->
-        <div v-if="imagePrefs.dalle" class="card">
-          <h4>DALL-E Configuration</h4>
-          <div class="settings-grid">
-            <div v-if="imagePrefs.dalle.model" class="stat">
-              <span class="stat-label">Model</span>
-              <span>{{ imagePrefs.dalle.model }}</span>
-            </div>
-            <div v-if="imagePrefs.dalle.quality" class="stat">
-              <span class="stat-label">Quality</span>
-              <span>{{ imagePrefs.dalle.quality }}</span>
-            </div>
-            <div v-if="imagePrefs.dalle.style" class="stat">
-              <span class="stat-label">Style</span>
-              <span>{{ imagePrefs.dalle.style }}</span>
-            </div>
-            <div v-if="imagePrefs.dalle.size" class="stat">
-              <span class="stat-label">Size</span>
-              <span>{{ imagePrefs.dalle.size }}</span>
-            </div>
-          </div>
-        </div>
+                <!-- ComfyUI Settings -->
+                <div v-if="preset.config.comfyui" class="config-section">
+                  <h5>ComfyUI Configuration</h5>
+                  <div class="settings-grid">
+                    <div v-if="preset.config.comfyui.endpoint" class="stat">
+                      <span class="stat-label">Endpoint</span>
+                      <span class="mono">{{ preset.config.comfyui.endpoint }}</span>
+                    </div>
+                    <div v-if="preset.config.comfyui.checkpoint" class="stat">
+                      <span class="stat-label">Checkpoint</span>
+                      <span>{{ preset.config.comfyui.checkpoint }}</span>
+                    </div>
+                    <div v-if="preset.config.comfyui.defaultWorkflow" class="stat">
+                      <span class="stat-label">Workflow</span>
+                      <span>{{ preset.config.comfyui.defaultWorkflow }}</span>
+                    </div>
+                  </div>
+                  <div v-if="preset.config.comfyui.loras?.length" class="mt-20">
+                    <strong>LoRAs:</strong>
+                    <div v-for="lora in preset.config.comfyui.loras" :key="lora.name" class="stat">
+                      <span class="stat-label">{{ lora.name }}</span>
+                      <span>Weight: {{ lora.weight }}</span>
+                    </div>
+                  </div>
+                  <div v-if="preset.config.comfyui.samplerSettings" class="mt-20">
+                    <strong>Sampler Settings:</strong>
+                    <div class="settings-grid">
+                      <div v-if="preset.config.comfyui.samplerSettings.sampler" class="stat">
+                        <span class="stat-label">Sampler</span>
+                        <span>{{ preset.config.comfyui.samplerSettings.sampler }}</span>
+                      </div>
+                      <div v-if="preset.config.comfyui.samplerSettings.scheduler" class="stat">
+                        <span class="stat-label">Scheduler</span>
+                        <span>{{ preset.config.comfyui.samplerSettings.scheduler }}</span>
+                      </div>
+                      <div v-if="preset.config.comfyui.samplerSettings.steps" class="stat">
+                        <span class="stat-label">Steps</span>
+                        <span>{{ preset.config.comfyui.samplerSettings.steps }}</span>
+                      </div>
+                      <div v-if="preset.config.comfyui.samplerSettings.cfg" class="stat">
+                        <span class="stat-label">CFG</span>
+                        <span>{{ preset.config.comfyui.samplerSettings.cfg }}</span>
+                      </div>
+                    </div>
+                  </div>
 
-        <!-- Midjourney Settings -->
-        <div v-if="imagePrefs.midjourney" class="card">
-          <h4>Midjourney Configuration</h4>
-          <div class="settings-grid">
-            <div v-if="imagePrefs.midjourney.version" class="stat">
-              <span class="stat-label">Version</span>
-              <span>{{ imagePrefs.midjourney.version }}</span>
-            </div>
-            <div v-if="imagePrefs.midjourney.stylize !== undefined" class="stat">
-              <span class="stat-label">Stylize</span>
-              <span>{{ imagePrefs.midjourney.stylize }}</span>
-            </div>
-            <div v-if="imagePrefs.midjourney.chaos !== undefined" class="stat">
-              <span class="stat-label">Chaos</span>
-              <span>{{ imagePrefs.midjourney.chaos }}</span>
-            </div>
-            <div v-if="imagePrefs.midjourney.quality !== undefined" class="stat">
-              <span class="stat-label">Quality</span>
-              <span>{{ imagePrefs.midjourney.quality }}</span>
-            </div>
-            <div v-if="imagePrefs.midjourney.aspectRatio" class="stat">
-              <span class="stat-label">Aspect Ratio</span>
-              <span>{{ imagePrefs.midjourney.aspectRatio }}</span>
-            </div>
-          </div>
-        </div>
+                  <!-- Workflow Templates -->
+                  <div v-if="preset.config.comfyui.workflows && Object.keys(preset.config.comfyui.workflows).length > 0" class="mt-20">
+                    <strong>Workflow Templates:</strong>
+                    <div class="workflow-list">
+                      <div
+                        v-for="(workflow, id) in preset.config.comfyui.workflows"
+                        :key="id"
+                        class="workflow-card"
+                        :class="{ 'is-default': preset.config.comfyui.defaultWorkflowId === id }"
+                      >
+                        <div class="workflow-header">
+                          <span class="workflow-name">{{ workflow.name }}</span>
+                          <span v-if="preset.config.comfyui.defaultWorkflowId === id" class="workflow-badge">Default</span>
+                        </div>
+                        <p v-if="workflow.description" class="workflow-description">{{ workflow.description }}</p>
+                        <div v-if="workflow.inputNodes" class="workflow-nodes">
+                          <span class="stat-label">Input Nodes:</span>
+                          <div class="node-tags">
+                            <span v-if="workflow.inputNodes.positivePrompt" class="node-tag">Positive: {{ workflow.inputNodes.positivePrompt }}</span>
+                            <span v-if="workflow.inputNodes.negativePrompt" class="node-tag">Negative: {{ workflow.inputNodes.negativePrompt }}</span>
+                            <span v-if="workflow.inputNodes.checkpoint" class="node-tag">Checkpoint: {{ workflow.inputNodes.checkpoint }}</span>
+                            <span v-if="workflow.inputNodes.seed" class="node-tag">Seed: {{ workflow.inputNodes.seed }}</span>
+                            <span v-if="workflow.inputNodes.steps" class="node-tag">Steps: {{ workflow.inputNodes.steps }}</span>
+                            <span v-if="workflow.inputNodes.cfg" class="node-tag">CFG: {{ workflow.inputNodes.cfg }}</span>
+                          </div>
+                        </div>
+                        <details class="workflow-json">
+                          <summary>View Workflow JSON</summary>
+                          <pre class="mono text-sm">{{ JSON.stringify(workflow.workflow, null, 2) }}</pre>
+                        </details>
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-        <!-- SDXL Settings -->
-        <div v-if="imagePrefs.sdxl" class="card">
-          <h4>Stable Diffusion XL Configuration</h4>
-          <div class="settings-grid">
-            <div v-if="imagePrefs.sdxl.model" class="stat">
-              <span class="stat-label">Model</span>
-              <span>{{ imagePrefs.sdxl.model }}</span>
-            </div>
-            <div v-if="imagePrefs.sdxl.samplerName" class="stat">
-              <span class="stat-label">Sampler</span>
-              <span>{{ imagePrefs.sdxl.samplerName }}</span>
-            </div>
-            <div v-if="imagePrefs.sdxl.steps" class="stat">
-              <span class="stat-label">Steps</span>
-              <span>{{ imagePrefs.sdxl.steps }}</span>
-            </div>
-            <div v-if="imagePrefs.sdxl.cfg" class="stat">
-              <span class="stat-label">CFG</span>
-              <span>{{ imagePrefs.sdxl.cfg }}</span>
-            </div>
-            <div v-if="imagePrefs.sdxl.width && imagePrefs.sdxl.height" class="stat">
-              <span class="stat-label">Size</span>
-              <span>{{ imagePrefs.sdxl.width }} x {{ imagePrefs.sdxl.height }}</span>
-            </div>
-          </div>
-          <div v-if="imagePrefs.sdxl.negativePrompt" class="mt-20">
-            <strong>Negative Prompt:</strong>
-            <p class="mono text-sm">{{ imagePrefs.sdxl.negativePrompt }}</p>
-          </div>
-        </div>
+                <!-- DALL-E Settings -->
+                <div v-if="preset.config.dalle" class="config-section">
+                  <h5>DALL-E Configuration</h5>
+                  <div class="settings-grid">
+                    <div v-if="preset.config.dalle.model" class="stat">
+                      <span class="stat-label">Model</span>
+                      <span>{{ preset.config.dalle.model }}</span>
+                    </div>
+                    <div v-if="preset.config.dalle.quality" class="stat">
+                      <span class="stat-label">Quality</span>
+                      <span>{{ preset.config.dalle.quality }}</span>
+                    </div>
+                    <div v-if="preset.config.dalle.style" class="stat">
+                      <span class="stat-label">Style</span>
+                      <span>{{ preset.config.dalle.style }}</span>
+                    </div>
+                    <div v-if="preset.config.dalle.size" class="stat">
+                      <span class="stat-label">Size</span>
+                      <span>{{ preset.config.dalle.size }}</span>
+                    </div>
+                  </div>
+                </div>
 
-        <!-- Flux Settings -->
-        <div v-if="imagePrefs.flux" class="card">
-          <h4>Flux Configuration</h4>
-          <div class="settings-grid">
-            <div v-if="imagePrefs.flux.model" class="stat">
-              <span class="stat-label">Model</span>
-              <span>{{ imagePrefs.flux.model }}</span>
-            </div>
-            <div v-if="imagePrefs.flux.steps" class="stat">
-              <span class="stat-label">Steps</span>
-              <span>{{ imagePrefs.flux.steps }}</span>
-            </div>
-            <div v-if="imagePrefs.flux.guidance" class="stat">
-              <span class="stat-label">Guidance</span>
-              <span>{{ imagePrefs.flux.guidance }}</span>
-            </div>
-          </div>
-        </div>
+                <!-- Midjourney Settings -->
+                <div v-if="preset.config.midjourney" class="config-section">
+                  <h5>Midjourney Configuration</h5>
+                  <div class="settings-grid">
+                    <div v-if="preset.config.midjourney.version" class="stat">
+                      <span class="stat-label">Version</span>
+                      <span>{{ preset.config.midjourney.version }}</span>
+                    </div>
+                    <div v-if="preset.config.midjourney.stylize !== undefined" class="stat">
+                      <span class="stat-label">Stylize</span>
+                      <span>{{ preset.config.midjourney.stylize }}</span>
+                    </div>
+                    <div v-if="preset.config.midjourney.chaos !== undefined" class="stat">
+                      <span class="stat-label">Chaos</span>
+                      <span>{{ preset.config.midjourney.chaos }}</span>
+                    </div>
+                    <div v-if="preset.config.midjourney.quality !== undefined" class="stat">
+                      <span class="stat-label">Quality</span>
+                      <span>{{ preset.config.midjourney.quality }}</span>
+                    </div>
+                    <div v-if="preset.config.midjourney.aspectRatio" class="stat">
+                      <span class="stat-label">Aspect Ratio</span>
+                      <span>{{ preset.config.midjourney.aspectRatio }}</span>
+                    </div>
+                  </div>
+                </div>
 
-        <!-- Generation Defaults -->
-        <div v-if="imagePrefs.defaults" class="card">
-          <h4>Generation Defaults</h4>
-          <div class="settings-grid">
-            <div v-if="imagePrefs.defaults.aspectRatio" class="stat">
-              <span class="stat-label">Aspect Ratio</span>
-              <span>{{ imagePrefs.defaults.aspectRatio }}</span>
-            </div>
-            <div v-if="imagePrefs.defaults.generateOnCreate !== undefined" class="stat">
-              <span class="stat-label">Auto-Generate</span>
-              <span>{{ imagePrefs.defaults.generateOnCreate ? 'Yes' : 'No' }}</span>
-            </div>
-            <div v-if="imagePrefs.defaults.savePrompts !== undefined" class="stat">
-              <span class="stat-label">Save Prompts</span>
-              <span>{{ imagePrefs.defaults.savePrompts ? 'Yes' : 'No' }}</span>
-            </div>
-          </div>
-          <div v-if="imagePrefs.defaults.framing" class="mt-20">
-            <strong>Default Framing:</strong>
-            <div class="settings-grid">
-              <div v-if="imagePrefs.defaults.framing.character" class="stat">
-                <span class="stat-label">Character</span>
-                <span>{{ imagePrefs.defaults.framing.character }}</span>
-              </div>
-              <div v-if="imagePrefs.defaults.framing.location" class="stat">
-                <span class="stat-label">Location</span>
-                <span>{{ imagePrefs.defaults.framing.location }}</span>
-              </div>
-              <div v-if="imagePrefs.defaults.framing.item" class="stat">
-                <span class="stat-label">Item</span>
-                <span>{{ imagePrefs.defaults.framing.item }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
+                <!-- SDXL Settings -->
+                <div v-if="preset.config.sdxl" class="config-section">
+                  <h5>Stable Diffusion XL Configuration</h5>
+                  <div class="settings-grid">
+                    <div v-if="preset.config.sdxl.model" class="stat">
+                      <span class="stat-label">Model</span>
+                      <span>{{ preset.config.sdxl.model }}</span>
+                    </div>
+                    <div v-if="preset.config.sdxl.samplerName" class="stat">
+                      <span class="stat-label">Sampler</span>
+                      <span>{{ preset.config.sdxl.samplerName }}</span>
+                    </div>
+                    <div v-if="preset.config.sdxl.steps" class="stat">
+                      <span class="stat-label">Steps</span>
+                      <span>{{ preset.config.sdxl.steps }}</span>
+                    </div>
+                    <div v-if="preset.config.sdxl.cfg" class="stat">
+                      <span class="stat-label">CFG</span>
+                      <span>{{ preset.config.sdxl.cfg }}</span>
+                    </div>
+                    <div v-if="preset.config.sdxl.width && preset.config.sdxl.height" class="stat">
+                      <span class="stat-label">Size</span>
+                      <span>{{ preset.config.sdxl.width }} x {{ preset.config.sdxl.height }}</span>
+                    </div>
+                  </div>
+                  <div v-if="preset.config.sdxl.negativePrompt" class="mt-20">
+                    <strong>Negative Prompt:</strong>
+                    <p class="mono text-sm">{{ preset.config.sdxl.negativePrompt }}</p>
+                  </div>
+                </div>
 
-        <!-- Consistency Settings -->
-        <div v-if="imagePrefs.consistency" class="card">
-          <h4>Consistency Settings</h4>
-          <div class="settings-grid">
-            <div v-if="imagePrefs.consistency.maintainColorPalette !== undefined" class="stat">
-              <span class="stat-label">Maintain Color Palette</span>
-              <span>{{ imagePrefs.consistency.maintainColorPalette ? 'Yes' : 'No' }}</span>
-            </div>
-            <div v-if="imagePrefs.consistency.useCharacterRefs !== undefined" class="stat">
-              <span class="stat-label">Use Character Refs</span>
-              <span>{{ imagePrefs.consistency.useCharacterRefs ? 'Yes' : 'No' }}</span>
-            </div>
-            <div v-if="imagePrefs.consistency.styleReferenceImage" class="stat">
-              <span class="stat-label">Style Reference</span>
-              <span>{{ imagePrefs.consistency.styleReferenceImage }}</span>
+                <!-- Flux Settings -->
+                <div v-if="preset.config.flux" class="config-section">
+                  <h5>Flux Configuration</h5>
+                  <div class="settings-grid">
+                    <div v-if="preset.config.flux.model" class="stat">
+                      <span class="stat-label">Model</span>
+                      <span>{{ preset.config.flux.model }}</span>
+                    </div>
+                    <div v-if="preset.config.flux.steps" class="stat">
+                      <span class="stat-label">Steps</span>
+                      <span>{{ preset.config.flux.steps }}</span>
+                    </div>
+                    <div v-if="preset.config.flux.guidance" class="stat">
+                      <span class="stat-label">Guidance</span>
+                      <span>{{ preset.config.flux.guidance }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Generation Defaults -->
+                <div v-if="preset.config.defaults" class="config-section">
+                  <h5>Generation Defaults</h5>
+                  <div class="settings-grid">
+                    <div v-if="preset.config.defaults.aspectRatio" class="stat">
+                      <span class="stat-label">Aspect Ratio</span>
+                      <span>{{ preset.config.defaults.aspectRatio }}</span>
+                    </div>
+                    <div v-if="preset.config.defaults.generateOnCreate !== undefined" class="stat">
+                      <span class="stat-label">Auto-Generate</span>
+                      <span>{{ preset.config.defaults.generateOnCreate ? 'Yes' : 'No' }}</span>
+                    </div>
+                    <div v-if="preset.config.defaults.savePrompts !== undefined" class="stat">
+                      <span class="stat-label">Save Prompts</span>
+                      <span>{{ preset.config.defaults.savePrompts ? 'Yes' : 'No' }}</span>
+                    </div>
+                  </div>
+                  <div v-if="preset.config.defaults.framing" class="mt-20">
+                    <strong>Default Framing:</strong>
+                    <div class="settings-grid">
+                      <div v-if="preset.config.defaults.framing.character" class="stat">
+                        <span class="stat-label">Character</span>
+                        <span>{{ preset.config.defaults.framing.character }}</span>
+                      </div>
+                      <div v-if="preset.config.defaults.framing.location" class="stat">
+                        <span class="stat-label">Location</span>
+                        <span>{{ preset.config.defaults.framing.location }}</span>
+                      </div>
+                      <div v-if="preset.config.defaults.framing.item" class="stat">
+                        <span class="stat-label">Item</span>
+                        <span>{{ preset.config.defaults.framing.item }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Consistency Settings -->
+                <div v-if="preset.config.consistency" class="config-section">
+                  <h5>Consistency Settings</h5>
+                  <div class="settings-grid">
+                    <div v-if="preset.config.consistency.maintainColorPalette !== undefined" class="stat">
+                      <span class="stat-label">Maintain Color Palette</span>
+                      <span>{{ preset.config.consistency.maintainColorPalette ? 'Yes' : 'No' }}</span>
+                    </div>
+                    <div v-if="preset.config.consistency.useCharacterRefs !== undefined" class="stat">
+                      <span class="stat-label">Use Character Refs</span>
+                      <span>{{ preset.config.consistency.useCharacterRefs ? 'Yes' : 'No' }}</span>
+                    </div>
+                    <div v-if="preset.config.consistency.styleReferenceImage" class="stat">
+                      <span class="stat-label">Style Reference</span>
+                      <span>{{ preset.config.consistency.styleReferenceImage }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Notes -->
+                <div v-if="preset.config.notes" class="config-section">
+                  <h5>Notes</h5>
+                  <p>{{ preset.config.notes }}</p>
+                </div>
+              </template>
             </div>
           </div>
-        </div>
-
-        <!-- Notes -->
-        <div v-if="imagePrefs.notes" class="card">
-          <h4>Notes</h4>
-          <p>{{ imagePrefs.notes }}</p>
         </div>
       </template>
 
-      <!-- No Preferences Configured -->
+      <!-- No Presets Configured -->
       <div v-else class="empty-card">
         <div class="empty-icon">🎨</div>
-        <div class="empty-title">No Image Generation Preferences</div>
+        <div class="empty-title">No Image Generation Presets</div>
         <div class="empty-description">
-          Image generation preferences haven't been configured for this game yet.
-          The DM agent can set these using the <code>set_image_generation_preferences</code> tool.
+          Image generation presets haven't been configured for this game yet.
+          The DM agent can create presets using the <code>create_image_generation_preset</code> tool.
         </div>
       </div>
     </section>
@@ -369,6 +420,11 @@ onMounted(async () => {
 }
 
 .settings-section h3 {
+  margin-bottom: var(--space-2);
+}
+
+.section-description {
+  color: var(--text-muted);
   margin-bottom: var(--space-4);
 }
 
@@ -378,10 +434,112 @@ onMounted(async () => {
   gap: var(--space-2);
 }
 
-.setting-value {
-  font-size: var(--text-lg);
+/* Presets List */
+.presets-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.preset-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+.preset-card.is-default {
+  border-color: var(--accent);
+}
+
+.preset-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.preset-header:hover {
+  background: var(--bg-elevated);
+}
+
+.preset-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.preset-name {
   font-weight: 600;
-  color: var(--accent);
+  font-size: var(--text-base);
+}
+
+.preset-badge {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: white;
+}
+
+.preset-tool {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  padding: 2px 8px;
+  background: var(--bg-elevated);
+  border-radius: 4px;
+}
+
+.preset-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.entity-types {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.expand-icon {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.preset-description {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  padding: 0 var(--space-4) var(--space-3);
+  margin: 0;
+}
+
+.preset-details {
+  padding: var(--space-4);
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-elevated);
+}
+
+.config-section {
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.config-section:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.config-section h5 {
+  margin-bottom: var(--space-2);
+  font-size: var(--text-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
 }
 
 .empty-card {
@@ -434,7 +592,7 @@ onMounted(async () => {
 }
 
 .workflow-card {
-  background: var(--bg-elevated);
+  background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
   padding: var(--space-3);
@@ -485,7 +643,7 @@ onMounted(async () => {
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   padding: 2px 6px;
-  background: var(--bg-secondary);
+  background: var(--bg-elevated);
   border-radius: 4px;
   color: var(--text-muted);
 }

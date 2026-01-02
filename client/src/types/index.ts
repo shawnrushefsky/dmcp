@@ -230,7 +230,25 @@ export interface Breadcrumb {
   icon?: 'home' | 'session' | 'character' | 'location' | 'quest' | 'image'
 }
 
-// Image Generation Preferences
+// Image Generation Preset - a named collection of settings for a specific use case
+export interface ImageGenerationPreset {
+  id: string
+  name: string
+  description?: string
+  entityTypes?: ('character' | 'location' | 'item' | 'scene')[]
+  isDefault?: boolean
+  config: ImageGenerationPreferences
+  createdAt?: string
+  updatedAt?: string
+}
+
+// Response from the presets API
+export interface ImagePresetsResponse {
+  presets: ImageGenerationPreset[]
+  defaultPresetId: string | null
+}
+
+// Image Generation Preferences (config within a preset)
 export interface ImageGenerationPreferences {
   defaultTool?: 'dalle' | 'sdxl' | 'midjourney' | 'comfyui' | 'flux' | 'other'
   defaultStyle?: {

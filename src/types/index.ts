@@ -53,11 +53,27 @@ export interface GamePreferences {
   // Custom notes
   additionalNotes: string;
 
-  // Image generation preferences (optional)
-  imageGeneration?: ImageGenerationPreferences;
+  // Image generation presets collection (optional)
+  // Each preset can be for different use cases: portraits, locations, items with text, etc.
+  imageGenerationPresets?: ImageGenerationPreset[];
+
+  // Which preset to use by default
+  defaultImagePresetId?: string;
 }
 
-// Image generation preferences for the session
+// Image generation preset - a named collection of settings for a specific use case
+export interface ImageGenerationPreset {
+  id: string;                              // Unique identifier
+  name: string;                            // Human-readable name (e.g., "Character Portraits", "Location Art")
+  description?: string;                    // What this preset is for
+  entityTypes?: ("character" | "location" | "item" | "scene")[]; // Which entity types this preset is best for
+  isDefault?: boolean;                     // Whether this is the default preset
+  config: ImageGenerationPreferences;      // The actual settings
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Image generation preferences (settings within a preset)
 export interface ImageGenerationPreferences {
   // Default tool/service to use
   defaultTool?: "dalle" | "sdxl" | "midjourney" | "comfyui" | "flux" | "other";

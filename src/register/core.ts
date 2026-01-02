@@ -702,159 +702,220 @@ export function registerCoreTools(server: McpServer) {
   );
 
   // ============================================================================
-  // IMAGE GENERATION PREFERENCES TOOLS
+  // IMAGE GENERATION PRESET TOOLS
   // ============================================================================
 
+  // Reusable schema for image generation config (used in create and update)
+  const imageGenerationConfigSchema = z.object({
+    defaultTool: z.enum(["dalle", "sdxl", "midjourney", "comfyui", "flux", "other"]).optional()
+      .describe("Default image generation tool/service"),
+    defaultStyle: z.object({
+      artisticStyle: z.string().optional().describe("E.g., 'digital painting', 'oil painting', 'anime'"),
+      mood: z.string().optional().describe("E.g., 'dark', 'epic', 'whimsical'"),
+      colorScheme: z.string().optional().describe("E.g., 'warm', 'cold', 'muted', 'vibrant'"),
+      qualityTags: z.array(z.string()).optional().describe("E.g., ['highly detailed', '8k', 'masterpiece']"),
+      negativePrompts: z.array(z.string()).optional().describe("Things to avoid globally"),
+      influences: z.array(z.string()).optional().describe("Artist/game/movie style references"),
+    }).optional().describe("Default style settings applied to all images"),
+    comfyui: z.object({
+      endpoint: z.string().optional().describe("ComfyUI server URL"),
+      checkpoint: z.string().optional().describe("Default checkpoint model"),
+      loras: z.array(z.object({
+        name: z.string(),
+        weight: z.number(),
+      })).optional().describe("LoRA models to apply"),
+      samplerSettings: z.object({
+        sampler: z.string().optional(),
+        scheduler: z.string().optional(),
+        steps: z.number().optional(),
+        cfg: z.number().optional(),
+      }).optional(),
+      workflows: z.record(z.string(), z.object({
+        name: z.string().describe("Human-readable workflow name"),
+        description: z.string().optional().describe("What this workflow does"),
+        workflow: z.record(z.string(), z.unknown()).describe("Full ComfyUI workflow JSON (API format)"),
+        inputNodes: z.object({
+          positivePrompt: z.string().optional().describe("Node ID for positive prompt"),
+          negativePrompt: z.string().optional().describe("Node ID for negative prompt"),
+          checkpoint: z.string().optional().describe("Node ID for checkpoint loader"),
+          seed: z.string().optional().describe("Node ID for seed/noise"),
+          width: z.string().optional().describe("Node ID for width"),
+          height: z.string().optional().describe("Node ID for height"),
+          steps: z.string().optional().describe("Node ID for steps"),
+          cfg: z.string().optional().describe("Node ID for CFG scale"),
+          sampler: z.string().optional().describe("Node ID for sampler"),
+          scheduler: z.string().optional().describe("Node ID for scheduler"),
+        }).optional().describe("Node IDs for dynamic value injection"),
+      })).optional().describe("Named workflow templates - full ComfyUI workflows"),
+      defaultWorkflowId: z.string().optional().describe("ID of the default workflow to use"),
+      defaultWorkflow: z.string().optional().describe("Legacy: Workflow name or ID"),
+      workflowOverrides: z.record(z.string(), z.unknown()).optional(),
+    }).optional().describe("ComfyUI-specific settings"),
+    dalle: z.object({
+      model: z.string().optional().describe("'dall-e-3' or 'dall-e-2'"),
+      quality: z.enum(["standard", "hd"]).optional(),
+      style: z.enum(["vivid", "natural"]).optional(),
+      size: z.enum(["1024x1024", "1792x1024", "1024x1792"]).optional(),
+    }).optional().describe("DALL-E specific settings"),
+    midjourney: z.object({
+      version: z.string().optional().describe("'v5', 'v6', 'niji'"),
+      stylize: z.number().optional().describe("0-1000"),
+      chaos: z.number().optional().describe("0-100"),
+      quality: z.number().optional().describe("0.25, 0.5, 1, 2"),
+      aspectRatio: z.string().optional().describe("E.g., '1:1', '16:9', '2:3'"),
+    }).optional().describe("Midjourney specific settings"),
+    sdxl: z.object({
+      model: z.string().optional().describe("Model ID or path"),
+      samplerName: z.string().optional(),
+      steps: z.number().optional(),
+      cfg: z.number().optional(),
+      width: z.number().optional(),
+      height: z.number().optional(),
+      negativePrompt: z.string().optional(),
+    }).optional().describe("Stable Diffusion / SDXL settings"),
+    flux: z.object({
+      model: z.string().optional().describe("'schnell', 'dev', 'pro'"),
+      steps: z.number().optional(),
+      guidance: z.number().optional(),
+    }).optional().describe("Flux settings"),
+    defaults: z.object({
+      aspectRatio: z.string().optional().describe("Default aspect ratio for images"),
+      generateOnCreate: z.boolean().optional().describe("Auto-generate images when entities are created"),
+      savePrompts: z.boolean().optional().describe("Store prompts with entities"),
+      framing: z.object({
+        character: z.string().optional().describe("Default framing for character portraits"),
+        location: z.string().optional().describe("Default framing for location scenes"),
+        item: z.string().optional().describe("Default framing for item images"),
+      }).optional(),
+    }).optional().describe("Generation defaults"),
+    consistency: z.object({
+      maintainColorPalette: z.boolean().optional(),
+      characterSeedImages: z.record(z.string(), z.string()).optional().describe("characterId -> seed image"),
+      styleReferenceImage: z.string().optional().describe("Session-wide style reference"),
+      useCharacterRefs: z.boolean().optional().describe("Use existing character images as reference"),
+    }).optional().describe("Consistency settings"),
+    notes: z.string().optional().describe("Custom notes for the DM about image generation"),
+  });
+
   server.registerTool(
-    "get_image_generation_preferences",
+    "list_image_generation_presets",
     {
-      description: "Get image generation preferences for a session (tools, models, styles, workflows)",
+      description: "List all image generation presets for a session. Presets allow different configurations for different use cases (character portraits, location art, items with text, etc.)",
       inputSchema: {
         sessionId: z.string().describe("The session ID"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
     async ({ sessionId }) => {
-      const imagePrefs = sessionTools.getImageGenerationPreferences(sessionId);
-      if (!imagePrefs) {
-        return {
-          content: [{
-            type: "text",
-            text: JSON.stringify({
-              message: "No image generation preferences configured for this session",
-              hint: "Use set_image_generation_preferences to configure default tools, models, and styles",
-            }, null, 2),
-          }],
-        };
-      }
+      const presets = sessionTools.listImageGenerationPresets(sessionId);
+      const defaultPreset = sessionTools.getDefaultImagePreset(sessionId);
       return {
-        content: [{ type: "text", text: JSON.stringify(imagePrefs, null, 2) }],
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            count: presets.length,
+            defaultPresetId: defaultPreset?.id || null,
+            presets: presets.map(p => ({
+              id: p.id,
+              name: p.name,
+              description: p.description,
+              entityTypes: p.entityTypes,
+              isDefault: p.isDefault,
+              tool: p.config.defaultTool,
+            })),
+          }, null, 2),
+        }],
       };
     }
   );
 
   server.registerTool(
-    "set_image_generation_preferences",
+    "get_image_generation_preset",
     {
-      description: "Set image generation preferences for a session. Supports DALL-E, Stable Diffusion/SDXL, Midjourney, ComfyUI, and Flux. Use this to configure default tools, models, styles, and workflows for image generation.",
+      description: "Get a specific image generation preset by ID, including full configuration details",
       inputSchema: {
         sessionId: z.string().describe("The session ID"),
-        preferences: z.object({
-          defaultTool: z.enum(["dalle", "sdxl", "midjourney", "comfyui", "flux", "other"]).optional()
-            .describe("Default image generation tool/service"),
-          defaultStyle: z.object({
-            artisticStyle: z.string().optional().describe("E.g., 'digital painting', 'oil painting', 'anime'"),
-            mood: z.string().optional().describe("E.g., 'dark', 'epic', 'whimsical'"),
-            colorScheme: z.string().optional().describe("E.g., 'warm', 'cold', 'muted', 'vibrant'"),
-            qualityTags: z.array(z.string()).optional().describe("E.g., ['highly detailed', '8k', 'masterpiece']"),
-            negativePrompts: z.array(z.string()).optional().describe("Things to avoid globally"),
-            influences: z.array(z.string()).optional().describe("Artist/game/movie style references"),
-          }).optional().describe("Default style settings applied to all images"),
-          comfyui: z.object({
-            endpoint: z.string().optional().describe("ComfyUI server URL"),
-            checkpoint: z.string().optional().describe("Default checkpoint model"),
-            loras: z.array(z.object({
-              name: z.string(),
-              weight: z.number(),
-            })).optional().describe("LoRA models to apply"),
-            samplerSettings: z.object({
-              sampler: z.string().optional(),
-              scheduler: z.string().optional(),
-              steps: z.number().optional(),
-              cfg: z.number().optional(),
-            }).optional(),
-            workflows: z.record(z.string(), z.object({
-              name: z.string().describe("Human-readable workflow name"),
-              description: z.string().optional().describe("What this workflow does"),
-              workflow: z.record(z.string(), z.unknown()).describe("Full ComfyUI workflow JSON (API format)"),
-              inputNodes: z.object({
-                positivePrompt: z.string().optional().describe("Node ID for positive prompt"),
-                negativePrompt: z.string().optional().describe("Node ID for negative prompt"),
-                checkpoint: z.string().optional().describe("Node ID for checkpoint loader"),
-                seed: z.string().optional().describe("Node ID for seed/noise"),
-                width: z.string().optional().describe("Node ID for width"),
-                height: z.string().optional().describe("Node ID for height"),
-                steps: z.string().optional().describe("Node ID for steps"),
-                cfg: z.string().optional().describe("Node ID for CFG scale"),
-                sampler: z.string().optional().describe("Node ID for sampler"),
-                scheduler: z.string().optional().describe("Node ID for scheduler"),
-              }).optional().describe("Node IDs for dynamic value injection"),
-            })).optional().describe("Named workflow templates - full ComfyUI workflows"),
-            defaultWorkflowId: z.string().optional().describe("ID of the default workflow to use"),
-            defaultWorkflow: z.string().optional().describe("Legacy: Workflow name or ID"),
-            workflowOverrides: z.record(z.string(), z.unknown()).optional(),
-          }).optional().describe("ComfyUI-specific settings"),
-          dalle: z.object({
-            model: z.string().optional().describe("'dall-e-3' or 'dall-e-2'"),
-            quality: z.enum(["standard", "hd"]).optional(),
-            style: z.enum(["vivid", "natural"]).optional(),
-            size: z.enum(["1024x1024", "1792x1024", "1024x1792"]).optional(),
-          }).optional().describe("DALL-E specific settings"),
-          midjourney: z.object({
-            version: z.string().optional().describe("'v5', 'v6', 'niji'"),
-            stylize: z.number().optional().describe("0-1000"),
-            chaos: z.number().optional().describe("0-100"),
-            quality: z.number().optional().describe("0.25, 0.5, 1, 2"),
-            aspectRatio: z.string().optional().describe("E.g., '1:1', '16:9', '2:3'"),
-          }).optional().describe("Midjourney specific settings"),
-          sdxl: z.object({
-            model: z.string().optional().describe("Model ID or path"),
-            samplerName: z.string().optional(),
-            steps: z.number().optional(),
-            cfg: z.number().optional(),
-            width: z.number().optional(),
-            height: z.number().optional(),
-            negativePrompt: z.string().optional(),
-          }).optional().describe("Stable Diffusion / SDXL settings"),
-          flux: z.object({
-            model: z.string().optional().describe("'schnell', 'dev', 'pro'"),
-            steps: z.number().optional(),
-            guidance: z.number().optional(),
-          }).optional().describe("Flux settings"),
-          defaults: z.object({
-            aspectRatio: z.string().optional().describe("Default aspect ratio for images"),
-            generateOnCreate: z.boolean().optional().describe("Auto-generate images when entities are created"),
-            savePrompts: z.boolean().optional().describe("Store prompts with entities"),
-            framing: z.object({
-              character: z.string().optional().describe("Default framing for character portraits"),
-              location: z.string().optional().describe("Default framing for location scenes"),
-              item: z.string().optional().describe("Default framing for item images"),
-            }).optional(),
-          }).optional().describe("Generation defaults"),
-          consistency: z.object({
-            maintainColorPalette: z.boolean().optional(),
-            characterSeedImages: z.record(z.string(), z.string()).optional().describe("characterId -> seed image"),
-            styleReferenceImage: z.string().optional().describe("Session-wide style reference"),
-            useCharacterRefs: z.boolean().optional().describe("Use existing character images as reference"),
-          }).optional().describe("Consistency settings"),
-          notes: z.string().optional().describe("Custom notes for the DM about image generation"),
-        }).describe("Image generation preferences"),
+        presetId: z.string().describe("The preset ID"),
       },
-      annotations: ANNOTATIONS.SET,
+      annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId, preferences }) => {
-      const success = sessionTools.setImageGenerationPreferences(sessionId, preferences);
-      if (!success) {
+    async ({ sessionId, presetId }) => {
+      const preset = sessionTools.getImageGenerationPreset(sessionId, presetId);
+      if (!preset) {
         return {
-          content: [{ type: "text", text: "Session not found" }],
+          content: [{ type: "text", text: "Preset not found" }],
           isError: true,
         };
       }
       return {
+        content: [{ type: "text", text: JSON.stringify(preset, null, 2) }],
+      };
+    }
+  );
+
+  server.registerTool(
+    "get_default_image_preset",
+    {
+      description: "Get the default image generation preset for a session",
+      inputSchema: {
+        sessionId: z.string().describe("The session ID"),
+      },
+      annotations: ANNOTATIONS.READ_ONLY,
+    },
+    async ({ sessionId }) => {
+      const preset = sessionTools.getDefaultImagePreset(sessionId);
+      if (!preset) {
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              message: "No image generation presets configured for this session",
+              hint: "Use create_image_generation_preset to add presets for different use cases",
+            }, null, 2),
+          }],
+        };
+      }
+      return {
+        content: [{ type: "text", text: JSON.stringify(preset, null, 2) }],
+      };
+    }
+  );
+
+  server.registerTool(
+    "create_image_generation_preset",
+    {
+      description: "Create a new image generation preset. Use different presets for different purposes: character portraits, location art, items with text, etc. Each preset can have its own tool, model, style, and workflow configuration.",
+      inputSchema: {
+        sessionId: z.string().describe("The session ID"),
+        name: z.string().describe("Human-readable preset name (e.g., 'Character Portraits', 'Location Art', 'Items with Text')"),
+        description: z.string().optional().describe("What this preset is for"),
+        entityTypes: z.array(z.enum(["character", "location", "item", "scene"])).optional()
+          .describe("Which entity types this preset is best suited for"),
+        isDefault: z.boolean().optional().describe("Make this the default preset"),
+        config: imageGenerationConfigSchema.describe("The image generation configuration"),
+      },
+      annotations: ANNOTATIONS.CREATE,
+    },
+    async ({ sessionId, name, description, entityTypes, isDefault, config }) => {
+      const preset = sessionTools.createImageGenerationPreset(sessionId, {
+        name,
+        description,
+        entityTypes,
+        isDefault,
+        config,
+      });
+      return {
         content: [{
           type: "text",
           text: JSON.stringify({
-            saved: true,
-            summary: {
-              defaultTool: preferences.defaultTool || "not set",
-              hasDefaultStyle: !!preferences.defaultStyle,
-              configuredTools: [
-                preferences.comfyui && "comfyui",
-                preferences.dalle && "dalle",
-                preferences.midjourney && "midjourney",
-                preferences.sdxl && "sdxl",
-                preferences.flux && "flux",
-              ].filter(Boolean),
+            created: true,
+            preset: {
+              id: preset.id,
+              name: preset.name,
+              description: preset.description,
+              entityTypes: preset.entityTypes,
+              isDefault: preset.isDefault,
+              tool: preset.config.defaultTool,
             },
           }, null, 2),
         }],
@@ -863,110 +924,85 @@ export function registerCoreTools(server: McpServer) {
   );
 
   server.registerTool(
-    "update_image_generation_preferences",
+    "update_image_generation_preset",
     {
-      description: "Partially update image generation preferences. Only specified fields are updated; others are preserved.",
+      description: "Update an existing image generation preset. Only specified fields are updated; others are preserved.",
       inputSchema: {
         sessionId: z.string().describe("The session ID"),
-        updates: z.object({
-          defaultTool: z.enum(["dalle", "sdxl", "midjourney", "comfyui", "flux", "other"]).optional(),
-          defaultStyle: z.object({
-            artisticStyle: z.string().optional(),
-            mood: z.string().optional(),
-            colorScheme: z.string().optional(),
-            qualityTags: z.array(z.string()).optional(),
-            negativePrompts: z.array(z.string()).optional(),
-            influences: z.array(z.string()).optional(),
-          }).optional(),
-          comfyui: z.object({
-            endpoint: z.string().optional(),
-            checkpoint: z.string().optional(),
-            loras: z.array(z.object({ name: z.string(), weight: z.number() })).optional(),
-            samplerSettings: z.object({
-              sampler: z.string().optional(),
-              scheduler: z.string().optional(),
-              steps: z.number().optional(),
-              cfg: z.number().optional(),
-            }).optional(),
-            workflows: z.record(z.string(), z.object({
-              name: z.string(),
-              description: z.string().optional(),
-              workflow: z.record(z.string(), z.unknown()),
-              inputNodes: z.object({
-                positivePrompt: z.string().optional(),
-                negativePrompt: z.string().optional(),
-                checkpoint: z.string().optional(),
-                seed: z.string().optional(),
-                width: z.string().optional(),
-                height: z.string().optional(),
-                steps: z.string().optional(),
-                cfg: z.string().optional(),
-                sampler: z.string().optional(),
-                scheduler: z.string().optional(),
-              }).optional(),
-            })).optional(),
-            defaultWorkflowId: z.string().optional(),
-            defaultWorkflow: z.string().optional(),
-            workflowOverrides: z.record(z.string(), z.unknown()).optional(),
-          }).optional(),
-          dalle: z.object({
-            model: z.string().optional(),
-            quality: z.enum(["standard", "hd"]).optional(),
-            style: z.enum(["vivid", "natural"]).optional(),
-            size: z.enum(["1024x1024", "1792x1024", "1024x1792"]).optional(),
-          }).optional(),
-          midjourney: z.object({
-            version: z.string().optional(),
-            stylize: z.number().optional(),
-            chaos: z.number().optional(),
-            quality: z.number().optional(),
-            aspectRatio: z.string().optional(),
-          }).optional(),
-          sdxl: z.object({
-            model: z.string().optional(),
-            samplerName: z.string().optional(),
-            steps: z.number().optional(),
-            cfg: z.number().optional(),
-            width: z.number().optional(),
-            height: z.number().optional(),
-            negativePrompt: z.string().optional(),
-          }).optional(),
-          flux: z.object({
-            model: z.string().optional(),
-            steps: z.number().optional(),
-            guidance: z.number().optional(),
-          }).optional(),
-          defaults: z.object({
-            aspectRatio: z.string().optional(),
-            generateOnCreate: z.boolean().optional(),
-            savePrompts: z.boolean().optional(),
-            framing: z.object({
-              character: z.string().optional(),
-              location: z.string().optional(),
-              item: z.string().optional(),
-            }).optional(),
-          }).optional(),
-          consistency: z.object({
-            maintainColorPalette: z.boolean().optional(),
-            characterSeedImages: z.record(z.string(), z.string()).optional(),
-            styleReferenceImage: z.string().optional(),
-            useCharacterRefs: z.boolean().optional(),
-          }).optional(),
-          notes: z.string().optional(),
-        }).describe("Partial updates to apply"),
+        presetId: z.string().describe("The preset ID to update"),
+        name: z.string().optional().describe("New preset name"),
+        description: z.string().optional().describe("New description"),
+        entityTypes: z.array(z.enum(["character", "location", "item", "scene"])).optional()
+          .describe("Update which entity types this preset is for"),
+        isDefault: z.boolean().optional().describe("Make this the default preset"),
+        config: imageGenerationConfigSchema.partial().optional().describe("Partial config updates (deep merged)"),
       },
       annotations: ANNOTATIONS.UPDATE,
     },
-    async ({ sessionId, updates }) => {
-      const result = sessionTools.updateImageGenerationPreferences(sessionId, updates);
-      if (!result) {
+    async ({ sessionId, presetId, name, description, entityTypes, isDefault, config }) => {
+      const preset = sessionTools.updateImageGenerationPreset(sessionId, presetId, {
+        name,
+        description,
+        entityTypes,
+        isDefault,
+        config,
+      });
+      if (!preset) {
         return {
-          content: [{ type: "text", text: "Session not found" }],
+          content: [{ type: "text", text: "Preset not found" }],
           isError: true,
         };
       }
       return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+        content: [{ type: "text", text: JSON.stringify(preset, null, 2) }],
+      };
+    }
+  );
+
+  server.registerTool(
+    "delete_image_generation_preset",
+    {
+      description: "Delete an image generation preset. This is IRREVERSIBLE.",
+      inputSchema: {
+        sessionId: z.string().describe("The session ID"),
+        presetId: z.string().describe("The preset ID to delete"),
+      },
+      annotations: ANNOTATIONS.DELETE,
+    },
+    async ({ sessionId, presetId }) => {
+      const success = sessionTools.deleteImageGenerationPreset(sessionId, presetId);
+      if (!success) {
+        return {
+          content: [{ type: "text", text: "Preset not found" }],
+          isError: true,
+        };
+      }
+      return {
+        content: [{ type: "text", text: JSON.stringify({ deleted: true, presetId }, null, 2) }],
+      };
+    }
+  );
+
+  server.registerTool(
+    "set_default_image_preset",
+    {
+      description: "Set which image generation preset should be used by default",
+      inputSchema: {
+        sessionId: z.string().describe("The session ID"),
+        presetId: z.string().describe("The preset ID to make default"),
+      },
+      annotations: ANNOTATIONS.SET,
+    },
+    async ({ sessionId, presetId }) => {
+      const success = sessionTools.setDefaultImagePreset(sessionId, presetId);
+      if (!success) {
+        return {
+          content: [{ type: "text", text: "Preset not found" }],
+          isError: true,
+        };
+      }
+      return {
+        content: [{ type: "text", text: JSON.stringify({ success: true, defaultPresetId: presetId }, null, 2) }],
       };
     }
   );

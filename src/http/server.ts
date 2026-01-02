@@ -5,7 +5,7 @@ import { fileURLToPath } from "url";
 import { dirname } from "path";
 
 // Import tool functions
-import { listSessions, loadSession, getImageGenerationPreferences } from "../tools/session.js";
+import { listSessions, loadSession, listImageGenerationPresets, getImageGenerationPreset, getDefaultImagePreset } from "../tools/session.js";
 import {
   getCharacter,
   listCharacters,
@@ -61,10 +61,23 @@ export function createHttpServer(port: number = 3456): express.Application {
     res.json(getSessionDisplayConfig(req.params.sessionId));
   });
 
-  // Image generation preferences
-  app.get("/api/sessions/:sessionId/image-preferences", (req: Request, res: Response) => {
-    const prefs = getImageGenerationPreferences(req.params.sessionId);
-    res.json(prefs || {});
+  // Image generation presets
+  app.get("/api/sessions/:sessionId/image-presets", (req: Request, res: Response) => {
+    const presets = listImageGenerationPresets(req.params.sessionId);
+    const defaultPreset = getDefaultImagePreset(req.params.sessionId);
+    res.json({
+      presets,
+      defaultPresetId: defaultPreset?.id || null,
+    });
+  });
+
+  app.get("/api/sessions/:sessionId/image-presets/:presetId", (req: Request, res: Response) => {
+    const preset = getImageGenerationPreset(req.params.sessionId, req.params.presetId);
+    if (!preset) {
+      res.status(404).json({ error: "Preset not found" });
+      return;
+    }
+    res.json(preset);
   });
 
   // Sessions

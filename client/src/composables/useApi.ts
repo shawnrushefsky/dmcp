@@ -11,7 +11,8 @@ import type {
   StoredImage,
   EntityImages,
   Item,
-  ImageGenerationPreferences,
+  ImagePresetsResponse,
+  ImageGenerationPreset,
 } from '../types'
 
 const API_BASE = '/api'
@@ -247,17 +248,33 @@ export function useApi() {
     }
   }
 
-  async function getImageGenerationPreferences(
+  async function getImageGenerationPresets(
     sessionId: string
-  ): Promise<ImageGenerationPreferences | null> {
+  ): Promise<ImagePresetsResponse> {
     loading.value = true
     error.value = null
     try {
-      const prefs = await fetchJson<ImageGenerationPreferences>(
-        `${API_BASE}/sessions/${sessionId}/image-preferences`
+      return await fetchJson<ImagePresetsResponse>(
+        `${API_BASE}/sessions/${sessionId}/image-presets`
       )
-      // Return null if empty object
-      return Object.keys(prefs).length > 0 ? prefs : null
+    } catch (e) {
+      error.value = (e as Error).message
+      return { presets: [], defaultPresetId: null }
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function getImageGenerationPreset(
+    sessionId: string,
+    presetId: string
+  ): Promise<ImageGenerationPreset | null> {
+    loading.value = true
+    error.value = null
+    try {
+      return await fetchJson<ImageGenerationPreset>(
+        `${API_BASE}/sessions/${sessionId}/image-presets/${presetId}`
+      )
     } catch (e) {
       error.value = (e as Error).message
       return null
@@ -283,6 +300,7 @@ export function useApi() {
     getInventory,
     getCharactersAtLocation,
     search,
-    getImageGenerationPreferences,
+    getImageGenerationPresets,
+    getImageGenerationPreset,
   }
 }
