@@ -15,7 +15,13 @@ function truncate(text: string, maxLen: number): string {
 </script>
 
 <template>
-  <div class="card">
+  <div class="card session-card">
+    <img
+      v-if="session.titleImageId"
+      :src="`/images/${session.titleImageId}/file?width=400`"
+      :alt="session.name"
+      class="session-title-image"
+    />
     <h3>
       <router-link :to="`/sessions/${session.id}`">{{ session.name }}</router-link>
     </h3>
@@ -30,3 +36,17 @@ function truncate(text: string, maxLen: number): string {
     </div>
   </div>
 </template>
+
+<style scoped>
+.session-card {
+  overflow: hidden;
+}
+.session-title-image {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  margin: -15px -15px 15px -15px;
+  width: calc(100% + 30px);
+  border-radius: 8px 8px 0 0;
+}
+</style>

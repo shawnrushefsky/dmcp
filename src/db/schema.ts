@@ -25,6 +25,13 @@ export function initializeSchema(): void {
     // Column already exists
   }
 
+  // Add title_image_id column if it doesn't exist (migration)
+  try {
+    db.exec(`ALTER TABLE sessions ADD COLUMN title_image_id TEXT`);
+  } catch {
+    // Column already exists
+  }
+
   // Characters table
   db.exec(`
     CREATE TABLE IF NOT EXISTS characters (

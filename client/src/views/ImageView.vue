@@ -2,7 +2,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
-import type { StoredImage } from '../types'
+import type { StoredImage, Breadcrumb } from '../types'
+import Breadcrumbs from '../components/Breadcrumbs.vue'
 
 const route = useRoute()
 const { getImage, loading } = useApi()
@@ -16,6 +17,15 @@ const fileSizeKb = computed(() => {
   return (image.value.fileSize / 1024).toFixed(1)
 })
 
+const breadcrumbs = computed<Breadcrumb[]>(() => {
+  if (!image.value) return []
+  return [
+    { label: 'Games', href: '/' },
+    { label: 'Session', href: `/sessions/${image.value.sessionId}` },
+    { label: image.value.label || 'Image' },
+  ]
+})
+
 onMounted(async () => {
   image.value = await getImage(imageId.value)
 })
@@ -24,6 +34,7 @@ onMounted(async () => {
 <template>
   <div v-if="loading" class="loading">Loading...</div>
   <div v-else-if="image">
+    <Breadcrumbs :items="breadcrumbs" />
     <h2>{{ image.label || 'Image' }}</h2>
 
     <img

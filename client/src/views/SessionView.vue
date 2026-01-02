@@ -2,17 +2,23 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
-import type { SessionState, Character } from '../types'
+import type { SessionState, Character, Breadcrumb } from '../types'
 import SessionTabs from '../components/SessionTabs.vue'
 import CharacterCard from '../components/CharacterCard.vue'
 import LocationCard from '../components/LocationCard.vue'
 import QuestTable from '../components/QuestTable.vue'
+import Breadcrumbs from '../components/Breadcrumbs.vue'
 
 const route = useRoute()
 const { getSession, loading } = useApi()
 const state = ref<SessionState | null>(null)
 
 const sessionId = computed(() => route.params.sessionId as string)
+
+const breadcrumbs = computed<Breadcrumb[]>(() => [
+  { label: 'Games', href: '/' },
+  { label: state.value?.session.name || 'Session' },
+])
 
 const playerCharacters = computed(() =>
   state.value?.characters.filter((c: Character) => c.isPlayer) || []
@@ -34,6 +40,7 @@ onMounted(async () => {
 <template>
   <div v-if="loading" class="loading">Loading...</div>
   <div v-else-if="state">
+    <Breadcrumbs :items="breadcrumbs" />
     <h2>{{ state.session.name }}</h2>
     <p class="mb-20">{{ state.session.setting }}</p>
 

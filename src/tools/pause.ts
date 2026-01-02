@@ -449,6 +449,7 @@ export function getResumeContext(sessionId: string): ResumeContext | null {
       ? JSON.parse(sessionRow.preferences as string)
       : null,
     currentLocationId: sessionRow.current_location_id as string | null,
+    titleImageId: sessionRow.title_image_id as string | null,
     createdAt: sessionRow.created_at as string,
     updatedAt: sessionRow.updated_at as string,
   };

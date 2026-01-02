@@ -2,7 +2,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
-import type { Quest } from '../types'
+import type { Quest, Breadcrumb } from '../types'
+import Breadcrumbs from '../components/Breadcrumbs.vue'
 
 const route = useRoute()
 const { getQuest, loading } = useApi()
@@ -10,6 +11,15 @@ const { getQuest, loading } = useApi()
 const quest = ref<Quest | null>(null)
 
 const questId = computed(() => route.params.questId as string)
+
+const breadcrumbs = computed<Breadcrumb[]>(() => {
+  if (!quest.value) return []
+  return [
+    { label: 'Games', href: '/' },
+    { label: 'Session', href: `/sessions/${quest.value.sessionId}` },
+    { label: quest.value.name },
+  ]
+})
 
 onMounted(async () => {
   quest.value = await getQuest(questId.value)
@@ -19,6 +29,7 @@ onMounted(async () => {
 <template>
   <div v-if="loading" class="loading">Loading...</div>
   <div v-else-if="quest">
+    <Breadcrumbs :items="breadcrumbs" />
     <h2>
       {{ quest.name }}
       <span class="tag">{{ quest.status }}</span>

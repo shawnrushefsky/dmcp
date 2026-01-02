@@ -3,6 +3,7 @@ export interface Session {
   name: string
   setting: string
   style: string
+  titleImageId: string | null
   createdAt: string
   updatedAt: string
 }

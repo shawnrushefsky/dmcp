@@ -203,6 +203,37 @@ export function registerCoreTools(server: McpServer) {
     }
   );
 
+  server.tool(
+    "set_session_title_image",
+    "Set or remove the title image for a game session",
+    {
+      sessionId: z.string().describe("The session ID"),
+      imageId: z.string().nullable().describe("The image ID to set as title image, or null to remove"),
+    },
+    async ({ sessionId, imageId }) => {
+      const session = sessionTools.setSessionTitleImage(sessionId, imageId);
+      if (!session) {
+        return {
+          content: [{ type: "text", text: "Session not found" }],
+          isError: true,
+        };
+      }
+      const webUiUrl = getSessionUrl(session.id);
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            ...session,
+            webUi: {
+              url: webUiUrl,
+              message: `View game at: ${webUiUrl}`,
+            },
+          }, null, 2),
+        }],
+      };
+    }
+  );
+
   // ============================================================================
   // GAME SETUP INTERVIEW TOOLS
   // ============================================================================

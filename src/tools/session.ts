@@ -36,6 +36,7 @@ export function createSession(params: {
     rules: null,
     preferences: params.preferences || null,
     currentLocationId: null,
+    titleImageId: null,
     createdAt: now,
     updatedAt: now,
   };
@@ -56,6 +57,7 @@ export function loadSession(id: string): Session | null {
     rules: row.rules ? safeJsonParse<RuleSystem>(row.rules as string, null as unknown as RuleSystem) : null,
     preferences: row.preferences ? safeJsonParse<GamePreferences>(row.preferences as string, null as unknown as GamePreferences) : null,
     currentLocationId: row.current_location_id as string | null,
+    titleImageId: row.title_image_id as string | null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
@@ -74,6 +76,7 @@ export function listSessions(): Session[] {
     rules: row.rules ? safeJsonParse<RuleSystem>(row.rules as string, null as unknown as RuleSystem) : null,
     preferences: row.preferences ? safeJsonParse<GamePreferences>(row.preferences as string, null as unknown as GamePreferences) : null,
     currentLocationId: row.current_location_id as string | null,
+    titleImageId: row.title_image_id as string | null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   }));
@@ -140,6 +143,27 @@ export function updateSession(
     name: newName,
     setting: newSetting,
     style: newStyle,
+    updatedAt: now,
+  };
+}
+
+export function setSessionTitleImage(
+  sessionId: string,
+  imageId: string | null
+): Session | null {
+  const db = getDatabase();
+  const session = loadSession(sessionId);
+  if (!session) return null;
+
+  const now = new Date().toISOString();
+  const stmt = db.prepare(`
+    UPDATE sessions SET title_image_id = ?, updated_at = ? WHERE id = ?
+  `);
+  stmt.run(imageId, now, sessionId);
+
+  return {
+    ...session,
+    titleImageId: imageId,
     updatedAt: now,
   };
 }

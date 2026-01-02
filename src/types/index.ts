@@ -7,6 +7,7 @@ export interface Session {
   rules: RuleSystem | null;
   preferences: GamePreferences | null;
   currentLocationId: string | null;
+  titleImageId: string | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -2,7 +2,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
-import type { Location, Character, Item, EntityImages } from '../types'
+import type { Location, Character, Item, EntityImages, Breadcrumb } from '../types'
+import Breadcrumbs from '../components/Breadcrumbs.vue'
 
 const route = useRoute()
 const { getLocation, getCharactersAtLocation, getInventory, getEntityImages, loading } = useApi()
@@ -13,6 +14,15 @@ const items = ref<Item[]>([])
 const images = ref<EntityImages>({ images: [], primaryImage: null })
 
 const locationId = computed(() => route.params.locationId as string)
+
+const breadcrumbs = computed<Breadcrumb[]>(() => {
+  if (!location.value) return []
+  return [
+    { label: 'Games', href: '/' },
+    { label: 'Session', href: `/sessions/${location.value.sessionId}` },
+    { label: location.value.name },
+  ]
+})
 
 onMounted(async () => {
   const loc = await getLocation(locationId.value)
@@ -33,6 +43,7 @@ onMounted(async () => {
 <template>
   <div v-if="loading" class="loading">Loading...</div>
   <div v-else-if="location">
+    <Breadcrumbs :items="breadcrumbs" />
     <h2>{{ location.name }}</h2>
 
     <img

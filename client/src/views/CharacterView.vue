@@ -3,9 +3,10 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
 import { useTheme } from '../composables/useTheme'
-import type { CharacterSheet, EntityImages } from '../types'
+import type { CharacterSheet, EntityImages, Breadcrumb } from '../types'
 import HealthBar from '../components/HealthBar.vue'
 import AsciiBox from '../components/AsciiBox.vue'
+import Breadcrumbs from '../components/Breadcrumbs.vue'
 
 const route = useRoute()
 const { getCharacterSheet, getEntityImages, loading } = useApi()
@@ -15,6 +16,15 @@ const sheet = ref<CharacterSheet | null>(null)
 const images = ref<EntityImages>({ images: [], primaryImage: null })
 
 const characterId = computed(() => route.params.characterId as string)
+
+const breadcrumbs = computed<Breadcrumb[]>(() => {
+  if (!sheet.value) return []
+  return [
+    { label: 'Games', href: '/' },
+    { label: 'Session', href: `/sessions/${sheet.value.character.sessionId}` },
+    { label: sheet.value.character.name },
+  ]
+})
 
 onMounted(async () => {
   const [sheetResult, imagesResult] = await Promise.all([
@@ -29,6 +39,7 @@ onMounted(async () => {
 <template>
   <div v-if="loading" class="loading">Loading...</div>
   <div v-else-if="sheet">
+    <Breadcrumbs :items="breadcrumbs" />
     <h2>
       {{ sheet.character.name }}
       <span class="tag">{{ sheet.character.isPlayer ? 'PC' : 'NPC' }}</span>
