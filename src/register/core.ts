@@ -11,10 +11,13 @@ export function registerCoreTools(server: McpServer) {
   // SESSION TOOLS
   // ============================================================================
 
-  server.tool(
+  server.registerTool(
     "get_game_menu",
-    "CALL THIS FIRST when player wants to play. Returns existing games (most recent first) or instructs to start new game if none exist.",
-    {},
+    {
+      description: "CALL THIS FIRST when player wants to play. Returns existing games (most recent first) or instructs to start new game if none exist.",
+      inputSchema: {},
+      annotations: ANNOTATIONS.READ_ONLY,
+    },
     async () => {
       const menu = sessionTools.getGameMenu();
       const menuWithUrls = {
@@ -36,13 +39,16 @@ export function registerCoreTools(server: McpServer) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "create_session",
-    "Create a new game session with a setting and style",
     {
-      name: z.string().min(1).max(LIMITS.NAME_MAX).describe("Name for this game session"),
-      setting: z.string().min(1).max(LIMITS.DESCRIPTION_MAX).describe("The game setting (e.g., 'dark fantasy', 'cyberpunk', 'cosmic horror')"),
-      style: z.string().min(1).max(LIMITS.NAME_MAX).describe("The narrative style (e.g., 'gritty', 'heroic', 'survival')"),
+      description: "Create a new game session with a setting and style",
+      inputSchema: {
+        name: z.string().min(1).max(LIMITS.NAME_MAX).describe("Name for this game session"),
+        setting: z.string().min(1).max(LIMITS.DESCRIPTION_MAX).describe("The game setting (e.g., 'dark fantasy', 'cyberpunk', 'cosmic horror')"),
+        style: z.string().min(1).max(LIMITS.NAME_MAX).describe("The narrative style (e.g., 'gritty', 'heroic', 'survival')"),
+      },
+      annotations: ANNOTATIONS.CREATE,
     },
     async ({ name, setting, style }) => {
       const session = sessionTools.createSession({ name, setting, style });
@@ -62,11 +68,14 @@ export function registerCoreTools(server: McpServer) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "load_session",
-    "Load an existing game session by ID",
     {
-      sessionId: z.string().max(100).describe("The session ID to load"),
+      description: "Load an existing game session by ID",
+      inputSchema: {
+        sessionId: z.string().max(100).describe("The session ID to load"),
+      },
+      annotations: ANNOTATIONS.READ_ONLY,
     },
     async ({ sessionId }) => {
       const session = sessionTools.loadSession(sessionId);
@@ -92,10 +101,13 @@ export function registerCoreTools(server: McpServer) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "list_sessions",
-    "List all saved game sessions",
-    {},
+    {
+      description: "List all saved game sessions",
+      inputSchema: {},
+      annotations: ANNOTATIONS.READ_ONLY,
+    },
     async () => {
       const sessions = sessionTools.listSessions();
       const sessionsWithUrls = sessions.map((s) => ({
@@ -116,11 +128,14 @@ export function registerCoreTools(server: McpServer) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "get_session_state",
-    "Get full current state overview for a session",
     {
-      sessionId: z.string().describe("The session ID"),
+      description: "Get full current state overview for a session",
+      inputSchema: {
+        sessionId: z.string().describe("The session ID"),
+      },
+      annotations: ANNOTATIONS.READ_ONLY,
     },
     async ({ sessionId }) => {
       const state = sessionTools.getSessionState(sessionId);
@@ -149,7 +164,6 @@ export function registerCoreTools(server: McpServer) {
     }
   );
 
-  // delete_session - DESTRUCTIVE operation with annotation
   server.registerTool(
     "delete_session",
     {
@@ -157,36 +171,28 @@ export function registerCoreTools(server: McpServer) {
       inputSchema: {
         sessionId: z.string().describe("The session ID to delete"),
       },
-      outputSchema: {
-        deleted: z.boolean(),
-        sessionId: z.string(),
-        message: z.string(),
-      },
       annotations: ANNOTATIONS.DESTRUCTIVE,
     },
     async ({ sessionId }) => {
       const success = sessionTools.deleteSession(sessionId);
-      const output = {
-        deleted: success,
-        sessionId,
-        message: success ? "Session deleted successfully" : "Session not found",
-      };
       return {
         content: [{ type: "text", text: success ? "Session deleted" : "Session not found" }],
-        structuredContent: output,
         isError: !success,
       };
     }
   );
 
-  server.tool(
+  server.registerTool(
     "update_session",
-    "Update a game session's name, setting, or style",
     {
-      sessionId: z.string().describe("The session ID to update"),
-      name: z.string().min(1).max(LIMITS.NAME_MAX).optional().describe("New name for the session"),
-      setting: z.string().min(1).max(LIMITS.DESCRIPTION_MAX).optional().describe("New setting description"),
-      style: z.string().min(1).max(LIMITS.NAME_MAX).optional().describe("New narrative style"),
+      description: "Update a game session's name, setting, or style",
+      inputSchema: {
+        sessionId: z.string().describe("The session ID to update"),
+        name: z.string().min(1).max(LIMITS.NAME_MAX).optional().describe("New name for the session"),
+        setting: z.string().min(1).max(LIMITS.DESCRIPTION_MAX).optional().describe("New setting description"),
+        style: z.string().min(1).max(LIMITS.NAME_MAX).optional().describe("New narrative style"),
+      },
+      annotations: ANNOTATIONS.UPDATE,
     },
     async ({ sessionId, name, setting, style }) => {
       if (!name && !setting && !style) {
@@ -218,12 +224,15 @@ export function registerCoreTools(server: McpServer) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "set_session_title_image",
-    "Set or remove the title image for a game session",
     {
-      sessionId: z.string().describe("The session ID"),
-      imageId: z.string().nullable().describe("The image ID to set as title image, or null to remove"),
+      description: "Set or remove the title image for a game session",
+      inputSchema: {
+        sessionId: z.string().describe("The session ID"),
+        imageId: z.string().nullable().describe("The image ID to set as title image, or null to remove"),
+      },
+      annotations: ANNOTATIONS.SET,
     },
     async ({ sessionId, imageId }) => {
       const session = sessionTools.setSessionTitleImage(sessionId, imageId);
@@ -253,10 +262,13 @@ export function registerCoreTools(server: McpServer) {
   // GAME SETUP INTERVIEW TOOLS
   // ============================================================================
 
-  server.tool(
+  server.registerTool(
     "get_interview_template",
-    "Get the full game setup interview template with all questions. Use this to guide players through game creation.",
-    {},
+    {
+      description: "Get the full game setup interview template with all questions. Use this to guide players through game creation.",
+      inputSchema: {},
+      annotations: ANNOTATIONS.READ_ONLY,
+    },
     async () => {
       const template = {
         introduction: "Let's create your perfect game experience! For each question, you can choose an option, give a custom answer, or say 'You decide' to let me handle it.",
@@ -600,35 +612,38 @@ export function registerCoreTools(server: McpServer) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "save_game_preferences",
-    "Save the player's game preferences after the interview",
     {
-      sessionId: z.string().describe("The session ID"),
-      preferences: z.object({
-        genre: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
-        tone: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
-        setting: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
-        complexity: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
-        combatFrequency: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
-        combatStyle: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
-        lethality: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
-        narrativeStyle: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
-        playerAgency: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
-        npcDepth: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
-        romanceContent: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
-        worldFamiliarity: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
-        magicOrTechLevel: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
-        politicalComplexity: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
-        sessionLength: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
-        pacingPreference: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
-        characterCreation: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
-        startingPowerLevel: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
-        contentToAvoid: z.array(z.string()),
-        contentToInclude: z.array(z.string()),
-        inspirations: z.array(z.string()),
-        additionalNotes: z.string(),
-      }).describe("The collected preferences"),
+      description: "Save the player's game preferences after the interview",
+      inputSchema: {
+        sessionId: z.string().describe("The session ID"),
+        preferences: z.object({
+          genre: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
+          tone: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
+          setting: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
+          complexity: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
+          combatFrequency: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
+          combatStyle: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
+          lethality: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
+          narrativeStyle: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
+          playerAgency: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
+          npcDepth: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
+          romanceContent: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
+          worldFamiliarity: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
+          magicOrTechLevel: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
+          politicalComplexity: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
+          sessionLength: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
+          pacingPreference: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
+          characterCreation: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
+          startingPowerLevel: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
+          contentToAvoid: z.array(z.string()),
+          contentToInclude: z.array(z.string()),
+          inspirations: z.array(z.string()),
+          additionalNotes: z.string(),
+        }).describe("The collected preferences"),
+      },
+      annotations: ANNOTATIONS.CREATE,
     },
     async ({ sessionId, preferences }) => {
       const success = sessionTools.updateSessionPreferences(sessionId, preferences);
@@ -664,11 +679,14 @@ export function registerCoreTools(server: McpServer) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "get_game_preferences",
-    "Get the saved game preferences for a session",
     {
-      sessionId: z.string().describe("The session ID"),
+      description: "Get the saved game preferences for a session",
+      inputSchema: {
+        sessionId: z.string().describe("The session ID"),
+      },
+      annotations: ANNOTATIONS.READ_ONLY,
     },
     async ({ sessionId }) => {
       const preferences = sessionTools.getSessionPreferences(sessionId);
@@ -687,59 +705,62 @@ export function registerCoreTools(server: McpServer) {
   // RULES TOOLS
   // ============================================================================
 
-  server.tool(
+  server.registerTool(
     "set_rules",
-    "Store a rule system for the session",
     {
-      sessionId: z.string().describe("The session ID"),
-      rules: z.object({
-        name: z.string(),
-        description: z.string(),
-        attributes: z.array(z.object({
+      description: "Store a rule system for the session",
+      inputSchema: {
+        sessionId: z.string().describe("The session ID"),
+        rules: z.object({
           name: z.string(),
-          abbreviation: z.string(),
           description: z.string(),
-          defaultValue: z.number(),
-          minValue: z.number(),
-          maxValue: z.number(),
-        })),
-        skills: z.array(z.object({
-          name: z.string(),
-          governingAttribute: z.string(),
-          description: z.string(),
-        })),
-        derivedStats: z.array(z.object({
-          name: z.string(),
-          abbreviation: z.string(),
-          description: z.string(),
-          formula: z.string(),
-        })),
-        combatRules: z.object({
-          initiativeFormula: z.string(),
-          actionsPerTurn: z.number(),
-          attackFormula: z.string(),
-          defenseFormula: z.string(),
-          damageFormula: z.string(),
-          conditions: z.array(z.object({
+          attributes: z.array(z.object({
             name: z.string(),
+            abbreviation: z.string(),
             description: z.string(),
-            effects: z.string(),
+            defaultValue: z.number(),
+            minValue: z.number(),
+            maxValue: z.number(),
           })),
-        }),
-        checkMechanics: z.object({
-          baseDice: z.string(),
-          modifierCalculation: z.string(),
-          difficultyScale: z.record(z.string(), z.number()),
-          criticalSuccess: z.number().optional(),
-          criticalFailure: z.number().optional(),
-        }),
-        progression: z.object({
-          experienceFormula: z.string(),
-          levelUpThresholds: z.array(z.number()),
-          attributePointsPerLevel: z.number(),
-          skillPointsPerLevel: z.number(),
-        }),
-      }).describe("The complete rule system"),
+          skills: z.array(z.object({
+            name: z.string(),
+            governingAttribute: z.string(),
+            description: z.string(),
+          })),
+          derivedStats: z.array(z.object({
+            name: z.string(),
+            abbreviation: z.string(),
+            description: z.string(),
+            formula: z.string(),
+          })),
+          combatRules: z.object({
+            initiativeFormula: z.string(),
+            actionsPerTurn: z.number(),
+            attackFormula: z.string(),
+            defenseFormula: z.string(),
+            damageFormula: z.string(),
+            conditions: z.array(z.object({
+              name: z.string(),
+              description: z.string(),
+              effects: z.string(),
+            })),
+          }),
+          checkMechanics: z.object({
+            baseDice: z.string(),
+            modifierCalculation: z.string(),
+            difficultyScale: z.record(z.string(), z.number()),
+            criticalSuccess: z.number().optional(),
+            criticalFailure: z.number().optional(),
+          }),
+          progression: z.object({
+            experienceFormula: z.string(),
+            levelUpThresholds: z.array(z.number()),
+            attributePointsPerLevel: z.number(),
+            skillPointsPerLevel: z.number(),
+          }),
+        }).describe("The complete rule system"),
+      },
+      annotations: ANNOTATIONS.SET,
     },
     async ({ sessionId, rules }) => {
       const success = rulesTools.setRules(sessionId, rules);
@@ -750,11 +771,14 @@ export function registerCoreTools(server: McpServer) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "get_rules",
-    "Get the current rule system for a session",
     {
-      sessionId: z.string().describe("The session ID"),
+      description: "Get the current rule system for a session",
+      inputSchema: {
+        sessionId: z.string().describe("The session ID"),
+      },
+      annotations: ANNOTATIONS.READ_ONLY,
     },
     async ({ sessionId }) => {
       const rules = rulesTools.getRules(sessionId);
@@ -769,12 +793,15 @@ export function registerCoreTools(server: McpServer) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "update_rules",
-    "Partially update the rule system",
     {
-      sessionId: z.string().describe("The session ID"),
-      updates: z.record(z.string(), z.unknown()).describe("Partial rule updates"),
+      description: "Partially update the rule system",
+      inputSchema: {
+        sessionId: z.string().describe("The session ID"),
+        updates: z.record(z.string(), z.unknown()).describe("Partial rule updates"),
+      },
+      annotations: ANNOTATIONS.UPDATE,
     },
     async ({ sessionId, updates }) => {
       const rules = rulesTools.updateRules(sessionId, updates);
