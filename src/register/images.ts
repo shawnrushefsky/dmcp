@@ -16,7 +16,7 @@ export function registerImageTools(server: McpServer) {
           .max(100)
           .describe("ID of the entity (character, location, item)"),
         entityType: z
-          .enum(["character", "location", "item", "scene"])
+          .enum(["character", "location", "item", "scene", "faction"])
           .describe("Type of entity"),
         base64: z
           .string()
@@ -161,7 +161,7 @@ export function registerImageTools(server: McpServer) {
       inputSchema: {
         entityId: z.string().max(100).describe("ID of the entity"),
         entityType: z
-          .enum(["character", "location", "item", "scene"])
+          .enum(["character", "location", "item", "scene", "faction"])
           .describe("Type of entity"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
@@ -220,27 +220,81 @@ export function registerImageTools(server: McpServer) {
   server.registerTool(
     "update_image_metadata",
     {
-      description: "Update label or description of an image",
+      description: "Update label, description, or entity association of an image",
       inputSchema: {
         imageId: z.string().max(100).describe("The image ID"),
         label: z.string().max(LIMITS.NAME_MAX).optional().describe("New label"),
         description: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("New description"),
+        entityId: z.string().max(100).optional().describe("New entity ID to associate the image with"),
+        entityType: z.enum(["character", "location", "item", "scene", "faction"]).optional().describe("New entity type (required if changing to a different type of entity)"),
       },
       annotations: ANNOTATIONS.UPDATE,
     },
-    async ({ imageId, label, description }) => {
-      const image = imageTools.updateImageMetadata(imageId, {
-        label,
-        description,
-      });
-      if (!image) {
+    async ({ imageId, label, description, entityId, entityType }) => {
+      try {
+        const image = imageTools.updateImageMetadata(imageId, {
+          label,
+          description,
+          entityId,
+          entityType,
+        });
+        if (!image) {
+          return {
+            content: [{ type: "text", text: "Image not found" }],
+            isError: true,
+          };
+        }
         return {
-          content: [{ type: "text", text: "Image not found" }],
+          content: [{ type: "text", text: JSON.stringify(image, null, 2) }],
+        };
+      } catch (error) {
+        return {
+          content: [{ type: "text", text: `Error updating image: ${error}` }],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  // ============================================================================
+  // BUILD IMAGE PROMPT - construct prompt from entity's structured imageGen data
+  // ============================================================================
+  server.registerTool(
+    "build_image_prompt",
+    {
+      description: "Build an image generation prompt from an entity's structured imageGen data. Combines the entity's imageGen schema, notes/description, and session preset defaults into a ready-to-use prompt. Returns a summary for verification before generating.",
+      inputSchema: {
+        entityId: z.string().max(100).describe("The entity ID (character, location, item, or faction)"),
+        entityType: z.enum(["character", "location", "item", "faction"]).describe("Type of entity"),
+        sessionId: z.string().max(100).optional().describe("Session ID (optional, inferred from entity if not provided)"),
+      },
+      outputSchema: {
+        entityId: z.string(),
+        entityType: z.enum(["character", "location", "item", "faction"]),
+        entityName: z.string(),
+        prompt: z.string().describe("The constructed positive prompt"),
+        negativePrompt: z.string().describe("The constructed negative prompt"),
+        summary: z.string().describe("Human-readable summary for verification"),
+        source: z.object({
+          fromImageGen: z.boolean().describe("Whether imageGen schema was used"),
+          fromNotes: z.boolean().describe("Whether notes/description was used"),
+          fromPreset: z.boolean().describe("Whether session preset was applied"),
+        }),
+      },
+      annotations: ANNOTATIONS.READ_ONLY,
+    },
+    async ({ entityId, entityType, sessionId }) => {
+      const { buildImagePrompt } = await import("../tools/image-prompt.js");
+      const result = buildImagePrompt(entityId, entityType, sessionId);
+      if (!result) {
+        return {
+          content: [{ type: "text", text: `Entity not found: ${entityType} ${entityId}` }],
           isError: true,
         };
       }
       return {
-        content: [{ type: "text", text: JSON.stringify(image, null, 2) }],
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+        structuredContent: result as unknown as Record<string, unknown>,
       };
     }
   );

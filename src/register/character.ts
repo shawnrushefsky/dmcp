@@ -279,4 +279,67 @@ export function registerCharacterTools(server: McpServer) {
     }
   );
 
+  // ============================================================================
+  // GET CHARACTER BY NAME - lookup by name instead of UUID
+  // ============================================================================
+  server.registerTool(
+    "get_character_by_name",
+    {
+      description: "Look up a character by name within a session. Supports exact, partial, and fuzzy matching. Returns the best match or an error if no reasonable match found.",
+      inputSchema: {
+        sessionId: z.string().describe("The session ID to search within"),
+        name: z.string().describe("Character name to search for (case-insensitive)"),
+      },
+      outputSchema: characterOutputSchema,
+      annotations: ANNOTATIONS.READ_ONLY,
+    },
+    async ({ sessionId, name }) => {
+      const character = characterTools.getCharacterByName(sessionId, name);
+      if (!character) {
+        return {
+          content: [{ type: "text", text: `No character found matching "${name}"` }],
+          isError: true,
+        };
+      }
+      return {
+        content: [{ type: "text", text: JSON.stringify(character, null, 2) }],
+        structuredContent: character as unknown as Record<string, unknown>,
+      };
+    }
+  );
+
+  // ============================================================================
+  // LIST CHARACTER SUMMARIES - quick identification info
+  // ============================================================================
+  server.registerTool(
+    "list_character_summaries",
+    {
+      description: "List characters with quick-identification summaries. Use this to help identify characters by appearance before looking up their full details. More efficient than loading full character data when you just need to identify who's who.",
+      inputSchema: {
+        sessionId: z.string().describe("The session ID"),
+      },
+      outputSchema: {
+        summaries: z.array(z.object({
+          id: z.string(),
+          name: z.string(),
+          isPlayer: z.boolean(),
+          summary: z.string().describe("One-line summary: gender, age, role"),
+          hasImageGen: z.boolean().describe("Whether character has imageGen data"),
+          hasImages: z.boolean().describe("Whether character has stored images"),
+        })),
+      },
+      annotations: ANNOTATIONS.READ_ONLY,
+    },
+    async ({ sessionId }) => {
+      // Dynamic import to avoid circular dependency
+      const { listCharacterSummaries } = await import("../tools/image-prompt.js");
+      const summaries = listCharacterSummaries(sessionId);
+      const output = { summaries };
+      return {
+        content: [{ type: "text", text: JSON.stringify(summaries, null, 2) }],
+        structuredContent: output as unknown as Record<string, unknown>,
+      };
+    }
+  );
+
 }

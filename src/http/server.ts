@@ -295,7 +295,7 @@ export function createHttpServer(port: number = 3456): express.Application {
     (req: Request, res: Response) => {
       const images = listEntityImages(
         req.params.entityId,
-        req.params.entityType as "character" | "location" | "item" | "scene"
+        req.params.entityType as "character" | "location" | "item" | "scene" | "faction"
       );
       res.json(images);
     }

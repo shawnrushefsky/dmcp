@@ -13,7 +13,7 @@ import SkeletonLoader from '../components/SkeletonLoader.vue'
 const route = useRoute()
 const { getCharacterSheet, getSession, getEntityImages, loading } = useApi()
 const { linkText, setSessionState, setItems } = useEntityLinker()
-const { config } = useTheme()
+const { config, setSession } = useTheme()
 
 const sheet = ref<CharacterSheet | null>(null)
 const sessionState = ref<SessionState | null>(null)
@@ -43,8 +43,9 @@ onMounted(async () => {
   sheet.value = sheetResult
   images.value = imagesResult
 
-  // Fetch session state for entity linking
+  // Fetch session state for entity linking and theming
   if (sheetResult) {
+    setSession(sheetResult.character.sessionId)
     sessionState.value = await getSession(sheetResult.character.sessionId)
   }
 })

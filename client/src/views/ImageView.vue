@@ -2,12 +2,14 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
+import { useTheme } from '../composables/useTheme'
 import type { StoredImage, SessionState, Breadcrumb } from '../types'
 import Breadcrumbs from '../components/Breadcrumbs.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
 
 const route = useRoute()
 const { getImage, getSession, loading } = useApi()
+const { setSession } = useTheme()
 
 const image = ref<StoredImage | null>(null)
 const sessionState = ref<SessionState | null>(null)
@@ -31,6 +33,7 @@ const breadcrumbs = computed<Breadcrumb[]>(() => {
 onMounted(async () => {
   image.value = await getImage(imageId.value)
   if (image.value) {
+    setSession(image.value.sessionId)
     sessionState.value = await getSession(image.value.sessionId)
   }
 })

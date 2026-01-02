@@ -346,7 +346,7 @@ export const storedImageOutputSchema = {
   id: z.string(),
   sessionId: z.string(),
   entityId: z.string(),
-  entityType: z.enum(["character", "location", "item", "scene"]),
+  entityType: z.enum(["character", "location", "item", "scene", "faction"]),
   fileSize: z.number(),
   mimeType: z.string(),
   width: z.number().nullable(),

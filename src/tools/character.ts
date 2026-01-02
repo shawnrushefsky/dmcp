@@ -200,6 +200,69 @@ export function listCharacters(
   }));
 }
 
+/**
+ * Find a character by name (case-insensitive, fuzzy match).
+ * Returns the best match or null if no reasonable match found.
+ */
+export function getCharacterByName(
+  sessionId: string,
+  name: string
+): Character | null {
+  const db = getDatabase();
+  const searchName = name.toLowerCase().trim();
+
+  // First try exact match (case-insensitive)
+  const exactMatch = db.prepare(
+    `SELECT * FROM characters WHERE session_id = ? AND LOWER(name) = ?`
+  ).get(sessionId, searchName) as Record<string, unknown> | undefined;
+
+  if (exactMatch) {
+    return mapRowToCharacter(exactMatch);
+  }
+
+  // Try contains match
+  const containsMatch = db.prepare(
+    `SELECT * FROM characters WHERE session_id = ? AND LOWER(name) LIKE ?`
+  ).get(sessionId, `%${searchName}%`) as Record<string, unknown> | undefined;
+
+  if (containsMatch) {
+    return mapRowToCharacter(containsMatch);
+  }
+
+  // Try matching just the last word (e.g., "Gannik" matches "Master Gannik")
+  const words = searchName.split(/\s+/);
+  if (words.length > 0) {
+    const lastName = words[words.length - 1];
+    const lastNameMatch = db.prepare(
+      `SELECT * FROM characters WHERE session_id = ? AND LOWER(name) LIKE ?`
+    ).get(sessionId, `%${lastName}%`) as Record<string, unknown> | undefined;
+
+    if (lastNameMatch) {
+      return mapRowToCharacter(lastNameMatch);
+    }
+  }
+
+  return null;
+}
+
+// Helper function to map database row to Character
+function mapRowToCharacter(row: Record<string, unknown>): Character {
+  return {
+    id: row.id as string,
+    sessionId: row.session_id as string,
+    name: row.name as string,
+    isPlayer: (row.is_player as number) === 1,
+    attributes: safeJsonParse<Record<string, number>>(row.attributes as string, {}),
+    skills: safeJsonParse<Record<string, number>>(row.skills as string, {}),
+    status: safeJsonParse<CharacterStatus>(row.status as string, { health: 0, maxHealth: 0, conditions: [], experience: 0, level: 1 }),
+    locationId: row.location_id as string | null,
+    notes: row.notes as string,
+    voice: row.voice ? safeJsonParse<VoiceDescription>(row.voice as string, null as unknown as VoiceDescription) : null,
+    imageGen: row.image_gen ? safeJsonParse<ImageGeneration>(row.image_gen as string, null as unknown as ImageGeneration) : null,
+    createdAt: row.created_at as string,
+  };
+}
+
 export function moveCharacter(
   characterId: string,
   locationId: string | null

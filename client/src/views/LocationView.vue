@@ -3,6 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
 import { useEntityLinker } from '../composables/useEntityLinker'
+import { useTheme } from '../composables/useTheme'
 import type { Location, Character, Item, EntityImages, Breadcrumb, SessionState } from '../types'
 import Breadcrumbs from '../components/Breadcrumbs.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
@@ -10,6 +11,7 @@ import SkeletonLoader from '../components/SkeletonLoader.vue'
 const route = useRoute()
 const { getLocation, getSession, getCharactersAtLocation, getInventory, getEntityImages, loading } = useApi()
 const { linkText, setSessionState, setItems } = useEntityLinker()
+const { setSession } = useTheme()
 
 const location = ref<Location | null>(null)
 const sessionState = ref<SessionState | null>(null)
@@ -36,6 +38,7 @@ onMounted(async () => {
   const loc = await getLocation(locationId.value)
   location.value = loc
   if (loc) {
+    setSession(loc.sessionId)
     const [state, chars, inv, imgs] = await Promise.all([
       getSession(loc.sessionId),
       getCharactersAtLocation(loc.sessionId, locationId.value),

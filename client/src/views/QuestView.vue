@@ -3,6 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
 import { useEntityLinker } from '../composables/useEntityLinker'
+import { useTheme } from '../composables/useTheme'
 import type { Quest, Breadcrumb, SessionState } from '../types'
 import Breadcrumbs from '../components/Breadcrumbs.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
@@ -10,6 +11,7 @@ import SkeletonLoader from '../components/SkeletonLoader.vue'
 const route = useRoute()
 const { getQuest, getSession, loading } = useApi()
 const { linkText, setSessionState } = useEntityLinker()
+const { setSession } = useTheme()
 
 const quest = ref<Quest | null>(null)
 const sessionState = ref<SessionState | null>(null)
@@ -32,8 +34,9 @@ onMounted(async () => {
   const q = await getQuest(questId.value)
   quest.value = q
 
-  // Fetch session state for entity linking
+  // Fetch session state for entity linking and theming
   if (q) {
+    setSession(q.sessionId)
     sessionState.value = await getSession(q.sessionId)
   }
 })

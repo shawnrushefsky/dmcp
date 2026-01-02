@@ -66,7 +66,7 @@ export interface ImageGenerationPreset {
   id: string;                              // Unique identifier
   name: string;                            // Human-readable name (e.g., "Character Portraits", "Location Art")
   description?: string;                    // What this preset is for
-  entityTypes?: ("character" | "location" | "item" | "scene")[]; // Which entity types this preset is best for
+  entityTypes?: ("character" | "location" | "item" | "scene" | "faction")[]; // Which entity types this preset is best for
   isDefault?: boolean;                     // Whether this is the default preset
   config: ImageGenerationPreferences;      // The actual settings
   createdAt?: string;
@@ -1034,7 +1034,7 @@ export interface StoredImage {
   id: string;
   sessionId: string;
   entityId: string;
-  entityType: "character" | "location" | "item" | "scene";
+  entityType: "character" | "location" | "item" | "scene" | "faction";
 
   // File information
   filePath: string;           // Relative path from data/images/
@@ -1061,7 +1061,7 @@ export interface StoredImage {
 export interface StoreImageParams {
   sessionId: string;
   entityId: string;
-  entityType: "character" | "location" | "item" | "scene";
+  entityType: "character" | "location" | "item" | "scene" | "faction";
 
   // Image data (one required)
   base64?: string;            // Base64-encoded image data

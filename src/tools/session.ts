@@ -306,7 +306,7 @@ export function createImageGenerationPreset(
   params: {
     name: string;
     description?: string;
-    entityTypes?: ("character" | "location" | "item" | "scene")[];
+    entityTypes?: ("character" | "location" | "item" | "scene" | "faction")[];
     isDefault?: boolean;
     config: ImageGenerationPreferences;
   }
@@ -348,7 +348,7 @@ export function updateImageGenerationPreset(
   updates: {
     name?: string;
     description?: string;
-    entityTypes?: ("character" | "location" | "item" | "scene")[];
+    entityTypes?: ("character" | "location" | "item" | "scene" | "faction")[];
     isDefault?: boolean;
     config?: Partial<ImageGenerationPreferences>;
   }

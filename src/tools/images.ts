@@ -16,10 +16,42 @@ import type {
   StoreImageParams,
   ImageListResult,
 } from "../types/index.js";
+import { getCharacter } from "./character.js";
+import { getLocation } from "./world.js";
+import { getItem } from "./inventory.js";
+import { getFaction } from "./faction.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const IMAGES_DIR = join(__dirname, "..", "..", "data", "images");
+
+// Helper: Validate entity exists
+function validateEntityExists(
+  entityId: string,
+  entityType: "character" | "location" | "item" | "scene" | "faction"
+): void {
+  let entity = null;
+  switch (entityType) {
+    case "character":
+      entity = getCharacter(entityId);
+      break;
+    case "location":
+      entity = getLocation(entityId);
+      break;
+    case "item":
+      entity = getItem(entityId);
+      break;
+    case "faction":
+      entity = getFaction(entityId);
+      break;
+    case "scene":
+      // Scenes don't have a dedicated table - they're ad-hoc, so skip validation
+      return;
+  }
+  if (!entity) {
+    throw new Error(`${entityType} not found: ${entityId}`);
+  }
+}
 
 // Helper: Ensure directory exists
 function ensureDir(dirPath: string): void {
@@ -67,7 +99,7 @@ function mapRowToStoredImage(row: Record<string, unknown>): StoredImage {
     id: row.id as string,
     sessionId: row.session_id as string,
     entityId: row.entity_id as string,
-    entityType: row.entity_type as "character" | "location" | "item" | "scene",
+    entityType: row.entity_type as "character" | "location" | "item" | "scene" | "faction",
     filePath: row.file_path as string,
     fileSize: row.file_size as number,
     mimeType: row.mime_type as string,
@@ -85,6 +117,9 @@ function mapRowToStoredImage(row: Record<string, unknown>): StoredImage {
 }
 
 export async function storeImage(params: StoreImageParams): Promise<StoredImage> {
+  // Validate entity exists before storing image
+  validateEntityExists(params.entityId, params.entityType);
+
   const db = getDatabase();
   const id = uuidv4();
   const now = new Date().toISOString();
@@ -304,7 +339,7 @@ export async function getImageData(
 
 export function listEntityImages(
   entityId: string,
-  entityType: "character" | "location" | "item" | "scene"
+  entityType: "character" | "location" | "item" | "scene" | "faction"
 ): ImageListResult {
   const db = getDatabase();
   const rows = db
@@ -360,7 +395,12 @@ export function setPrimaryImage(imageId: string): StoredImage | null {
 
 export function updateImageMetadata(
   imageId: string,
-  updates: { label?: string; description?: string }
+  updates: {
+    label?: string;
+    description?: string;
+    entityId?: string;
+    entityType?: "character" | "location" | "item" | "scene" | "faction";
+  }
 ): StoredImage | null {
   const db = getDatabase();
   const current = getImage(imageId);
@@ -370,13 +410,58 @@ export function updateImageMetadata(
   const newDescription =
     updates.description !== undefined ? updates.description : current.description;
 
+  // Handle entity re-association
+  let newEntityId = current.entityId;
+  let newEntityType = current.entityType;
+  let newFilePath = current.filePath;
+
+  if (updates.entityId !== undefined || updates.entityType !== undefined) {
+    newEntityId = updates.entityId ?? current.entityId;
+    newEntityType = updates.entityType ?? current.entityType;
+
+    // Validate new entity exists
+    validateEntityExists(newEntityId, newEntityType);
+
+    // If entity changed, move the file
+    if (newEntityId !== current.entityId || newEntityType !== current.entityType) {
+      const oldFullPath = join(IMAGES_DIR, current.filePath);
+      const ext = current.filePath.split(".").pop() || "png";
+      newFilePath = join(
+        current.sessionId,
+        `${newEntityType}s`,
+        newEntityId,
+        `${imageId}.${ext}`
+      );
+      const newFullPath = join(IMAGES_DIR, newFilePath);
+
+      // Ensure new directory exists
+      ensureDir(dirname(newFullPath));
+
+      // Move the file
+      if (existsSync(oldFullPath)) {
+        const fileData = readFileSync(oldFullPath);
+        writeFileSync(newFullPath, fileData);
+        unlinkSync(oldFullPath);
+      }
+    }
+  }
+
   db.prepare(
     `
-    UPDATE stored_images SET label = ?, description = ? WHERE id = ?
+    UPDATE stored_images
+    SET label = ?, description = ?, entity_id = ?, entity_type = ?, file_path = ?
+    WHERE id = ?
   `
-  ).run(newLabel, newDescription, imageId);
+  ).run(newLabel, newDescription, newEntityId, newEntityType, newFilePath, imageId);
 
-  return { ...current, label: newLabel, description: newDescription };
+  return {
+    ...current,
+    label: newLabel,
+    description: newDescription,
+    entityId: newEntityId,
+    entityType: newEntityType,
+    filePath: newFilePath,
+  };
 }
 
 // Cleanup helper - delete all images for a session
@@ -399,7 +484,7 @@ export function deleteSessionImages(sessionId: string): number {
 // Get primary image for an entity
 export function getPrimaryImage(
   entityId: string,
-  entityType: "character" | "location" | "item" | "scene"
+  entityType: "character" | "location" | "item" | "scene" | "faction"
 ): StoredImage | null {
   const db = getDatabase();
   const row = db
