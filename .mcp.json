@@ -1,8 +1,30 @@
 {
   "mcpServers": {
+    "MCP_DOCKER": {
+      "command": "docker",
+      "args": [
+        "mcp",
+        "gateway",
+        "run"
+      ]
+    },
     "dmcp": {
-      "command": "node",
-      "args": ["dist/index.js"]
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm", "--pull", "always",
+        "-p", "3456:3456",
+        "-v", "dmcp-data:/app/data",
+        "ghcr.io/shawnrushefsky/dmcp:latest"
+      ]
+    },
+    "comfyui": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm", "--pull", "always",
+        "-v", "comfyui-mcp-data:/root/.comfyui-mcp",
+        "-e", "COMFYUI_URL=http://host.docker.internal:8000",
+        "ghcr.io/shawnrushefsky/comfyui-mcp:latest"
+      ]
     }
   }
 }

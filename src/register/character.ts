@@ -342,4 +342,39 @@ export function registerCharacterTools(server: McpServer) {
     }
   );
 
+  // ============================================================================
+  // DELETE CHARACTER - destructive operation
+  // ============================================================================
+  server.registerTool(
+    "delete_character",
+    {
+      description: "Delete a character permanently. This is IRREVERSIBLE and will remove the character and all associated data.",
+      inputSchema: {
+        characterId: z.string().describe("The character ID to delete"),
+      },
+      outputSchema: {
+        success: z.boolean(),
+        deletedId: z.string(),
+      },
+      annotations: ANNOTATIONS.DELETE,
+    },
+    async ({ characterId }) => {
+      const success = characterTools.deleteCharacter(characterId);
+      if (!success) {
+        return {
+          content: [{ type: "text", text: "Character not found or already deleted" }],
+          isError: true,
+        };
+      }
+      const output = {
+        success: true,
+        deletedId: characterId,
+      };
+      return {
+        content: [{ type: "text", text: JSON.stringify(output, null, 2) }],
+        structuredContent: output as unknown as Record<string, unknown>,
+      };
+    }
+  );
+
 }
