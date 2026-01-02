@@ -489,6 +489,15 @@ export function initializeSchema(): void {
     )
   `);
 
+  // Display configuration table (global, one row)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS display_config (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      config TEXT NOT NULL DEFAULT '{}',
+      updated_at TEXT NOT NULL
+    )
+  `);
+
   // Create indexes for common queries
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_characters_session ON characters(session_id);

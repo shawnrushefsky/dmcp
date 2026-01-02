@@ -45,6 +45,7 @@ An MCP (Model Context Protocol) server that enables AI agents to act as dynamic 
     - [Pause \& Resume](#pause--resume-7-tools)
     - [Multi-Agent Collaboration](#multi-agent-collaboration-8-tools)
     - [Image Storage](#image-storage-7-tools)
+    - [Display & Theme](#display--theme-9-tools)
   - [MCP Prompts (6 total)](#mcp-prompts-6-total)
   - [Example Usage](#example-usage)
     - [Starting a New Game](#starting-a-new-game)
@@ -312,10 +313,23 @@ npx @modelcontextprotocol/inspector node dist/index.js
 
 ### HTTP Web UI
 
-DMCP includes a built-in HTTP server for viewing game content in a browser. It runs automatically alongside the MCP server.
+DMCP includes a built-in HTTP server with a Vue.js single-page application for viewing game content. It starts automatically alongside the MCP server.
 
 - **Default URL**: http://localhost:3000
 - **Configure Port**: Set `DMCP_HTTP_PORT` environment variable
+
+**Development Mode:**
+
+For hot-reload during development:
+```bash
+# Terminal 1: Run the MCP server
+npm run dev
+
+# Terminal 2: Run Vue dev server with hot-reload
+npm run dev:client
+```
+
+The Vue dev server proxies API requests to the backend automatically.
 
 **Available Pages:**
 - `/` - Home page with all game sessions
@@ -336,6 +350,22 @@ DMCP includes a built-in HTTP server for viewing game content in a browser. It r
 - `GET /api/characters/:id` - Character data
 - `GET /api/characters/:id/sheet` - Character sheet with ASCII art
 - `GET /api/locations/:id` - Location data
+- `GET /api/theme` - Current theme configuration (polled by Vue app)
+
+**Dynamic Theming:**
+
+The DM agent can customize the UI theme in real-time using display tools:
+```javascript
+// Apply a preset theme
+apply_theme_preset({ preset: "cyberpunk" })
+
+// Or customize individual elements
+set_theme_colors({ bgColor: "#1a1a2e", accentColor: "#00ff88" })
+set_app_title({ title: "Neon Shadows" })
+set_display_options({ showHealthBars: true, showAsciiSheets: false })
+```
+
+Available presets: `dark-fantasy`, `cyberpunk`, `cosmic-horror`, `high-fantasy`, `noir`, `steampunk`, `post-apocalyptic`
 
 ---
 
@@ -379,7 +409,7 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 
 </details>
 
-## Available Tools (173 total)
+## Available Tools (182 total)
 
 ### Session Management (6 tools)
 | Tool | Description |
@@ -653,6 +683,19 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `delete_image` | Delete stored image |
 | `set_primary_image` | Set image as primary for entity |
 | `update_image_metadata` | Update image label/description |
+
+### Display & Theme (9 tools)
+| Tool | Description |
+|------|-------------|
+| `get_display_config` | Get current theme/display configuration |
+| `set_display_config` | Set complete display configuration |
+| `reset_display_config` | Reset to default theme |
+| `apply_theme_preset` | Apply a preset theme (dark-fantasy, cyberpunk, cosmic-horror, etc.) |
+| `list_theme_presets` | List available theme presets |
+| `set_display_options` | Toggle UI components (health bars, ASCII sheets, etc.) |
+| `set_theme_colors` | Set individual theme colors |
+| `set_app_title` | Set the app title in the header |
+| `set_fonts` | Set body and ASCII fonts |
 
 ## MCP Prompts (6 total)
 

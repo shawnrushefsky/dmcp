@@ -26,6 +26,7 @@ import { registerAbilityTools } from "./register/abilities.js";
 import { registerNoteTools } from "./register/notes.js";
 import { registerPauseTools } from "./register/pause.js";
 import { registerImageTools } from "./register/images.js";
+import { registerDisplayTools } from "./register/display.js";
 import { registerMcpResources } from "./register/mcp-resources.js";
 import { registerMcpPrompts } from "./register/mcp-prompts.js";
 
@@ -58,6 +59,7 @@ registerAbilityTools(server);        // Abilities/Powers
 registerNoteTools(server);           // Session Notes
 registerPauseTools(server);          // Pause/Resume, Context Snapshots, External Updates
 registerImageTools(server);          // Stored Images
+registerDisplayTools(server);        // Display/Theme Configuration
 
 // Register MCP Resources and Prompts
 registerMcpResources(server);        // Read-only data access via URI

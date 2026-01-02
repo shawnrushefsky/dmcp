@@ -1,0 +1,154 @@
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { useApi } from '../composables/useApi'
+import { useTheme } from '../composables/useTheme'
+import type { CharacterSheet, EntityImages } from '../types'
+import HealthBar from '../components/HealthBar.vue'
+import AsciiBox from '../components/AsciiBox.vue'
+
+const route = useRoute()
+const { getCharacterSheet, getEntityImages, loading } = useApi()
+const { config } = useTheme()
+
+const sheet = ref<CharacterSheet | null>(null)
+const images = ref<EntityImages>({ images: [], primaryImage: null })
+
+const characterId = computed(() => route.params.characterId as string)
+
+onMounted(async () => {
+  const [sheetResult, imagesResult] = await Promise.all([
+    getCharacterSheet(characterId.value),
+    getEntityImages(characterId.value, 'character'),
+  ])
+  sheet.value = sheetResult
+  images.value = imagesResult
+})
+</script>
+
+<template>
+  <div v-if="loading" class="loading">Loading...</div>
+  <div v-else-if="sheet">
+    <h2>
+      {{ sheet.character.name }}
+      <span class="tag">{{ sheet.character.isPlayer ? 'PC' : 'NPC' }}</span>
+    </h2>
+
+    <div class="two-col">
+      <div>
+        <img
+          v-if="images.primaryImage"
+          :src="`/images/${images.primaryImage.id}/file`"
+          :alt="sheet.character.name"
+          class="character-image"
+        />
+
+        <div class="card">
+          <h3>Status</h3>
+          <HealthBar
+            v-if="config.showHealthBars"
+            :current="sheet.character.status.health"
+            :max="sheet.character.status.maxHealth"
+          />
+          <div class="stat">
+            <span class="stat-label">HP</span>
+            <span>{{ sheet.character.status.health }}/{{ sheet.character.status.maxHealth }}</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Level</span>
+            <span>{{ sheet.character.status.level }}</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">XP</span>
+            <span>{{ sheet.character.status.experience }}</span>
+          </div>
+          <div v-if="sheet.locationName" class="stat">
+            <span class="stat-label">Location</span>
+            <span>{{ sheet.locationName }}</span>
+          </div>
+          <div v-if="sheet.character.status.conditions.length" class="mt-20">
+            <strong>Conditions:</strong><br />
+            <span
+              v-for="condition in sheet.character.status.conditions"
+              :key="condition"
+              class="tag condition"
+            >
+              {{ condition }}
+            </span>
+          </div>
+        </div>
+
+        <div v-if="Object.keys(sheet.character.attributes).length" class="card">
+          <h3>Attributes</h3>
+          <div
+            v-for="(value, key) in sheet.character.attributes"
+            :key="key"
+            class="stat"
+          >
+            <span class="stat-label">{{ key }}</span>
+            <span>{{ value }}</span>
+          </div>
+        </div>
+
+        <div v-if="Object.keys(sheet.character.skills).length" class="card">
+          <h3>Skills</h3>
+          <div
+            v-for="(value, key) in sheet.character.skills"
+            :key="key"
+            class="stat"
+          >
+            <span class="stat-label">{{ key }}</span>
+            <span>{{ value }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div v-if="config.showAsciiSheets" class="card">
+          <h3>ASCII Character Sheet</h3>
+          <AsciiBox :content="sheet.ascii" />
+        </div>
+
+        <div v-if="sheet.inventory.length" class="card">
+          <h3>Inventory</h3>
+          <ul>
+            <li v-for="item in sheet.inventory" :key="item.id">
+              {{ item.name }}
+              <span v-if="item.type">({{ item.type }})</span>
+            </li>
+          </ul>
+        </div>
+
+        <div v-if="sheet.character.notes" class="card">
+          <h3>Notes</h3>
+          <p>{{ sheet.character.notes }}</p>
+        </div>
+
+        <div v-if="images.images.length" class="card">
+          <h3>Gallery</h3>
+          <div class="image-grid">
+            <div v-for="img in images.images" :key="img.id" class="image-card">
+              <router-link :to="`/images/${img.id}`">
+                <img
+                  :src="`/images/${img.id}/file?width=200`"
+                  :alt="img.label || 'Image'"
+                  loading="lazy"
+                />
+              </router-link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p v-else class="empty">Character not found.</p>
+</template>
+
+<style scoped>
+.character-image {
+  width: 100%;
+  max-width: 300px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+</style>

@@ -14,9 +14,12 @@
     "dmcp": "dist/index.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && npm run build:client",
+    "build:server": "tsc",
+    "build:client": "cd client && npm run build",
     "start": "node dist/index.js",
-    "dev": "tsx src/index.ts"
+    "dev": "tsx src/index.ts",
+    "dev:client": "cd client && npm run dev"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
