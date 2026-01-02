@@ -4,6 +4,9 @@ import * as sessionTools from "../tools/session.js";
 import * as characterTools from "../tools/character.js";
 import * as narrativeTools from "../tools/narrative.js";
 import * as pauseTools from "../tools/pause.js";
+import * as worldTools from "../tools/world.js";
+import * as questTools from "../tools/quest.js";
+import * as relationshipTools from "../tools/relationship.js";
 
 export function registerMcpPrompts(server: McpServer) {
   // ============================================================================
@@ -431,6 +434,221 @@ export function registerMcpPrompts(server: McpServer) {
       }
 
       promptText += `\n---\n\nWhen voicing ${character.name}, embody these characteristics in dialogue and narration.`;
+
+      return {
+        messages: [
+          {
+            role: "user",
+            content: { type: "text", text: promptText },
+          },
+        ],
+      };
+    }
+  );
+
+  // ============================================================================
+  // SAVE GAME CHECKLIST - Thorough pre-save verification
+  // ============================================================================
+
+  server.registerPrompt(
+    "save-game-checklist",
+    {
+      description: "Comprehensive checklist for properly saving/pausing a game - ensures all entities are persisted",
+      argsSchema: {
+        sessionId: z.string().describe("The session ID to save"),
+      },
+    },
+    async ({ sessionId }) => {
+      const session = sessionTools.loadSession(sessionId);
+      if (!session) {
+        return {
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: `Error: Session ${sessionId} not found.`,
+              },
+            },
+          ],
+        };
+      }
+
+      // Gather current state
+      const characters = characterTools.listCharacters(sessionId);
+      const locations = worldTools.listLocations(sessionId);
+      const quests = questTools.listQuests(sessionId);
+      const relationships = relationshipTools.listRelationships(sessionId);
+      const recentEvents = narrativeTools.getHistory(sessionId, { limit: 20 });
+
+      // Build character and location name lists for reference
+      const characterNames = characters.map(c => c.name.toLowerCase());
+      const locationNames = locations.map(l => l.name.toLowerCase());
+
+      let promptText = `# Save Game Checklist: ${session.name}\n\n`;
+      promptText += `Before pausing the game, work through this checklist to ensure all game state is properly persisted.\n\n`;
+
+      // ========================================
+      // SECTION 1: Review Recent Narrative
+      // ========================================
+      promptText += `## 1. Review Recent Narrative\n\n`;
+      promptText += `Examine the recent narrative events below. For each event, verify that all mentioned entities exist in the database.\n\n`;
+
+      if (recentEvents.length > 0) {
+        promptText += `### Recent Events (${recentEvents.length})\n`;
+        promptText += `\`\`\`\n`;
+        for (const event of recentEvents.slice(0, 10)) {
+          promptText += `[${event.eventType}] ${event.content.slice(0, 200)}${event.content.length > 200 ? "..." : ""}\n\n`;
+        }
+        promptText += `\`\`\`\n\n`;
+      } else {
+        promptText += `*No recent narrative events found.*\n\n`;
+      }
+
+      // ========================================
+      // SECTION 2: Character Verification
+      // ========================================
+      promptText += `## 2. Character Verification\n\n`;
+      promptText += `**Current Characters (${characters.length}):**\n`;
+      for (const char of characters) {
+        const status = char.isPlayer ? "PC" : "NPC";
+        promptText += `- ${char.name} (${status}) - HP: ${char.status.health}/${char.status.maxHealth}`;
+        if (char.status.conditions.length > 0) {
+          promptText += ` - Conditions: ${char.status.conditions.join(", ")}`;
+        }
+        promptText += `\n`;
+      }
+      promptText += `\n`;
+
+      promptText += `### Verify:\n`;
+      promptText += `- [ ] All NPCs mentioned in recent dialogue/narrative are created\n`;
+      promptText += `- [ ] Character health reflects any damage/healing from recent events\n`;
+      promptText += `- [ ] Status conditions (poisoned, stunned, etc.) are applied/removed\n`;
+      promptText += `- [ ] Character locations are up to date\n`;
+      promptText += `- [ ] XP/level changes are recorded\n`;
+      promptText += `- [ ] Any new skills or abilities are added\n\n`;
+
+      // ========================================
+      // SECTION 3: Location Verification
+      // ========================================
+      promptText += `## 3. Location Verification\n\n`;
+      promptText += `**Current Locations (${locations.length}):**\n`;
+      for (const loc of locations) {
+        const exits = loc.properties.exits?.length || 0;
+        promptText += `- ${loc.name} (${exits} exits)\n`;
+      }
+      promptText += `\n`;
+
+      promptText += `### Verify:\n`;
+      promptText += `- [ ] All visited locations are created with descriptions\n`;
+      promptText += `- [ ] Location connections (exits) are properly set up\n`;
+      promptText += `- [ ] Items left at locations are recorded\n`;
+      promptText += `- [ ] Location atmosphere/state changes are updated\n\n`;
+
+      // ========================================
+      // SECTION 4: Quest & Objective Tracking
+      // ========================================
+      promptText += `## 4. Quest & Objective Tracking\n\n`;
+      const activeQuests = quests.filter(q => q.status === "active");
+      const completedQuests = quests.filter(q => q.status === "completed");
+
+      promptText += `**Active Quests (${activeQuests.length}):**\n`;
+      for (const quest of activeQuests) {
+        const completed = quest.objectives.filter(o => o.completed).length;
+        const total = quest.objectives.length;
+        promptText += `- ${quest.name} (${completed}/${total} objectives)\n`;
+        for (const obj of quest.objectives) {
+          promptText += `  ${obj.completed ? "✅" : "⬜"} ${obj.description}\n`;
+        }
+      }
+      promptText += `\n`;
+
+      promptText += `### Verify:\n`;
+      promptText += `- [ ] Any new quests/missions mentioned are created\n`;
+      promptText += `- [ ] Completed objectives are marked as complete\n`;
+      promptText += `- [ ] Failed quests are marked as failed\n`;
+      promptText += `- [ ] New objectives discovered are added\n`;
+      promptText += `- [ ] Quest rewards given are recorded\n\n`;
+
+      // ========================================
+      // SECTION 5: Relationships
+      // ========================================
+      promptText += `## 5. Relationship Updates\n\n`;
+      promptText += `**Current Relationships (${relationships.length}):**\n`;
+      for (const rel of relationships.slice(0, 10)) {
+        promptText += `- ${rel.sourceId} → ${rel.targetId}: ${rel.relationshipType} (${rel.value}, ${rel.label || "no label"})\n`;
+      }
+      if (relationships.length > 10) {
+        promptText += `  ... and ${relationships.length - 10} more\n`;
+      }
+      promptText += `\n`;
+
+      promptText += `### Verify:\n`;
+      promptText += `- [ ] NPC attitudes changed by recent interactions are updated\n`;
+      promptText += `- [ ] New alliances or enmities are recorded\n`;
+      promptText += `- [ ] Faction relationships affected by player actions are updated\n`;
+      promptText += `- [ ] Romantic/friendship developments are tracked\n\n`;
+
+      // ========================================
+      // SECTION 6: Items & Inventory
+      // ========================================
+      promptText += `## 6. Items & Inventory\n\n`;
+      promptText += `### Verify:\n`;
+      promptText += `- [ ] Items given to players are added to their inventory\n`;
+      promptText += `- [ ] Items used/consumed are removed or updated\n`;
+      promptText += `- [ ] Loot from combat is distributed\n`;
+      promptText += `- [ ] Gold/currency changes are recorded\n`;
+      promptText += `- [ ] Items dropped at locations are transferred\n\n`;
+
+      // ========================================
+      // SECTION 7: World State & Time
+      // ========================================
+      promptText += `## 7. World State & Time\n\n`;
+      promptText += `### Verify:\n`;
+      promptText += `- [ ] In-game time has been advanced appropriately\n`;
+      promptText += `- [ ] Scheduled events are set for future triggers\n`;
+      promptText += `- [ ] Timers/countdowns are updated\n`;
+      promptText += `- [ ] World changes from player actions are reflected\n\n`;
+
+      // ========================================
+      // SECTION 8: Secrets & Knowledge
+      // ========================================
+      promptText += `## 8. Secrets & Knowledge\n\n`;
+      promptText += `### Verify:\n`;
+      promptText += `- [ ] Secrets discovered by players are revealed to them\n`;
+      promptText += `- [ ] Clues found are added to relevant secrets\n`;
+      promptText += `- [ ] New secrets introduced are created\n`;
+      promptText += `- [ ] Character knowledge is updated\n\n`;
+
+      // ========================================
+      // SECTION 9: Save Pause State
+      // ========================================
+      promptText += `## 9. Save DM Context\n\n`;
+      promptText += `After verifying the above, use \`save_pause_state\` to capture:\n\n`;
+      promptText += `### Required:\n`;
+      promptText += `- **currentScene**: Where are we in the story?\n`;
+      promptText += `- **immediateSituation**: What is happening RIGHT NOW?\n\n`;
+
+      promptText += `### Recommended:\n`;
+      promptText += `- **dmShortTermPlans**: What was about to happen next?\n`;
+      promptText += `- **dmLongTermPlans**: Major arcs being developed\n`;
+      promptText += `- **activeThreads**: Ongoing storylines and their status\n`;
+      promptText += `- **npcAttitudes**: Current NPC emotional states\n`;
+      promptText += `- **pendingPlayerAction**: What was the player considering?\n`;
+      promptText += `- **upcomingReveals**: Secrets close to being discovered\n`;
+      promptText += `- **sceneAtmosphere**: Mood, lighting, tension\n\n`;
+
+      // ========================================
+      // SECTION 10: Final Actions
+      // ========================================
+      promptText += `## 10. Final Actions\n\n`;
+      promptText += `1. **Log a summary event**: Use \`log_event\` with type "session_end" to record a brief summary\n`;
+      promptText += `2. **Generate recap note**: Use \`generate_recap\` to create a recap note\n`;
+      promptText += `3. **Save pause state**: Use \`save_pause_state\` with all relevant context\n`;
+      promptText += `4. **Confirm to player**: Let them know the game is saved and summarize where they left off\n\n`;
+
+      promptText += `---\n\n`;
+      promptText += `Work through each section, making tool calls to create/update any missing entities, then save the pause state.`;
 
       return {
         messages: [
