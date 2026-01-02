@@ -33,7 +33,7 @@ const __dirname = dirname(__filename);
 // Path to Vue app build
 const CLIENT_DIST = join(__dirname, "..", "..", "client", "dist");
 
-export function createHttpServer(port: number = 3000): express.Application {
+export function createHttpServer(port: number = 3456): express.Application {
   const app = express();
 
   app.use(express.json());
@@ -348,12 +348,31 @@ export function createHttpServer(port: number = 3000): express.Application {
   return app;
 }
 
-export function startHttpServer(port: number = 3000): Promise<void> {
-  return new Promise((resolve) => {
+export function startHttpServer(port: number = 3456): Promise<number> {
+  return new Promise((resolve, reject) => {
     const app = createHttpServer(port);
-    app.listen(port, () => {
-      console.error(`HTTP server running at http://localhost:${port}`);
-      resolve();
+    const server = app.listen(port, () => {
+      const addr = server.address();
+      const actualPort = typeof addr === 'object' && addr ? addr.port : port;
+      console.error(`HTTP server running at http://localhost:${actualPort}`);
+      resolve(actualPort);
+    });
+
+    server.on('error', (err: NodeJS.ErrnoException) => {
+      if (err.code === 'EADDRINUSE') {
+        console.error(`Port ${port} in use, trying port 0 (random available)`);
+        server.close();
+        // Try with port 0 to get a random available port
+        const retryServer = app.listen(0, () => {
+          const addr = retryServer.address();
+          const actualPort = typeof addr === 'object' && addr ? addr.port : 0;
+          console.error(`HTTP server running at http://localhost:${actualPort}`);
+          resolve(actualPort);
+        });
+        retryServer.on('error', reject);
+      } else {
+        reject(err);
+      }
     });
   });
 }

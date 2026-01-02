@@ -1,8 +1,20 @@
 /**
+ * Actual port the HTTP server is running on (set at runtime)
+ */
+let actualHttpPort: number | null = null;
+
+/**
+ * Set the actual HTTP port after server starts
+ */
+export function setHttpPort(port: number): void {
+  actualHttpPort = port;
+}
+
+/**
  * Get the base URL for the HTTP web UI
  */
 export function getWebUiBaseUrl(): string {
-  const port = parseInt(process.env.DMCP_HTTP_PORT || "3000", 10);
+  const port = actualHttpPort ?? parseInt(process.env.DMCP_HTTP_PORT || "3456", 10);
   return `http://localhost:${port}`;
 }
 

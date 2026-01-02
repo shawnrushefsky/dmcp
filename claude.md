@@ -49,7 +49,7 @@ DMCP includes a built-in HTTP server that runs alongside the MCP server. This pr
 
 ### Configuration
 
-- **Default Port**: 3000
+- **Default Port**: 3456
 - **Environment Variable**: `DMCP_HTTP_PORT` to change the port
 
 ### Available Routes

@@ -203,7 +203,7 @@ Or use Docker:
       "command": "docker",
       "args": [
         "run", "-i", "--rm",
-        "-p", "3000:3000",
+        "-p", "3456:3456",
         "-v", "dmcp-data:/app/data",
         "ghcr.io/shawnrushefsky/dmcp:latest"
       ]
@@ -290,7 +290,7 @@ For Docker-based MCP clients, use the ghcr.io image:
       "command": "docker",
       "args": [
         "run", "-i", "--rm",
-        "-p", "3000:3000",
+        "-p", "3456:3456",
         "-v", "dmcp-data:/app/data",
         "ghcr.io/shawnrushefsky/dmcp:latest"
       ]
@@ -300,7 +300,7 @@ For Docker-based MCP clients, use the ghcr.io image:
 ```
 
 **Flags:**
-- `-p 3000:3000` exposes the HTTP web UI at http://localhost:3000
+- `-p 3456:3456` exposes the HTTP web UI at http://localhost:3456
 - `-v dmcp-data:/app/data` persists game data across container restarts
 
 To use a different port, add `-e DMCP_HTTP_PORT=8080` and change `-p 8080:8080`.
@@ -321,7 +321,7 @@ npx @modelcontextprotocol/inspector node dist/index.js
 
 DMCP includes a built-in HTTP server with a Vue.js single-page application for viewing game content. It starts automatically alongside the MCP server.
 
-- **Default URL**: http://localhost:3000
+- **Default URL**: http://localhost:3456
 - **Configure Port**: Set `DMCP_HTTP_PORT` environment variable
 
 **Development Mode:**
@@ -401,7 +401,7 @@ Please help me configure this MCP server for my system. Here's what I need you t
    - For source setup: Help me clone the repo, run npm install && npm run build, and configure
 
 3. The configuration should use these settings:
-   - Docker: command "docker" with args ["run", "-i", "--rm", "-p", "3000:3000", "-v", "dmcp-data:/app/data", "ghcr.io/shawnrushefsky/dmcp:latest"]
+   - Docker: command "docker" with args ["run", "-i", "--rm", "-p", "3456:3456", "-v", "dmcp-data:/app/data", "ghcr.io/shawnrushefsky/dmcp:latest"]
    - Source: command "node" with args pointing to the dist/index.js file
 
 4. After configuration, tell me to restart my AI application, then we can start playing!

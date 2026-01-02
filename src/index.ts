@@ -5,6 +5,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { initializeSchema } from "./db/schema.js";
 import { closeDatabase } from "./db/connection.js";
 import { startHttpServer } from "./http/server.js";
+import { setHttpPort } from "./utils/webui.js";
 
 // Import registration functions
 import { registerCoreTools } from "./register/core.js";
@@ -70,11 +71,12 @@ registerMcpPrompts(server);          // Reusable prompt templates
 // ============================================================================
 
 // HTTP server port (configurable via environment variable)
-const HTTP_PORT = parseInt(process.env.DMCP_HTTP_PORT || "3000", 10);
+const HTTP_PORT = parseInt(process.env.DMCP_HTTP_PORT || "3456", 10);
 
 async function main() {
   // Start HTTP server for web UI (runs alongside MCP)
-  await startHttpServer(HTTP_PORT);
+  const actualPort = await startHttpServer(HTTP_PORT);
+  setHttpPort(actualPort);
 
   // Start MCP server with stdio transport
   const transport = new StdioServerTransport();
