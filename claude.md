@@ -24,6 +24,8 @@ npx @modelcontextprotocol/inspector node dist/index.js
 ```
 src/
 ├── index.ts           # MCP server entry point, tool definitions
+├── http/
+│   └── server.ts      # HTTP web UI server (Express)
 ├── db/
 │   ├── connection.ts  # SQLite connection singleton
 │   └── schema.ts      # Database schema and migrations
@@ -40,6 +42,37 @@ src/
 └── types/
     └── index.ts       # TypeScript interfaces
 ```
+
+## HTTP Web UI
+
+DMCP includes a built-in HTTP server that runs alongside the MCP server. This provides a web-based interface for viewing game content.
+
+### Configuration
+
+- **Default Port**: 3000
+- **Environment Variable**: `DMCP_HTTP_PORT` to change the port
+
+### Available Routes
+
+**HTML Pages:**
+- `/` - Home page with list of all game sessions
+- `/sessions/:sessionId` - Session overview with characters, locations, quests
+- `/sessions/:sessionId/map` - ASCII world map view
+- `/sessions/:sessionId/images` - Image gallery
+- `/sessions/:sessionId/history` - Narrative event history
+- `/characters/:characterId` - Character sheet with stats, inventory, images
+- `/locations/:locationId` - Location details with exits, characters, items
+- `/quests/:questId` - Quest objectives and progress
+- `/images/:imageId` - Full image view with metadata
+- `/images/:imageId/file` - Raw image file (supports resize: `?width=200&height=200`)
+
+**JSON API:**
+- `GET /api/sessions` - List all sessions
+- `GET /api/sessions/:sessionId` - Full session state (characters, locations, quests)
+- `GET /api/sessions/:sessionId/map` - Map data structure
+- `GET /api/characters/:characterId` - Character data
+- `GET /api/characters/:characterId/sheet` - Character sheet with ASCII art
+- `GET /api/locations/:locationId` - Location data
 
 ## Key Design Decisions
 
