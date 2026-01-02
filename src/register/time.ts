@@ -351,34 +351,4 @@ export function registerTimeTools(server: McpServer) {
     }
   );
 
-  server.registerTool(
-    "render_timer",
-    {
-      description: "Render an ASCII visualization of a timer",
-      inputSchema: {
-        timerId: z.string().max(100).describe("The timer ID"),
-      },
-      annotations: ANNOTATIONS.READ_ONLY,
-    },
-    async ({ timerId }) => {
-      const render = timerTools.renderTimer(timerId);
-      if (!render) {
-        return {
-          content: [{ type: "text", text: "Timer not found" }],
-          isError: true,
-        };
-      }
-      return {
-        content: [{
-          type: "text",
-          text: JSON.stringify({
-            ascii: render.ascii,
-            percentage: render.percentage,
-            timer: render.timer,
-            instruction: "Display this ASCII timer visualization to the player for dramatic effect.",
-          }, null, 2),
-        }],
-      };
-    }
-  );
 }

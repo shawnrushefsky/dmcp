@@ -56,55 +56,6 @@ export function registerTagTools(server: McpServer) {
   );
 
   // ============================================================================
-  // LEGACY: ADD TAG (kept for backwards compatibility)
-  // ============================================================================
-  server.registerTool(
-    "add_tag",
-    {
-      description: "Add a tag to any entity. Consider using modify_tags for batch operations.",
-      inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
-        entityId: z.string().max(100).describe("The entity ID to tag"),
-        entityType: z.string().max(100).describe("Type of entity (e.g., 'character', 'location', 'item', 'quest')"),
-        tag: z.string().min(1).max(LIMITS.NAME_MAX).describe("The tag to add"),
-        color: z.string().max(50).optional().describe("Optional color hint for the tag"),
-        notes: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("Optional notes about this tag"),
-      },
-      annotations: ANNOTATIONS.CREATE,
-    },
-    async (params) => {
-      const tag = tagTools.addTag(params);
-      return {
-        content: [{ type: "text", text: JSON.stringify(tag, null, 2) }],
-      };
-    }
-  );
-
-  // ============================================================================
-  // LEGACY: REMOVE TAG (kept for backwards compatibility)
-  // ============================================================================
-  server.registerTool(
-    "remove_tag",
-    {
-      description: "Remove a tag from an entity. Consider using modify_tags for batch operations.",
-      inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
-        entityId: z.string().max(100).describe("The entity ID"),
-        entityType: z.string().max(100).describe("Type of entity"),
-        tag: z.string().max(LIMITS.NAME_MAX).describe("The tag to remove"),
-      },
-      annotations: ANNOTATIONS.DESTRUCTIVE,
-    },
-    async (params) => {
-      const success = tagTools.removeTag(params);
-      return {
-        content: [{ type: "text", text: success ? "Tag removed" : "Tag not found" }],
-        isError: !success,
-      };
-    }
-  );
-
-  // ============================================================================
   // LIST TAGS - read-only
   // ============================================================================
   server.registerTool(

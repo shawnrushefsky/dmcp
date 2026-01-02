@@ -6,18 +6,11 @@ import {
   resetDisplayConfig,
   applyThemePreset,
   listThemePresets,
-  setDisplayOptions,
-  setThemeColors,
-  setAppTitle,
-  setFonts,
-  setVisualStyle,
   getSessionDisplayConfig,
   setSessionDisplayConfig,
   applySessionThemePreset,
   resetSessionTheme,
   inferAndApplyTheme,
-  type BorderRadiusStyle,
-  type CardStyle,
 } from "../tools/display.js";
 
 // All available theme presets
@@ -161,130 +154,6 @@ export function registerDisplayTools(server: McpServer): void {
           {
             type: "text",
             text: `Available theme presets:\n${JSON.stringify(presets, null, 2)}`,
-          },
-        ],
-      };
-    }
-  );
-
-  // Set display options (convenience)
-  server.tool(
-    "set_display_options",
-    "Enable or disable specific display components",
-    {
-      showHealthBars: z.boolean().optional().describe("Show/hide health bars"),
-      showAsciiSheets: z.boolean().optional().describe("Show/hide ASCII character sheets"),
-      showConditionTags: z.boolean().optional().describe("Show/hide condition tags"),
-      showImages: z.boolean().optional().describe("Show/hide images"),
-    },
-    async (args) => {
-      const config = setDisplayOptions(args);
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Display options updated:\n- Health Bars: ${config.showHealthBars}\n- ASCII Sheets: ${config.showAsciiSheets}\n- Condition Tags: ${config.showConditionTags}\n- Images: ${config.showImages}`,
-          },
-        ],
-      };
-    }
-  );
-
-  // Set theme colors (convenience)
-  server.tool(
-    "set_theme_colors",
-    "Set the color scheme for the web viewer",
-    {
-      bgColor: z.string().optional().describe("Background color"),
-      bgSecondary: z.string().optional().describe("Secondary background"),
-      bgElevated: z.string().optional().describe("Elevated surface color"),
-      textColor: z.string().optional().describe("Text color"),
-      textMuted: z.string().optional().describe("Muted text"),
-      accentColor: z.string().optional().describe("Accent color"),
-      accentHover: z.string().optional().describe("Accent hover color"),
-      borderColor: z.string().optional().describe("Border color"),
-      successColor: z.string().optional().describe("Success color"),
-      warningColor: z.string().optional().describe("Warning color"),
-      dangerColor: z.string().optional().describe("Danger color"),
-      codeBackground: z.string().optional().describe("Code block background"),
-      codeText: z.string().optional().describe("Code text color"),
-    },
-    async (args) => {
-      const config = setThemeColors(args);
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Theme colors updated. The web viewer will refresh automatically.`,
-          },
-        ],
-      };
-    }
-  );
-
-  // Set app title
-  server.tool(
-    "set_app_title",
-    "Set a custom title for the web viewer (e.g., your campaign name)",
-    {
-      title: z.string().describe("The title to display"),
-    },
-    async ({ title }) => {
-      const config = setAppTitle(title);
-      return {
-        content: [
-          {
-            type: "text",
-            text: `App title set to: "${config.appTitle}"`,
-          },
-        ],
-      };
-    }
-  );
-
-  // Set fonts
-  server.tool(
-    "set_fonts",
-    "Set custom fonts for the web viewer (Google Fonts names)",
-    {
-      fontDisplay: z.string().optional().describe("Display/heading font"),
-      fontBody: z.string().optional().describe("Body text font"),
-      fontMono: z.string().optional().describe("Monospace font"),
-    },
-    async (args) => {
-      const config = setFonts(args);
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Fonts updated:\n- Display: ${config.fontDisplay}\n- Body: ${config.fontBody}\n- Mono: ${config.fontMono}`,
-          },
-        ],
-      };
-    }
-  );
-
-  // Set visual style
-  server.tool(
-    "set_visual_style",
-    "Set visual style options (border radius and card style)",
-    {
-      borderRadius: z
-        .enum(["sharp", "rounded", "soft"])
-        .optional()
-        .describe("Border radius: sharp (0px), rounded (12px), soft (24px)"),
-      cardStyle: z
-        .enum(["clean", "grungy", "tech", "parchment", "metallic", "wooden"])
-        .optional()
-        .describe("Card visual style"),
-    },
-    async (args) => {
-      const config = setVisualStyle(args as { borderRadius?: BorderRadiusStyle; cardStyle?: CardStyle });
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Visual style updated:\n- Border Radius: ${config.borderRadius}\n- Card Style: ${config.cardStyle}`,
           },
         ],
       };

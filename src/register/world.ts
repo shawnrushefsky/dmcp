@@ -111,49 +111,4 @@ export function registerWorldTools(server: McpServer) {
     }
   );
 
-  server.tool(
-    "render_map",
-    "Render an ASCII map of the game world. Can show the full map or a local area around a specific location.",
-    {
-      sessionId: z.string().describe("The session ID"),
-      centerId: z.string().optional().describe("Location ID to center the map on (defaults to player location or first location)"),
-      radius: z.number().optional().describe("Maximum distance from center to show (omit for full map)"),
-      playerLocationId: z.string().optional().describe("Current player location ID (marks with @ on map)"),
-    },
-    async ({ sessionId, centerId, radius, playerLocationId }) => {
-      const mapData = worldTools.renderMap(sessionId, {
-        centerId,
-        radius,
-        showPlayerLocation: !!playerLocationId,
-        playerLocationId,
-      });
-
-      if (!mapData) {
-        return {
-          content: [{ type: "text", text: "No locations found in this session" }],
-          isError: true,
-        };
-      }
-
-      return {
-        content: [{
-          type: "text",
-          text: JSON.stringify({
-            ascii: mapData.ascii,
-            nodeCount: mapData.nodes.length,
-            bounds: mapData.bounds,
-            nodes: mapData.nodes.map(n => ({
-              id: n.id,
-              name: n.name,
-              position: { x: n.x, y: n.y },
-              exits: n.exits.length,
-              isCenter: n.isCenter,
-              hasPlayer: n.hasPlayer,
-            })),
-            instruction: "Display the ASCII map to the player. The @ symbol marks the player's location. Use this to help players visualize the game world.",
-          }, null, 2),
-        }],
-      };
-    }
-  );
 }

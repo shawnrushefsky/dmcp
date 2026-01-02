@@ -176,7 +176,7 @@ export function registerCharacterTools(server: McpServer) {
         success: true,
         characterId,
         newLocationId: locationId,
-        tip: "Consider using render_map to show the player their new position, or describe the new location with ASCII art for atmosphere.",
+        tip: "Consider describing the new location to the player or showing relevant details about what they see.",
       };
       return {
         content: [{ type: "text", text: JSON.stringify(output, null, 2) }],
@@ -302,110 +302,4 @@ export function registerCharacterTools(server: McpServer) {
     }
   );
 
-  // ============================================================================
-  // LEGACY: ADD CONDITION (kept for backwards compatibility)
-  // ============================================================================
-  server.registerTool(
-    "add_condition",
-    {
-      description: "Add a condition to a character. Consider using modify_conditions for batch operations.",
-      inputSchema: {
-        characterId: z.string().describe("The character ID"),
-        condition: z.string().describe("The condition to add"),
-      },
-      outputSchema: {
-        conditions: z.array(z.string()),
-      },
-      annotations: ANNOTATIONS.UPDATE,
-    },
-    async ({ characterId, condition }) => {
-      const character = characterTools.addCondition(characterId, condition);
-      if (!character) {
-        return {
-          content: [{ type: "text", text: "Character not found" }],
-          isError: true,
-        };
-      }
-      const output = { conditions: character.status.conditions };
-      return {
-        content: [{ type: "text", text: JSON.stringify(character.status.conditions, null, 2) }],
-        structuredContent: output as unknown as Record<string, unknown>,
-      };
-    }
-  );
-
-  // ============================================================================
-  // LEGACY: REMOVE CONDITION (kept for backwards compatibility)
-  // ============================================================================
-  server.registerTool(
-    "remove_condition",
-    {
-      description: "Remove a condition from a character. Consider using modify_conditions for batch operations.",
-      inputSchema: {
-        characterId: z.string().describe("The character ID"),
-        condition: z.string().describe("The condition to remove"),
-      },
-      outputSchema: {
-        conditions: z.array(z.string()),
-      },
-      annotations: ANNOTATIONS.UPDATE,
-    },
-    async ({ characterId, condition }) => {
-      const character = characterTools.removeCondition(characterId, condition);
-      if (!character) {
-        return {
-          content: [{ type: "text", text: "Character not found" }],
-          isError: true,
-        };
-      }
-      const output = { conditions: character.status.conditions };
-      return {
-        content: [{ type: "text", text: JSON.stringify(character.status.conditions, null, 2) }],
-        structuredContent: output as unknown as Record<string, unknown>,
-      };
-    }
-  );
-
-  // ============================================================================
-  // RENDER CHARACTER SHEET - read-only
-  // ============================================================================
-  server.registerTool(
-    "render_character_sheet",
-    {
-      description: "Render an ASCII character sheet showing stats, health bar, attributes, skills, inventory, and conditions in a visual format",
-      inputSchema: {
-        characterId: z.string().describe("The character ID"),
-      },
-      outputSchema: {
-        ascii: z.string(),
-        characterId: z.string(),
-        name: z.string(),
-        locationName: z.string().nullable(),
-        inventoryCount: z.number(),
-        instruction: z.string(),
-      },
-      annotations: ANNOTATIONS.READ_ONLY,
-    },
-    async ({ characterId }) => {
-      const sheetData = characterTools.renderCharacterSheet(characterId);
-      if (!sheetData) {
-        return {
-          content: [{ type: "text", text: "Character not found" }],
-          isError: true,
-        };
-      }
-      const output = {
-        ascii: sheetData.ascii,
-        characterId: sheetData.character.id,
-        name: sheetData.character.name,
-        locationName: sheetData.locationName,
-        inventoryCount: sheetData.inventory.length,
-        instruction: "Display the ASCII character sheet to the player. Use this to give players a visual overview of their character status.",
-      };
-      return {
-        content: [{ type: "text", text: JSON.stringify(output, null, 2) }],
-        structuredContent: output as unknown as Record<string, unknown>,
-      };
-    }
-  );
 }

@@ -93,15 +93,15 @@ SQLite database at `data/games.db`. Schema auto-initializes and migrates on star
 
 ## DM Agent Best Practices
 
-### Visual Storytelling with ASCII Art
+### Visual Storytelling
 
-When image generation tools are not available, DM agents should proactively use ASCII art to enhance the experience:
+DM agents should proactively create visualizations to enhance the experience. Use the game data available through `list_locations`, `get_character`, etc. to generate:
 
-- **Maps** - Use `render_map` tool regularly, especially after location changes
+- **Maps** - ASCII or text-based maps showing location connections
 - **Character portraits** - Simple ASCII faces or silhouettes for important NPCs
 - **Items** - ASCII drawings of weapons, artifacts, treasure
 - **Scene illustrations** - Atmospheric art for key moments (tavern interior, dungeon entrance, etc.)
 - **Combat layouts** - Tactical grids showing positions
 - **UI elements** - Health bars, inventory displays, quest trackers
 
-ASCII art creates visual anchors that make the game more immersive and memorable. Use it liberally - players appreciate the effort even with simple art.
+Visual content creates anchors that make the game more immersive and memorable. The agent has flexibility to render data however is most appropriate for the situation.

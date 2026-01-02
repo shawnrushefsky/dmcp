@@ -141,8 +141,7 @@ export function registerCoreTools(server: McpServer) {
               message: `View game at: ${webUiUrl}`,
             },
             tips: {
-              visualization: "Use render_map to show the world. If no image generation is available, use ASCII art liberally for character portraits, items, scene illustrations, and combat layouts to enhance immersion.",
-              mapRecommendation: state.locationCount > 0 ? "Consider showing a map with render_map" : null,
+              visualization: "Use the location and character data to describe the world. Generate ASCII art, maps, or other visualizations as appropriate to enhance immersion.",
             },
           }, null, 2),
         }],

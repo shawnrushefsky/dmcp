@@ -254,3 +254,119 @@ export function removeFactionTrait(factionId: string, trait: string): Faction | 
 
   return { ...faction, traits: newTraits };
 }
+
+// ============================================================================
+// CONSOLIDATED OPERATIONS
+// ============================================================================
+
+export function modifyFactionTraits(
+  factionId: string,
+  params: { add?: string[]; remove?: string[] }
+): { faction: Faction; added: string[]; removed: string[] } | null {
+  const db = getDatabase();
+  const faction = getFaction(factionId);
+  if (!faction) return null;
+
+  let newTraits = [...faction.traits];
+  const added: string[] = [];
+  const removed: string[] = [];
+
+  // Remove traits first
+  if (params.remove?.length) {
+    for (const trait of params.remove) {
+      if (newTraits.includes(trait)) {
+        newTraits = newTraits.filter(t => t !== trait);
+        removed.push(trait);
+      }
+    }
+  }
+
+  // Then add new traits
+  if (params.add?.length) {
+    for (const trait of params.add) {
+      if (!newTraits.includes(trait)) {
+        newTraits.push(trait);
+        added.push(trait);
+      }
+    }
+  }
+
+  db.prepare(`UPDATE factions SET traits = ? WHERE id = ?`)
+    .run(JSON.stringify(newTraits), factionId);
+
+  return {
+    faction: { ...faction, traits: newTraits },
+    added,
+    removed,
+  };
+}
+
+export function modifyFactionGoals(
+  factionId: string,
+  params: { add?: string[]; complete?: number[] }
+): { faction: Faction; added: string[]; completed: string[] } | null {
+  const db = getDatabase();
+  const faction = getFaction(factionId);
+  if (!faction) return null;
+
+  let newGoals = [...faction.goals];
+  const added: string[] = [];
+  const completed: string[] = [];
+
+  // Complete goals first (by index, descending to preserve indices)
+  if (params.complete?.length) {
+    const sortedIndices = [...params.complete].sort((a, b) => b - a);
+    for (const index of sortedIndices) {
+      if (index >= 0 && index < newGoals.length) {
+        completed.push(newGoals[index]);
+        newGoals.splice(index, 1);
+      }
+    }
+  }
+
+  // Then add new goals
+  if (params.add?.length) {
+    for (const goal of params.add) {
+      newGoals.push(goal);
+      added.push(goal);
+    }
+  }
+
+  db.prepare(`UPDATE factions SET goals = ? WHERE id = ?`)
+    .run(JSON.stringify(newGoals), factionId);
+
+  return {
+    faction: { ...faction, goals: newGoals },
+    added,
+    completed,
+  };
+}
+
+export function updateFactionResource(params: {
+  factionId: string;
+  resource: string;
+  mode: "delta" | "set";
+  value: number;
+}): Faction | null {
+  const db = getDatabase();
+  const faction = getFaction(params.factionId);
+  if (!faction) return null;
+
+  const newResources = { ...faction.resources };
+
+  if (params.mode === "delta") {
+    newResources[params.resource] = (newResources[params.resource] || 0) + params.value;
+  } else {
+    newResources[params.resource] = params.value;
+  }
+
+  // Remove resource if zero or negative
+  if (newResources[params.resource] <= 0) {
+    delete newResources[params.resource];
+  }
+
+  db.prepare(`UPDATE factions SET resources = ? WHERE id = ?`)
+    .run(JSON.stringify(newResources), params.factionId);
+
+  return { ...faction, resources: newResources };
+}

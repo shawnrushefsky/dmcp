@@ -19,12 +19,12 @@ An MCP (Model Context Protocol) server that enables AI agents to act as dynamic 
     - [Testing with MCP Inspector](#testing-with-mcp-inspector)
     - [HTTP Web UI](#http-web-ui)
     - [AI Self-Configuration Prompt](#ai-self-configuration-prompt)
-  - [Available Tools (184 total)](#available-tools-184-total)
+  - [Available Tools (169 total)](#available-tools-169-total)
     - [Session Management](#session-management-8-tools)
     - [Game Setup Interview](#game-setup-interview-3-tools)
     - [Rules System](#rules-system-3-tools)
-    - [World Management](#world-management-6-tools)
-    - [Character Management](#character-management-10-tools)
+    - [World Management](#world-management-5-tools)
+    - [Character Management](#character-management-7-tools)
     - [Dice \& Checks](#dice--checks-3-tools)
     - [Combat](#combat-7-tools)
     - [Inventory](#inventory-6-tools)
@@ -33,19 +33,19 @@ An MCP (Model Context Protocol) server that enables AI agents to act as dynamic 
     - [Player Interaction](#player-interaction-2-tools)
     - [Resources](#resources-8-tools)
     - [Time \& Calendar](#time--calendar-7-tools)
-    - [Timers](#timers-8-tools)
+    - [Timers](#timers-7-tools)
     - [Random Tables](#random-tables-8-tools)
     - [Secrets \& Knowledge](#secrets--knowledge-10-tools)
     - [Relationships](#relationships-8-tools)
-    - [Tags](#tags-6-tools)
+    - [Tags](#tags-5-tools)
     - [Status Effects](#status-effects-8-tools)
-    - [Factions](#factions-11-tools)
+    - [Factions](#factions-8-tools)
     - [Abilities \& Powers](#abilities--powers-9-tools)
     - [Session Notes](#session-notes-10-tools)
     - [Pause \& Resume](#pause--resume-7-tools)
     - [Multi-Agent Collaboration](#multi-agent-collaboration-8-tools)
     - [Image Storage](#image-storage-7-tools)
-    - [Display & Theme](#display--theme-9-tools)
+    - [Display & Theme](#display--theme-10-tools)
   - [MCP Prompts (6 total)](#mcp-prompts-6-total)
   - [Example Usage](#example-usage)
     - [Starting a New Game](#starting-a-new-game)
@@ -69,7 +69,7 @@ An MCP (Model Context Protocol) server that enables AI agents to act as dynamic 
 - **Player Choice System** - Structured choices with multi-select and free-form input
 - **Narrative Logging** - Event history for story continuity and export
 - **Dice & Checks** - Flexible dice rolling and skill resolution
-- **ASCII Visualizations** - World maps, character sheets, timer displays
+- **Flexible Visualizations** - Agents can render ASCII art, maps, or other visualizations as appropriate
 - **Factions & Politics** - Organizations with resources, goals, and relationships
 - **Abilities & Powers** - Spells, skills, powers with costs and cooldowns
 - **Status Effects** - Buffs, debuffs with duration, stacking, and modifiers
@@ -362,16 +362,20 @@ The Vue dev server proxies API requests to the backend automatically.
 
 The DM agent can customize the UI theme in real-time using display tools:
 ```javascript
-// Apply a preset theme
+// Apply a preset theme globally
 apply_theme_preset({ preset: "cyberpunk" })
 
-// Or customize individual elements
-set_theme_colors({ bgColor: "#1a1a2e", accentColor: "#00ff88" })
-set_app_title({ title: "Neon Shadows" })
-set_display_options({ showHealthBars: true, showAsciiSheets: false })
+// Or apply to a specific session
+apply_session_theme_preset({ sessionId: "...", preset: "noir" })
+
+// Customize individual elements
+set_display_config({ bgColor: "#1a1a2e", accentColor: "#00ff88", appTitle: "Neon Shadows" })
+
+// Auto-apply theme based on game genre
+auto_theme_session({ sessionId: "...", genre: "sci-fi" })
 ```
 
-Available presets: `dark-fantasy`, `cyberpunk`, `cosmic-horror`, `high-fantasy`, `noir`, `steampunk`, `post-apocalyptic`
+Available presets: `dark-fantasy`, `cyberpunk`, `cosmic-horror`, `high-fantasy`, `noir`, `steampunk`, `post-apocalyptic`, `pirate`, `western`, `modern`, `superhero`, `sci-fi`
 
 ---
 
@@ -415,7 +419,7 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 
 </details>
 
-## Available Tools (184 total)
+## Available Tools (169 total)
 
 ### Session Management (8 tools)
 | Tool | Description |
@@ -443,7 +447,7 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `get_rules` | Retrieve current rules |
 | `update_rules` | Modify rules mid-game |
 
-### World Management (6 tools)
+### World Management (5 tools)
 | Tool | Description |
 |------|-------------|
 | `create_location` | Add a new location |
@@ -451,9 +455,8 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `update_location` | Modify a location |
 | `list_locations` | All locations in session |
 | `connect_locations` | Create paths between locations |
-| `render_map` | ASCII map of world (full or local radius) |
 
-### Character Management (10 tools)
+### Character Management (7 tools)
 | Tool | Description |
 |------|-------------|
 | `create_character` | New PC or NPC (with optional voice) |
@@ -463,9 +466,7 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `move_character` | Change location |
 | `apply_damage` | Deal damage |
 | `heal_character` | Restore health |
-| `add_condition` | Apply status effect |
-| `remove_condition` | Remove status effect |
-| `render_character_sheet` | ASCII character sheet with stats & inventory |
+| `modify_conditions` | Add and/or remove conditions in one call |
 
 ### Dice & Checks (3 tools)
 | Tool | Description |
@@ -544,7 +545,7 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `list_scheduled_events` | List upcoming events |
 | `cancel_event` | Cancel scheduled event |
 
-### Timers (8 tools)
+### Timers (7 tools)
 | Tool | Description |
 |------|-------------|
 | `create_timer` | Create countdown, stopwatch, or segmented clock |
@@ -554,7 +555,6 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `list_timers` | List active timers |
 | `tick_timer` | Advance/reduce timer |
 | `reset_timer` | Reset to initial state |
-| `render_timer` | ASCII visualization of timer |
 
 ### Random Tables (8 tools)
 | Tool | Description |
@@ -594,11 +594,10 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `list_relationships` | List with filters |
 | `get_relationship_history` | Get change history |
 
-### Tags (6 tools)
+### Tags (5 tools)
 | Tool | Description |
 |------|-------------|
-| `add_tag` | Tag any entity |
-| `remove_tag` | Remove tag |
+| `modify_tags` | Add and/or remove tags in one call |
 | `list_tags` | List all unique tags with counts |
 | `get_entity_tags` | Get tags for specific entity |
 | `find_by_tag` | Find entities by tag |
@@ -616,7 +615,7 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `clear_status_effects` | Remove all effects |
 | `get_effective_modifiers` | Sum all stat modifiers |
 
-### Factions (11 tools)
+### Factions (8 tools)
 | Tool | Description |
 |------|-------------|
 | `create_faction` | Create faction/organization |
@@ -624,12 +623,9 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `update_faction` | Update faction details |
 | `delete_faction` | Remove faction |
 | `list_factions` | List factions |
-| `modify_faction_resource` | Add/subtract resource |
-| `set_faction_resource` | Set resource value |
-| `add_faction_goal` | Add goal to faction |
-| `complete_faction_goal` | Mark goal complete |
-| `add_faction_trait` | Add trait |
-| `remove_faction_trait` | Remove trait |
+| `update_faction_resource` | Update resource (delta or set mode) |
+| `modify_faction_goals` | Add and/or complete goals in one call |
+| `modify_faction_traits` | Add and/or remove traits in one call |
 
 ### Abilities & Powers (9 tools)
 | Tool | Description |
@@ -692,18 +688,19 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `set_primary_image` | Set image as primary for entity |
 | `update_image_metadata` | Update image label/description |
 
-### Display & Theme (9 tools)
+### Display & Theme (10 tools)
 | Tool | Description |
 |------|-------------|
 | `get_display_config` | Get current theme/display configuration |
-| `set_display_config` | Set complete display configuration |
+| `set_display_config` | Set any display configuration options |
 | `reset_display_config` | Reset to default theme |
 | `apply_theme_preset` | Apply a preset theme (dark-fantasy, cyberpunk, cosmic-horror, etc.) |
 | `list_theme_presets` | List available theme presets |
-| `set_display_options` | Toggle UI components (health bars, ASCII sheets, etc.) |
-| `set_theme_colors` | Set individual theme colors |
-| `set_app_title` | Set the app title in the header |
-| `set_fonts` | Set body and ASCII fonts |
+| `get_session_theme` | Get session-specific theme config |
+| `set_session_theme` | Set session-specific theme |
+| `apply_session_theme_preset` | Apply preset to specific session |
+| `reset_session_theme` | Revert session to global theme |
+| `auto_theme_session` | Auto-apply theme based on genre |
 
 ## MCP Prompts (6 total)
 

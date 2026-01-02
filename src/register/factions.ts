@@ -118,19 +118,23 @@ export function registerFactionTools(server: McpServer) {
     }
   );
 
+  // ============================================================================
+  // CONSOLIDATED: UPDATE FACTION RESOURCE (replaces modify_faction_resource + set_faction_resource)
+  // ============================================================================
   server.registerTool(
-    "modify_faction_resource",
+    "update_faction_resource",
     {
-      description: "Add or subtract from a faction resource",
+      description: "Update a faction resource value. Use mode 'delta' to add/subtract, or 'set' to set an absolute value.",
       inputSchema: {
         factionId: z.string().max(100).describe("The faction ID"),
         resource: z.string().max(LIMITS.NAME_MAX).describe("Resource name (e.g., 'gold', 'soldiers')"),
-        delta: z.number().describe("Amount to add (positive) or subtract (negative)"),
+        mode: z.enum(["delta", "set"]).describe("'delta' to add/subtract from current value, 'set' to set absolute value"),
+        value: z.number().describe("Amount to add/subtract (for delta) or absolute value (for set). Values <= 0 remove the resource."),
       },
       annotations: ANNOTATIONS.UPDATE,
     },
     async (params) => {
-      const faction = factionTools.modifyFactionResource(params);
+      const faction = factionTools.updateFactionResource(params);
       if (!faction) {
         return {
           content: [{ type: "text", text: "Faction not found" }],
@@ -143,123 +147,84 @@ export function registerFactionTools(server: McpServer) {
     }
   );
 
+  // ============================================================================
+  // CONSOLIDATED: MODIFY FACTION GOALS (replaces add_faction_goal + complete_faction_goal)
+  // ============================================================================
   server.registerTool(
-    "set_faction_resource",
+    "modify_faction_goals",
     {
-      description: "Set a faction resource to a specific value",
+      description: "Add and/or complete faction goals in a single call. More efficient than separate add/complete calls.",
       inputSchema: {
         factionId: z.string().max(100).describe("The faction ID"),
-        resource: z.string().max(LIMITS.NAME_MAX).describe("Resource name"),
-        value: z.number().describe("New value (0 or less removes the resource)"),
-      },
-      annotations: ANNOTATIONS.SET,
-    },
-    async (params) => {
-      const faction = factionTools.setFactionResource(params);
-      if (!faction) {
-        return {
-          content: [{ type: "text", text: "Faction not found" }],
-          isError: true,
-        };
-      }
-      return {
-        content: [{ type: "text", text: JSON.stringify(faction, null, 2) }],
-      };
-    }
-  );
-
-  server.registerTool(
-    "add_faction_goal",
-    {
-      description: "Add a goal to a faction",
-      inputSchema: {
-        factionId: z.string().max(100).describe("The faction ID"),
-        goal: z.string().max(LIMITS.DESCRIPTION_MAX).describe("The goal to add"),
+        add: z.array(z.string().max(LIMITS.DESCRIPTION_MAX)).max(LIMITS.ARRAY_MAX).optional().describe("Goals to add"),
+        complete: z.array(z.number()).max(LIMITS.ARRAY_MAX).optional().describe("Indices of goals to complete (0-based)"),
       },
       annotations: ANNOTATIONS.UPDATE,
     },
-    async ({ factionId, goal }) => {
-      const faction = factionTools.addFactionGoal(factionId, goal);
-      if (!faction) {
+    async ({ factionId, add, complete }) => {
+      if (!add?.length && !complete?.length) {
+        return {
+          content: [{ type: "text", text: "No goals to add or complete" }],
+          isError: true,
+        };
+      }
+
+      const result = factionTools.modifyFactionGoals(factionId, { add, complete });
+      if (!result) {
         return {
           content: [{ type: "text", text: "Faction not found" }],
           isError: true,
         };
       }
+
       return {
-        content: [{ type: "text", text: JSON.stringify(faction, null, 2) }],
+        content: [{ type: "text", text: JSON.stringify({
+          factionId: result.faction.id,
+          goals: result.faction.goals,
+          added: result.added,
+          completed: result.completed,
+        }, null, 2) }],
       };
     }
   );
 
+  // ============================================================================
+  // CONSOLIDATED: MODIFY FACTION TRAITS (replaces add_faction_trait + remove_faction_trait)
+  // ============================================================================
   server.registerTool(
-    "complete_faction_goal",
+    "modify_faction_traits",
     {
-      description: "Mark a faction goal as complete (removes it)",
+      description: "Add and/or remove faction traits in a single call. More efficient than separate add/remove calls.",
       inputSchema: {
         factionId: z.string().max(100).describe("The faction ID"),
-        goalIndex: z.number().describe("Index of the goal to complete (0-based)"),
+        add: z.array(z.string().max(LIMITS.NAME_MAX)).max(LIMITS.ARRAY_MAX).optional().describe("Traits to add"),
+        remove: z.array(z.string().max(LIMITS.NAME_MAX)).max(LIMITS.ARRAY_MAX).optional().describe("Traits to remove"),
       },
       annotations: ANNOTATIONS.UPDATE,
     },
-    async ({ factionId, goalIndex }) => {
-      const faction = factionTools.completeFactionGoal(factionId, goalIndex);
-      if (!faction) {
+    async ({ factionId, add, remove }) => {
+      if (!add?.length && !remove?.length) {
         return {
-          content: [{ type: "text", text: "Faction not found or invalid goal index" }],
+          content: [{ type: "text", text: "No traits to add or remove" }],
           isError: true,
         };
       }
-      return {
-        content: [{ type: "text", text: JSON.stringify(faction, null, 2) }],
-      };
-    }
-  );
 
-  server.registerTool(
-    "add_faction_trait",
-    {
-      description: "Add a trait to a faction",
-      inputSchema: {
-        factionId: z.string().max(100).describe("The faction ID"),
-        trait: z.string().max(LIMITS.NAME_MAX).describe("The trait to add"),
-      },
-      annotations: ANNOTATIONS.UPDATE,
-    },
-    async ({ factionId, trait }) => {
-      const faction = factionTools.addFactionTrait(factionId, trait);
-      if (!faction) {
+      const result = factionTools.modifyFactionTraits(factionId, { add, remove });
+      if (!result) {
         return {
           content: [{ type: "text", text: "Faction not found" }],
           isError: true,
         };
       }
-      return {
-        content: [{ type: "text", text: JSON.stringify(faction, null, 2) }],
-      };
-    }
-  );
 
-  server.registerTool(
-    "remove_faction_trait",
-    {
-      description: "Remove a trait from a faction",
-      inputSchema: {
-        factionId: z.string().max(100).describe("The faction ID"),
-        trait: z.string().max(LIMITS.NAME_MAX).describe("The trait to remove"),
-      },
-      annotations: ANNOTATIONS.DESTRUCTIVE,
-    },
-    async ({ factionId, trait }) => {
-      const faction = factionTools.removeFactionTrait(factionId, trait);
-      if (!faction) {
-        return {
-          content: [{ type: "text", text: "Faction not found" }],
-          isError: true,
-        };
-      }
       return {
-        content: [{ type: "text", text: JSON.stringify(faction, null, 2) }],
+        content: [{ type: "text", text: JSON.stringify({
+          factionId: result.faction.id,
+          traits: result.faction.traits,
+          added: result.added,
+          removed: result.removed,
+        }, null, 2) }],
       };
     }
   );
