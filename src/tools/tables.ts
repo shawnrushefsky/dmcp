@@ -189,26 +189,44 @@ export function rollTable(tableId: string, modifier = 0): TableRollResult | null
   return result;
 }
 
-export function addTableEntry(tableId: string, entry: TableEntry): RandomTable | null {
+/**
+ * Modify table entries - add and/or remove entries in a single call.
+ */
+export function modifyTableEntries(
+  tableId: string,
+  params: {
+    add?: TableEntry[];
+    remove?: number[]; // indices to remove
+  }
+): { table: RandomTable; added: number; removed: number } | null {
   const table = getTable(tableId);
   if (!table) return null;
 
-  const newEntries = [...table.entries, entry];
+  let entries = [...table.entries];
+  let removedCount = 0;
 
-  return updateTable(tableId, { entries: newEntries });
-}
+  // Remove entries first (process in reverse order to maintain indices)
+  if (params.remove && params.remove.length > 0) {
+    const indicesToRemove = [...new Set(params.remove)]
+      .filter(i => i >= 0 && i < entries.length)
+      .sort((a, b) => b - a); // Sort descending
 
-export function removeTableEntry(tableId: string, index: number): RandomTable | null {
-  const table = getTable(tableId);
-  if (!table) return null;
-
-  if (index < 0 || index >= table.entries.length) {
-    return null;
+    for (const idx of indicesToRemove) {
+      entries.splice(idx, 1);
+      removedCount++;
+    }
   }
 
-  const newEntries = table.entries.filter((_, i) => i !== index);
+  // Add new entries
+  const addedCount = params.add?.length || 0;
+  if (params.add) {
+    entries = [...entries, ...params.add];
+  }
 
-  return updateTable(tableId, { entries: newEntries });
+  const updated = updateTable(tableId, { entries });
+  if (!updated) return null;
+
+  return { table: updated, added: addedCount, removed: removedCount };
 }
 
 // Helper to create a simple d6 table quickly

@@ -3,20 +3,24 @@ import { z } from "zod";
 import * as worldTools from "../tools/world.js";
 import { imageGenSchema } from "../schemas/index.js";
 import { LIMITS } from "../utils/validation.js";
+import { ANNOTATIONS } from "../utils/tool-annotations.js";
 
 export function registerWorldTools(server: McpServer) {
-  server.tool(
+  server.registerTool(
     "create_location",
-    "Create a new location in the game world",
     {
-      sessionId: z.string().max(100).describe("The session ID"),
-      name: z.string().min(1).max(LIMITS.NAME_MAX).describe("Location name"),
-      description: z.string().max(LIMITS.DESCRIPTION_MAX).describe("Location description"),
-      properties: z.object({
-        features: z.array(z.string().max(LIMITS.NAME_MAX)).max(LIMITS.ARRAY_MAX).optional(),
-        atmosphere: z.string().max(LIMITS.DESCRIPTION_MAX).optional(),
-      }).optional().describe("Additional location properties"),
-      imageGen: imageGenSchema.optional().describe("Image generation metadata for location art"),
+      description: "Create a new location in the game world",
+      inputSchema: {
+        sessionId: z.string().max(100).describe("The session ID"),
+        name: z.string().min(1).max(LIMITS.NAME_MAX).describe("Location name"),
+        description: z.string().max(LIMITS.DESCRIPTION_MAX).describe("Location description"),
+        properties: z.object({
+          features: z.array(z.string().max(LIMITS.NAME_MAX)).max(LIMITS.ARRAY_MAX).optional(),
+          atmosphere: z.string().max(LIMITS.DESCRIPTION_MAX).optional(),
+        }).optional().describe("Additional location properties"),
+        imageGen: imageGenSchema.optional().describe("Image generation metadata for location art"),
+      },
+      annotations: ANNOTATIONS.CREATE,
     },
     async ({ sessionId, name, description, properties, imageGen }) => {
       const location = worldTools.createLocation({ sessionId, name, description, properties, imageGen });
@@ -26,11 +30,14 @@ export function registerWorldTools(server: McpServer) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "get_location",
-    "Get location details",
     {
-      locationId: z.string().describe("The location ID"),
+      description: "Get location details",
+      inputSchema: {
+        locationId: z.string().describe("The location ID"),
+      },
+      annotations: ANNOTATIONS.READ_ONLY,
     },
     async ({ locationId }) => {
       const location = worldTools.getLocation(locationId);
@@ -46,15 +53,18 @@ export function registerWorldTools(server: McpServer) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "update_location",
-    "Update a location",
     {
-      locationId: z.string().describe("The location ID"),
-      name: z.string().optional().describe("New name"),
-      description: z.string().optional().describe("New description"),
-      properties: z.record(z.string(), z.unknown()).optional().describe("Property updates"),
-      imageGen: imageGenSchema.nullable().optional().describe("Image generation metadata (null to remove)"),
+      description: "Update a location",
+      inputSchema: {
+        locationId: z.string().describe("The location ID"),
+        name: z.string().optional().describe("New name"),
+        description: z.string().optional().describe("New description"),
+        properties: z.record(z.string(), z.unknown()).optional().describe("Property updates"),
+        imageGen: imageGenSchema.nullable().optional().describe("Image generation metadata (null to remove)"),
+      },
+      annotations: ANNOTATIONS.UPDATE,
     },
     async ({ locationId, name, description, properties, imageGen }) => {
       const location = worldTools.updateLocation(locationId, { name, description, properties, imageGen });
@@ -70,11 +80,14 @@ export function registerWorldTools(server: McpServer) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "list_locations",
-    "List all locations in a session",
     {
-      sessionId: z.string().describe("The session ID"),
+      description: "List all locations in a session",
+      inputSchema: {
+        sessionId: z.string().describe("The session ID"),
+      },
+      annotations: ANNOTATIONS.READ_ONLY,
     },
     async ({ sessionId }) => {
       const locations = worldTools.listLocations(sessionId);
@@ -84,16 +97,19 @@ export function registerWorldTools(server: McpServer) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "connect_locations",
-    "Create exits/paths between two locations",
     {
-      fromLocationId: z.string().describe("First location ID"),
-      toLocationId: z.string().describe("Second location ID"),
-      fromDirection: z.string().describe("Direction from first location (e.g., 'north', 'up', 'through the door')"),
-      toDirection: z.string().describe("Direction from second location back (e.g., 'south', 'down')"),
-      description: z.string().optional().describe("Description of the path"),
-      bidirectional: z.boolean().optional().describe("Create exit in both directions (default: true)"),
+      description: "Create exits/paths between two locations",
+      inputSchema: {
+        fromLocationId: z.string().describe("First location ID"),
+        toLocationId: z.string().describe("Second location ID"),
+        fromDirection: z.string().describe("Direction from first location (e.g., 'north', 'up', 'through the door')"),
+        toDirection: z.string().describe("Direction from second location back (e.g., 'south', 'down')"),
+        description: z.string().optional().describe("Description of the path"),
+        bidirectional: z.boolean().optional().describe("Create exit in both directions (default: true)"),
+      },
+      annotations: ANNOTATIONS.CREATE,
     },
     async ({ fromLocationId, toLocationId, fromDirection, toDirection, description, bidirectional }) => {
       const success = worldTools.connectLocations({

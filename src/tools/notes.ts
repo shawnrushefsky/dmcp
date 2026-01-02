@@ -212,36 +212,46 @@ export function pinNote(id: string, pinned: boolean): Note | null {
   return { ...note, pinned, updatedAt: now };
 }
 
-export function addNoteTag(id: string, tag: string): Note | null {
+/**
+ * Modify note tags - add and/or remove tags in a single call.
+ */
+export function modifyNoteTags(
+  id: string,
+  params: { add?: string[]; remove?: string[] }
+): { note: Note; added: string[]; removed: string[] } | null {
   const db = getDatabase();
   const note = getNote(id);
   if (!note) return null;
 
-  if (note.tags.includes(tag)) {
-    return note;
+  let tags = [...note.tags];
+  const added: string[] = [];
+  const removed: string[] = [];
+
+  // Remove tags first
+  if (params.remove) {
+    for (const tag of params.remove) {
+      if (tags.includes(tag)) {
+        tags = tags.filter(t => t !== tag);
+        removed.push(tag);
+      }
+    }
+  }
+
+  // Add new tags
+  if (params.add) {
+    for (const tag of params.add) {
+      if (!tags.includes(tag)) {
+        tags.push(tag);
+        added.push(tag);
+      }
+    }
   }
 
   const now = new Date().toISOString();
-  const newTags = [...note.tags, tag];
-
   db.prepare(`UPDATE notes SET tags = ?, updated_at = ? WHERE id = ?`)
-    .run(JSON.stringify(newTags), now, id);
+    .run(JSON.stringify(tags), now, id);
 
-  return { ...note, tags: newTags, updatedAt: now };
-}
-
-export function removeNoteTag(id: string, tag: string): Note | null {
-  const db = getDatabase();
-  const note = getNote(id);
-  if (!note) return null;
-
-  const now = new Date().toISOString();
-  const newTags = note.tags.filter(t => t !== tag);
-
-  db.prepare(`UPDATE notes SET tags = ?, updated_at = ? WHERE id = ?`)
-    .run(JSON.stringify(newTags), now, id);
-
-  return { ...note, tags: newTags, updatedAt: now };
+  return { note: { ...note, tags, updatedAt: now }, added, removed };
 }
 
 export function generateRecap(sessionId: string, eventLimit = 20): Note {

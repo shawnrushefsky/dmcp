@@ -164,27 +164,46 @@ export function listSecrets(
   return secrets;
 }
 
-export function revealSecret(secretId: string, characterIds: string[]): Secret | null {
+/**
+ * Modify secret visibility - reveal to specific characters or make public in a single call.
+ */
+export function modifySecretVisibility(
+  secretId: string,
+  params: { revealTo?: string[]; makePublic?: boolean }
+): { secret: Secret; revealedToNew: string[]; madePublic: boolean } | null {
   const db = getDatabase();
   const secret = getSecret(secretId);
   if (!secret) return null;
 
-  const newRevealedTo = [...new Set([...secret.revealedTo, ...characterIds])];
+  let revealedTo = [...secret.revealedTo];
+  const revealedToNew: string[] = [];
+  let madePublic = false;
+  let isPublic = secret.isPublic;
 
-  db.prepare(`UPDATE secrets SET revealed_to = ? WHERE id = ?`)
-    .run(JSON.stringify(newRevealedTo), secretId);
+  // Reveal to specific characters
+  if (params.revealTo) {
+    for (const charId of params.revealTo) {
+      if (!revealedTo.includes(charId)) {
+        revealedTo.push(charId);
+        revealedToNew.push(charId);
+      }
+    }
+    db.prepare(`UPDATE secrets SET revealed_to = ? WHERE id = ?`)
+      .run(JSON.stringify(revealedTo), secretId);
+  }
 
-  return { ...secret, revealedTo: newRevealedTo };
-}
+  // Make public
+  if (params.makePublic && !secret.isPublic) {
+    db.prepare(`UPDATE secrets SET is_public = 1 WHERE id = ?`).run(secretId);
+    isPublic = true;
+    madePublic = true;
+  }
 
-export function makePublic(secretId: string): Secret | null {
-  const db = getDatabase();
-  const secret = getSecret(secretId);
-  if (!secret) return null;
-
-  db.prepare(`UPDATE secrets SET is_public = 1 WHERE id = ?`).run(secretId);
-
-  return { ...secret, isPublic: true };
+  return {
+    secret: { ...secret, revealedTo, isPublic },
+    revealedToNew,
+    madePublic,
+  };
 }
 
 export function addClue(secretId: string, clue: string): Secret | null {

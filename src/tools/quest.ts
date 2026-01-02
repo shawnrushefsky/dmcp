@@ -96,17 +96,48 @@ export function updateQuest(
   };
 }
 
-export function completeObjective(
+/**
+ * Modify quest objectives - add new objectives and/or complete existing ones in a single call.
+ */
+export function modifyObjectives(
   questId: string,
-  objectiveId: string
-): Quest | null {
+  params: {
+    add?: Array<{ description: string; optional?: boolean }>;
+    complete?: string[]; // objective IDs to mark complete
+  }
+): { quest: Quest; added: QuestObjective[]; completed: string[] } | null {
   const db = getDatabase();
   const quest = getQuest(questId);
   if (!quest) return null;
 
-  const objectives = quest.objectives.map((obj) =>
-    obj.id === objectiveId ? { ...obj, completed: true } : obj
-  );
+  let objectives = [...quest.objectives];
+  const added: QuestObjective[] = [];
+  const completed: string[] = [];
+
+  // Complete objectives first
+  if (params.complete) {
+    for (const objectiveId of params.complete) {
+      const idx = objectives.findIndex((o) => o.id === objectiveId);
+      if (idx !== -1 && !objectives[idx].completed) {
+        objectives[idx] = { ...objectives[idx], completed: true };
+        completed.push(objectiveId);
+      }
+    }
+  }
+
+  // Add new objectives
+  if (params.add) {
+    for (const obj of params.add) {
+      const newObjective: QuestObjective = {
+        id: uuidv4(),
+        description: obj.description,
+        completed: false,
+        optional: obj.optional,
+      };
+      objectives.push(newObjective);
+      added.push(newObjective);
+    }
+  }
 
   const stmt = db.prepare(`UPDATE quests SET objectives = ? WHERE id = ?`);
   stmt.run(JSON.stringify(objectives), questId);
@@ -116,45 +147,15 @@ export function completeObjective(
     .filter((o) => !o.optional)
     .every((o) => o.completed);
 
-  if (requiredComplete) {
+  let finalQuest: Quest;
+  if (requiredComplete && quest.status === "active") {
     updateQuest(questId, { status: "completed" });
-    return {
-      ...quest,
-      objectives,
-      status: "completed",
-    };
+    finalQuest = { ...quest, objectives, status: "completed" };
+  } else {
+    finalQuest = { ...quest, objectives };
   }
 
-  return {
-    ...quest,
-    objectives,
-  };
-}
-
-export function addObjective(
-  questId: string,
-  objective: Omit<QuestObjective, "id">
-): Quest | null {
-  const db = getDatabase();
-  const quest = getQuest(questId);
-  if (!quest) return null;
-
-  const newObjective: QuestObjective = {
-    id: uuidv4(),
-    description: objective.description,
-    completed: objective.completed || false,
-    optional: objective.optional,
-  };
-
-  const objectives = [...quest.objectives, newObjective];
-
-  const stmt = db.prepare(`UPDATE quests SET objectives = ? WHERE id = ?`);
-  stmt.run(JSON.stringify(objectives), questId);
-
-  return {
-    ...quest,
-    objectives,
-  };
+  return { quest: finalQuest, added, completed };
 }
 
 export function deleteQuest(id: string): boolean {

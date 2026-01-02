@@ -147,50 +147,38 @@ export function registerTableTools(server: McpServer) {
     }
   );
 
+  // ============================================================================
+  // MODIFY TABLE ENTRIES - CONSOLIDATED (replaces add_table_entry + remove_table_entry)
+  // ============================================================================
   server.registerTool(
-    "add_table_entry",
+    "modify_table_entries",
     {
-      description: "Add an entry to an existing random table",
+      description: "Add and/or remove table entries in a single call. More efficient than separate add/remove calls.",
       inputSchema: {
         tableId: z.string().max(100).describe("The table ID"),
-        entry: tableEntrySchema.describe("The entry to add"),
+        add: z.array(tableEntrySchema).max(LIMITS.ARRAY_MAX).optional().describe("Entries to add"),
+        remove: z.array(z.number()).max(LIMITS.ARRAY_MAX).optional().describe("Indices of entries to remove (0-based)"),
       },
       annotations: ANNOTATIONS.UPDATE,
     },
-    async ({ tableId, entry }) => {
-      const table = tableTools.addTableEntry(tableId, entry);
-      if (!table) {
+    async ({ tableId, add, remove }) => {
+      if (!add?.length && !remove?.length) {
+        return {
+          content: [{ type: "text", text: "No entries to add or remove" }],
+          isError: true,
+        };
+      }
+
+      const result = tableTools.modifyTableEntries(tableId, { add, remove });
+      if (!result) {
         return {
           content: [{ type: "text", text: "Table not found" }],
           isError: true,
         };
       }
-      return {
-        content: [{ type: "text", text: JSON.stringify(table, null, 2) }],
-      };
-    }
-  );
 
-  server.registerTool(
-    "remove_table_entry",
-    {
-      description: "Remove an entry from a random table by index",
-      inputSchema: {
-        tableId: z.string().max(100).describe("The table ID"),
-        index: z.number().describe("Index of the entry to remove (0-based)"),
-      },
-      annotations: ANNOTATIONS.DESTRUCTIVE,
-    },
-    async ({ tableId, index }) => {
-      const table = tableTools.removeTableEntry(tableId, index);
-      if (!table) {
-        return {
-          content: [{ type: "text", text: "Table not found or invalid index" }],
-          isError: true,
-        };
-      }
       return {
-        content: [{ type: "text", text: JSON.stringify(table, null, 2) }],
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };
     }
   );

@@ -300,6 +300,78 @@ export function getRelationshipHistory(relationshipId: string, limit?: number): 
   }));
 }
 
+/**
+ * Update a relationship value with optional metadata changes. Supports both direct set and delta modes.
+ * Logs to history when value changes.
+ */
+export function updateRelationshipValue(params: {
+  relationshipId: string;
+  mode: "delta" | "set";
+  value: number;
+  reason?: string;
+  minValue?: number;
+  maxValue?: number;
+  relationshipType?: string;
+  label?: string | null;
+  notes?: string;
+}): { relationship: Relationship; change: RelationshipChange | null; previousValue: number } | null {
+  const db = getDatabase();
+  const relationship = getRelationship(params.relationshipId);
+  if (!relationship) return null;
+
+  const previousValue = relationship.value;
+  let newValue: number;
+
+  if (params.mode === "delta") {
+    newValue = previousValue + params.value;
+  } else {
+    newValue = params.value;
+  }
+
+  // Apply bounds
+  if (params.minValue !== undefined) {
+    newValue = Math.max(newValue, params.minValue);
+  }
+  if (params.maxValue !== undefined) {
+    newValue = Math.min(newValue, params.maxValue);
+  }
+
+  const now = new Date().toISOString();
+  const newType = params.relationshipType ?? relationship.relationshipType;
+  const newLabel = params.label !== undefined ? params.label : relationship.label;
+  const newNotes = params.notes ?? relationship.notes;
+
+  db.prepare(`
+    UPDATE relationships
+    SET relationship_type = ?, value = ?, label = ?, notes = ?, updated_at = ?
+    WHERE id = ?
+  `).run(newType, newValue, newLabel, newNotes, now, params.relationshipId);
+
+  // Log to history if value changed
+  let change: RelationshipChange | null = null;
+  if (newValue !== previousValue) {
+    change = logRelationshipChange(
+      params.relationshipId,
+      previousValue,
+      newValue,
+      params.reason || null
+    );
+  }
+
+  return {
+    relationship: {
+      ...relationship,
+      relationshipType: newType,
+      value: newValue,
+      label: newLabel,
+      notes: newNotes,
+      updatedAt: now,
+    },
+    change,
+    previousValue,
+  };
+}
+
 // Helper to get a value label based on thresholds
 export function getRelationshipLabel(value: number): string {
   if (value >= 80) return "devoted";

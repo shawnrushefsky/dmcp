@@ -162,50 +162,38 @@ export function registerNoteTools(server: McpServer) {
     }
   );
 
+  // ============================================================================
+  // MODIFY NOTE TAGS - CONSOLIDATED (replaces add_note_tag + remove_note_tag)
+  // ============================================================================
   server.registerTool(
-    "add_note_tag",
+    "modify_note_tags",
     {
-      description: "Add a tag to a note",
+      description: "Add and/or remove tags from a note in a single call. More efficient than separate add/remove calls.",
       inputSchema: {
         noteId: z.string().max(100).describe("The note ID"),
-        tag: z.string().min(1).max(LIMITS.NAME_MAX).describe("Tag to add"),
+        add: z.array(z.string().min(1).max(LIMITS.NAME_MAX)).max(LIMITS.ARRAY_MAX).optional().describe("Tags to add"),
+        remove: z.array(z.string().max(LIMITS.NAME_MAX)).max(LIMITS.ARRAY_MAX).optional().describe("Tags to remove"),
       },
       annotations: ANNOTATIONS.UPDATE,
     },
-    async ({ noteId, tag }) => {
-      const note = noteTools.addNoteTag(noteId, tag);
-      if (!note) {
+    async ({ noteId, add, remove }) => {
+      if (!add?.length && !remove?.length) {
         return {
-          content: [{ type: "text", text: "Note not found" }],
+          content: [{ type: "text", text: "No tags to add or remove" }],
           isError: true,
         };
       }
-      return {
-        content: [{ type: "text", text: JSON.stringify(note, null, 2) }],
-      };
-    }
-  );
 
-  server.registerTool(
-    "remove_note_tag",
-    {
-      description: "Remove a tag from a note",
-      inputSchema: {
-        noteId: z.string().max(100).describe("The note ID"),
-        tag: z.string().max(LIMITS.NAME_MAX).describe("Tag to remove"),
-      },
-      annotations: ANNOTATIONS.DESTRUCTIVE,
-    },
-    async ({ noteId, tag }) => {
-      const note = noteTools.removeNoteTag(noteId, tag);
-      if (!note) {
+      const result = noteTools.modifyNoteTags(noteId, { add, remove });
+      if (!result) {
         return {
           content: [{ type: "text", text: "Note not found" }],
           isError: true,
         };
       }
+
       return {
-        content: [{ type: "text", text: JSON.stringify(note, null, 2) }],
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };
     }
   );

@@ -210,27 +210,33 @@ export function moveCharacter(
   return result.changes > 0;
 }
 
-export function applyDamage(characterId: string, amount: number): Character | null {
+/**
+ * Modify a character's health - damage or heal in a single call.
+ * Use mode: "damage" to reduce health, mode: "heal" to restore health.
+ */
+export function modifyHealth(
+  characterId: string,
+  params: { mode: "damage" | "heal"; amount: number }
+): { character: Character; previousHealth: number; newHealth: number } | null {
   const character = getCharacter(characterId);
   if (!character) return null;
 
-  const newHealth = Math.max(0, character.status.health - amount);
-  return updateCharacter(characterId, {
+  const previousHealth = character.status.health;
+  let newHealth: number;
+
+  if (params.mode === "damage") {
+    newHealth = Math.max(0, character.status.health - params.amount);
+  } else {
+    newHealth = Math.min(character.status.maxHealth, character.status.health + params.amount);
+  }
+
+  const updated = updateCharacter(characterId, {
     status: { health: newHealth },
   });
-}
 
-export function heal(characterId: string, amount: number): Character | null {
-  const character = getCharacter(characterId);
-  if (!character) return null;
+  if (!updated) return null;
 
-  const newHealth = Math.min(
-    character.status.maxHealth,
-    character.status.health + amount
-  );
-  return updateCharacter(characterId, {
-    status: { health: newHealth },
-  });
+  return { character: updated, previousHealth, newHealth };
 }
 
 export function addCondition(

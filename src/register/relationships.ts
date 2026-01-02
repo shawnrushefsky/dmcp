@@ -78,57 +78,47 @@ export function registerRelationshipTools(server: McpServer) {
     }
   );
 
+  // ============================================================================
+  // UPDATE RELATIONSHIP VALUE - CONSOLIDATED (replaces update_relationship + modify_relationship)
+  // ============================================================================
   server.registerTool(
-    "update_relationship",
+    "update_relationship_value",
     {
-      description: "Update a relationship's type, value, label, or notes",
+      description: "Update a relationship value and/or metadata. Use mode 'delta' to change by amount with history logging, or 'set' to set absolute value.",
       inputSchema: {
         relationshipId: z.string().max(100).describe("The relationship ID"),
-        relationshipType: z.string().max(100).optional().describe("New relationship type"),
-        value: z.number().optional().describe("New value"),
-        label: z.string().max(LIMITS.NAME_MAX).nullable().optional().describe("New label"),
-        notes: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("New notes"),
+        mode: z.enum(["delta", "set"]).describe("'delta' to change by amount, 'set' to set absolute value"),
+        value: z.number().describe("Value to add (delta mode) or set (set mode)"),
+        reason: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("Reason for the change (logged to history)"),
+        minValue: z.number().optional().describe("Minimum bound"),
+        maxValue: z.number().optional().describe("Maximum bound"),
+        relationshipType: z.string().max(100).optional().describe("Update relationship type"),
+        label: z.string().max(LIMITS.NAME_MAX).nullable().optional().describe("Update label"),
+        notes: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("Update notes"),
       },
       annotations: ANNOTATIONS.UPDATE,
     },
-    async ({ relationshipId, ...updates }) => {
-      const relationship = relationshipTools.updateRelationship(relationshipId, updates);
-      if (!relationship) {
-        return {
-          content: [{ type: "text", text: "Relationship not found" }],
-          isError: true,
-        };
-      }
-      return {
-        content: [{ type: "text", text: JSON.stringify(relationship, null, 2) }],
-      };
-    }
-  );
-
-  server.registerTool(
-    "modify_relationship",
-    {
-      description: "Adjust a relationship value by a delta (with history logging)",
-      inputSchema: {
-        relationshipId: z.string().max(100).describe("The relationship ID"),
-        delta: z.number().describe("Amount to change (+/-)"),
-        reason: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("Reason for the change (logged)"),
-        minValue: z.number().optional().describe("Minimum bound (default: none)"),
-        maxValue: z.number().optional().describe("Maximum bound (default: none)"),
-      },
-      annotations: ANNOTATIONS.UPDATE,
-    },
-    async (params) => {
-      const result = relationshipTools.modifyRelationship(params);
+    async ({ relationshipId, mode, value, reason, minValue, maxValue, relationshipType, label, notes }) => {
+      const result = relationshipTools.updateRelationshipValue({
+        relationshipId,
+        mode,
+        value,
+        reason,
+        minValue,
+        maxValue,
+        relationshipType,
+        label,
+        notes,
+      });
       if (!result) {
         return {
           content: [{ type: "text", text: "Relationship not found" }],
           isError: true,
         };
       }
-      const label = relationshipTools.getRelationshipLabel(result.relationship.value);
+      const suggestedLabel = relationshipTools.getRelationshipLabel(result.relationship.value);
       return {
-        content: [{ type: "text", text: JSON.stringify({ ...result, suggestedLabel: label }, null, 2) }],
+        content: [{ type: "text", text: JSON.stringify({ ...result, suggestedLabel }, null, 2) }],
       };
     }
   );

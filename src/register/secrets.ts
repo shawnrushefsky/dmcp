@@ -134,54 +134,36 @@ export function registerSecretTools(server: McpServer) {
   );
 
   // ============================================================================
-  // REVEAL SECRET
+  // MODIFY SECRET VISIBILITY - CONSOLIDATED (replaces reveal_secret + make_secret_public)
   // ============================================================================
   server.registerTool(
-    "reveal_secret",
+    "modify_secret_visibility",
     {
-      description: "Reveal a secret to specific character(s)",
+      description: "Modify secret visibility. Reveal to specific characters and/or make public in a single call.",
       inputSchema: {
         secretId: z.string().max(100).describe("The secret ID"),
-        characterIds: z.array(z.string().max(100)).max(LIMITS.ARRAY_MAX).describe("Character IDs to reveal to"),
+        revealTo: z.array(z.string().max(100)).max(LIMITS.ARRAY_MAX).optional().describe("Character IDs to reveal to"),
+        makePublic: z.boolean().optional().describe("Set to true to make the secret public (revealed to everyone)"),
       },
       annotations: ANNOTATIONS.UPDATE,
     },
-    async ({ secretId, characterIds }) => {
-      const secret = secretTools.revealSecret(secretId, characterIds);
-      if (!secret) {
+    async ({ secretId, revealTo, makePublic }) => {
+      if (!revealTo?.length && !makePublic) {
         return {
-          content: [{ type: "text", text: "Secret not found" }],
+          content: [{ type: "text", text: "No visibility changes specified (provide revealTo or makePublic)" }],
           isError: true,
         };
       }
-      return {
-        content: [{ type: "text", text: JSON.stringify(secret, null, 2) }],
-      };
-    }
-  );
 
-  // ============================================================================
-  // MAKE SECRET PUBLIC
-  // ============================================================================
-  server.registerTool(
-    "make_secret_public",
-    {
-      description: "Make a secret public (revealed to everyone)",
-      inputSchema: {
-        secretId: z.string().max(100).describe("The secret ID"),
-      },
-      annotations: ANNOTATIONS.UPDATE,
-    },
-    async ({ secretId }) => {
-      const secret = secretTools.makePublic(secretId);
-      if (!secret) {
+      const result = secretTools.modifySecretVisibility(secretId, { revealTo, makePublic });
+      if (!result) {
         return {
           content: [{ type: "text", text: "Secret not found" }],
           isError: true,
         };
       }
       return {
-        content: [{ type: "text", text: JSON.stringify(secret, null, 2) }],
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };
     }
   );

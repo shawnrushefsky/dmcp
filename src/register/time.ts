@@ -304,18 +304,22 @@ export function registerTimeTools(server: McpServer) {
     }
   );
 
+  // ============================================================================
+  // MODIFY TIMER - CONSOLIDATED (replaces tick_timer + reset_timer)
+  // ============================================================================
   server.registerTool(
-    "tick_timer",
+    "modify_timer",
     {
-      description: "Advance or reduce a timer by an amount",
+      description: "Modify a timer's state. Use mode 'tick' to advance by amount, or 'reset' to reset to initial state.",
       inputSchema: {
         timerId: z.string().max(100).describe("The timer ID"),
-        amount: z.number().optional().describe("Amount to tick (default: 1)"),
+        mode: z.enum(["tick", "reset"]).describe("'tick' to advance/reduce, 'reset' to reset to initial state"),
+        amount: z.number().optional().describe("Amount to tick (only for mode 'tick', default: 1)"),
       },
       annotations: ANNOTATIONS.UPDATE,
     },
-    async ({ timerId, amount }) => {
-      const result = timerTools.tickTimer(timerId, amount);
+    async ({ timerId, mode, amount }) => {
+      const result = timerTools.modifyTimerState(timerId, { mode, amount });
       if (!result) {
         return {
           content: [{ type: "text", text: "Timer not found" }],
@@ -324,29 +328,6 @@ export function registerTimeTools(server: McpServer) {
       }
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-      };
-    }
-  );
-
-  server.registerTool(
-    "reset_timer",
-    {
-      description: "Reset a timer to its initial state",
-      inputSchema: {
-        timerId: z.string().max(100).describe("The timer ID"),
-      },
-      annotations: ANNOTATIONS.UPDATE,
-    },
-    async ({ timerId }) => {
-      const timer = timerTools.resetTimer(timerId);
-      if (!timer) {
-        return {
-          content: [{ type: "text", text: "Timer not found" }],
-          isError: true,
-        };
-      }
-      return {
-        content: [{ type: "text", text: JSON.stringify(timer, null, 2) }],
       };
     }
   );

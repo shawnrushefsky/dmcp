@@ -119,44 +119,23 @@ export function registerResourceTools(server: McpServer) {
     }
   );
 
+  // ============================================================================
+  // UPDATE RESOURCE VALUE - CONSOLIDATED (replaces modify_resource + set_resource)
+  // ============================================================================
   server.registerTool(
-    "modify_resource",
+    "update_resource_value",
     {
-      description: "Add or subtract from a resource value (with clamping and history logging)",
+      description: "Update a resource's value. Use mode 'delta' to add/subtract, or 'set' to set an absolute value. Changes are logged to history.",
       inputSchema: {
         resourceId: z.string().max(100).describe("The resource ID"),
-        delta: z.number().describe("Amount to add (positive) or subtract (negative)"),
+        mode: z.enum(["delta", "set"]).describe("'delta' to add/subtract, 'set' to set absolute value"),
+        value: z.number().describe("Amount to add/subtract (for delta) or absolute value (for set)"),
         reason: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("Reason for the change (logged to history)"),
       },
       annotations: ANNOTATIONS.UPDATE,
     },
-    async (params) => {
-      const result = resourceTools.modifyResource(params);
-      if (!result) {
-        return {
-          content: [{ type: "text", text: "Resource not found" }],
-          isError: true,
-        };
-      }
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-      };
-    }
-  );
-
-  server.registerTool(
-    "set_resource",
-    {
-      description: "Set a resource to a specific value (with clamping and history logging)",
-      inputSchema: {
-        resourceId: z.string().max(100).describe("The resource ID"),
-        value: z.number().describe("New value to set"),
-        reason: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("Reason for the change (logged to history)"),
-      },
-      annotations: ANNOTATIONS.SET,
-    },
-    async (params) => {
-      const result = resourceTools.setResource(params);
+    async ({ resourceId, mode, value, reason }) => {
+      const result = resourceTools.updateResourceValue({ resourceId, mode, value, reason });
       if (!result) {
         return {
           content: [{ type: "text", text: "Resource not found" }],

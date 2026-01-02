@@ -186,64 +186,41 @@ export function registerCharacterTools(server: McpServer) {
   );
 
   // ============================================================================
-  // APPLY DAMAGE
+  // MODIFY HEALTH - CONSOLIDATED (replaces apply_damage + heal_character)
   // ============================================================================
   server.registerTool(
-    "apply_damage",
+    "modify_health",
     {
-      description: "Apply damage to a character",
+      description: "Modify a character's health. Use mode 'damage' to reduce health, or 'heal' to restore health.",
       inputSchema: {
         characterId: z.string().describe("The character ID"),
-        amount: z.number().describe("Amount of damage"),
+        mode: z.enum(["damage", "heal"]).describe("'damage' to reduce health, 'heal' to restore health"),
+        amount: z.number().describe("Amount of damage or healing"),
       },
       outputSchema: {
-        health: z.number(),
+        characterId: z.string(),
+        previousHealth: z.number(),
+        newHealth: z.number(),
         maxHealth: z.number(),
+        mode: z.enum(["damage", "heal"]),
       },
       annotations: ANNOTATIONS.UPDATE,
     },
-    async ({ characterId, amount }) => {
-      const character = characterTools.applyDamage(characterId, amount);
-      if (!character) {
+    async ({ characterId, mode, amount }) => {
+      const result = characterTools.modifyHealth(characterId, { mode, amount });
+      if (!result) {
         return {
           content: [{ type: "text", text: "Character not found" }],
           isError: true,
         };
       }
-      const output = { health: character.status.health, maxHealth: character.status.maxHealth };
-      return {
-        content: [{ type: "text", text: JSON.stringify(output, null, 2) }],
-        structuredContent: output as unknown as Record<string, unknown>,
+      const output = {
+        characterId,
+        previousHealth: result.previousHealth,
+        newHealth: result.newHealth,
+        maxHealth: result.character.status.maxHealth,
+        mode,
       };
-    }
-  );
-
-  // ============================================================================
-  // HEAL CHARACTER
-  // ============================================================================
-  server.registerTool(
-    "heal_character",
-    {
-      description: "Heal a character",
-      inputSchema: {
-        characterId: z.string().describe("The character ID"),
-        amount: z.number().describe("Amount to heal"),
-      },
-      outputSchema: {
-        health: z.number(),
-        maxHealth: z.number(),
-      },
-      annotations: ANNOTATIONS.UPDATE,
-    },
-    async ({ characterId, amount }) => {
-      const character = characterTools.heal(characterId, amount);
-      if (!character) {
-        return {
-          content: [{ type: "text", text: "Character not found" }],
-          isError: true,
-        };
-      }
-      const output = { health: character.status.health, maxHealth: character.status.maxHealth };
       return {
         content: [{ type: "text", text: JSON.stringify(output, null, 2) }],
         structuredContent: output as unknown as Record<string, unknown>,

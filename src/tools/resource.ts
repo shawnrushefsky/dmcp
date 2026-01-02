@@ -215,40 +215,13 @@ function logChange(
   };
 }
 
-export function modifyResource(params: {
+/**
+ * Update a resource's value - either by delta or absolute set.
+ * Use mode: "delta" to add/subtract, mode: "set" to set an absolute value.
+ */
+export function updateResourceValue(params: {
   resourceId: string;
-  delta: number;
-  reason?: string;
-}): { resource: Resource; change: ResourceChange } | null {
-  const resource = getResource(params.resourceId);
-  if (!resource) return null;
-
-  const previousValue = resource.value;
-  const newValue = clampValue(
-    previousValue + params.delta,
-    resource.minValue,
-    resource.maxValue
-  );
-
-  const db = getDatabase();
-  const stmt = db.prepare(`UPDATE resources SET value = ? WHERE id = ?`);
-  stmt.run(newValue, params.resourceId);
-
-  const change = logChange(
-    params.resourceId,
-    previousValue,
-    newValue,
-    params.reason || null
-  );
-
-  return {
-    resource: { ...resource, value: newValue },
-    change,
-  };
-}
-
-export function setResource(params: {
-  resourceId: string;
+  mode: "delta" | "set";
   value: number;
   reason?: string;
 }): { resource: Resource; change: ResourceChange } | null {
@@ -256,11 +229,21 @@ export function setResource(params: {
   if (!resource) return null;
 
   const previousValue = resource.value;
-  const newValue = clampValue(
-    params.value,
-    resource.minValue,
-    resource.maxValue
-  );
+  let newValue: number;
+
+  if (params.mode === "delta") {
+    newValue = clampValue(
+      previousValue + params.value,
+      resource.minValue,
+      resource.maxValue
+    );
+  } else {
+    newValue = clampValue(
+      params.value,
+      resource.minValue,
+      resource.maxValue
+    );
+  }
 
   const db = getDatabase();
   const stmt = db.prepare(`UPDATE resources SET value = ? WHERE id = ?`);

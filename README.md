@@ -28,20 +28,20 @@ An MCP (Model Context Protocol) server that enables AI agents to act as dynamic 
     - [Dice \& Checks](#dice--checks-3-tools)
     - [Combat](#combat-7-tools)
     - [Inventory](#inventory-6-tools)
-    - [Quests](#quests-6-tools)
+    - [Quests](#quests-5-tools)
     - [Narrative](#narrative-6-tools)
     - [Player Interaction](#player-interaction-2-tools)
-    - [Resources](#resources-8-tools)
+    - [Resources](#resources-7-tools)
     - [Time \& Calendar](#time--calendar-7-tools)
-    - [Timers](#timers-7-tools)
-    - [Random Tables](#random-tables-8-tools)
-    - [Secrets \& Knowledge](#secrets--knowledge-10-tools)
-    - [Relationships](#relationships-8-tools)
+    - [Timers](#timers-6-tools)
+    - [Random Tables](#random-tables-7-tools)
+    - [Secrets \& Knowledge](#secrets--knowledge-9-tools)
+    - [Relationships](#relationships-7-tools)
     - [Tags](#tags-5-tools)
     - [Status Effects](#status-effects-8-tools)
     - [Factions](#factions-8-tools)
     - [Abilities \& Powers](#abilities--powers-9-tools)
-    - [Session Notes](#session-notes-10-tools)
+    - [Session Notes](#session-notes-9-tools)
     - [Pause \& Resume](#pause--resume-7-tools)
     - [Multi-Agent Collaboration](#multi-agent-collaboration-8-tools)
     - [Image Storage](#image-storage-7-tools)
@@ -464,8 +464,7 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `update_character` | Modify character |
 | `list_characters` | Filter by player/NPC/location |
 | `move_character` | Change location |
-| `apply_damage` | Deal damage |
-| `heal_character` | Restore health |
+| `modify_health` | Damage or heal (mode: damage/heal) |
 | `modify_conditions` | Add and/or remove conditions in one call |
 
 ### Dice & Checks (3 tools)
@@ -496,14 +495,13 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `transfer_item` | Move between owners |
 | `get_inventory` | List items |
 
-### Quests (6 tools)
+### Quests (5 tools)
 | Tool | Description |
 |------|-------------|
 | `create_quest` | New quest with objectives |
 | `get_quest` | Quest details |
 | `update_quest` | Modify quest |
-| `complete_objective` | Mark objective done |
-| `add_objective` | Add new objective |
+| `modify_objectives` | Add new objectives and/or mark complete in one call |
 | `list_quests` | Filter by status |
 
 ### Narrative (6 tools)
@@ -522,7 +520,7 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `present_choices` | Show choices with multi-select & free-form |
 | `record_choice` | Log player's decision |
 
-### Resources (8 tools)
+### Resources (7 tools)
 | Tool | Description |
 |------|-------------|
 | `create_resource` | Create custom resource (currency, reputation, etc.) |
@@ -530,8 +528,7 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `update_resource` | Update resource metadata |
 | `delete_resource` | Remove a resource |
 | `list_resources` | List resources with filters |
-| `modify_resource` | Add/subtract from resource value |
-| `set_resource` | Set resource to specific value |
+| `update_resource_value` | Set or adjust value (mode: delta/set) with history |
 | `get_resource_history` | Get change history |
 
 ### Time & Calendar (7 tools)
@@ -545,7 +542,7 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `list_scheduled_events` | List upcoming events |
 | `cancel_event` | Cancel scheduled event |
 
-### Timers (7 tools)
+### Timers (6 tools)
 | Tool | Description |
 |------|-------------|
 | `create_timer` | Create countdown, stopwatch, or segmented clock |
@@ -553,10 +550,9 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `update_timer` | Update timer settings |
 | `delete_timer` | Remove timer |
 | `list_timers` | List active timers |
-| `tick_timer` | Advance/reduce timer |
-| `reset_timer` | Reset to initial state |
+| `modify_timer` | Tick or reset timer (mode: tick/reset) |
 
-### Random Tables (8 tools)
+### Random Tables (7 tools)
 | Tool | Description |
 |------|-------------|
 | `create_random_table` | Create table for encounters, loot, etc. |
@@ -565,10 +561,9 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `delete_random_table` | Remove table |
 | `list_random_tables` | List tables in session |
 | `roll_on_table` | Roll and get result |
-| `add_table_entry` | Add entry to table |
-| `remove_table_entry` | Remove entry from table |
+| `modify_table_entries` | Add and/or remove entries in one call |
 
-### Secrets & Knowledge (10 tools)
+### Secrets & Knowledge (9 tools)
 | Tool | Description |
 |------|-------------|
 | `create_secret` | Create a revealable secret |
@@ -576,20 +571,18 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `update_secret` | Update secret details |
 | `delete_secret` | Remove secret |
 | `list_secrets` | List with filters |
-| `reveal_secret` | Reveal to specific characters |
-| `make_secret_public` | Make visible to all |
+| `modify_secret_visibility` | Reveal to characters and/or make public in one call |
 | `add_clue` | Add clue to secret |
 | `get_character_knowledge` | All secrets known by character |
 | `check_knows_secret` | Check if character knows secret |
 
-### Relationships (8 tools)
+### Relationships (7 tools)
 | Tool | Description |
 |------|-------------|
 | `create_relationship` | Create relationship between entities |
 | `get_relationship` | Get relationship by ID |
 | `get_relationship_between` | Get relationship between two entities |
-| `update_relationship` | Update relationship |
-| `modify_relationship` | Adjust value with history |
+| `update_relationship_value` | Set or adjust value (mode: delta/set) with history |
 | `delete_relationship` | Remove relationship |
 | `list_relationships` | List with filters |
 | `get_relationship_history` | Get change history |
@@ -640,7 +633,7 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `tick_ability_cooldowns` | Reduce cooldowns (end of round) |
 | `check_ability_requirements` | Check if character meets requirements |
 
-### Session Notes (10 tools)
+### Session Notes (9 tools)
 | Tool | Description |
 |------|-------------|
 | `create_note` | Create session note |
@@ -650,8 +643,7 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `list_notes` | List with filters |
 | `search_notes` | Full-text search |
 | `pin_note` | Toggle pinned status |
-| `add_note_tag` | Add tag to note |
-| `remove_note_tag` | Remove tag from note |
+| `modify_note_tags` | Add and/or remove tags in one call |
 | `generate_recap` | Auto-generate session recap |
 
 ### Pause & Resume (7 tools)

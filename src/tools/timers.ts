@@ -212,6 +212,31 @@ export function resetTimer(id: string): Timer | null {
   return { ...timer, currentValue: newValue, triggered: false };
 }
 
+/**
+ * Modify a timer - tick or reset in a single call.
+ * Use mode: "tick" to advance by amount, mode: "reset" to reset to initial state.
+ */
+export function modifyTimerState(
+  id: string,
+  params: { mode: "tick" | "reset"; amount?: number }
+): TickResult | null {
+  const timer = getTimer(id);
+  if (!timer) return null;
+
+  if (params.mode === "reset") {
+    const resetResult = resetTimer(id);
+    if (!resetResult) return null;
+    return {
+      timer: resetResult,
+      previousValue: timer.currentValue,
+      justTriggered: false,
+    };
+  }
+
+  // Tick mode
+  return tickTimer(id, params.amount ?? 1);
+}
+
 export interface TimerRender {
   timer: Timer;
   ascii: string;
