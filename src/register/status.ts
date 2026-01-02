@@ -2,23 +2,27 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import * as statusTools from "../tools/status.js";
 import { LIMITS } from "../utils/validation.js";
+import { ANNOTATIONS } from "../utils/tool-annotations.js";
 
 export function registerStatusTools(server: McpServer) {
-  server.tool(
+  server.registerTool(
     "apply_status_effect",
-    "Apply a status effect to a character (handles stacking automatically)",
     {
-      sessionId: z.string().max(100).describe("The session ID"),
-      targetId: z.string().max(100).describe("Character ID to apply effect to"),
-      name: z.string().min(1).max(LIMITS.NAME_MAX).describe("Effect name (e.g., 'Poisoned', 'Blessed', 'Stunned')"),
-      description: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("Description of the effect"),
-      effectType: z.enum(["buff", "debuff", "neutral"]).optional().describe("Effect category"),
-      duration: z.number().optional().describe("Duration in rounds (null for permanent)"),
-      stacks: z.number().optional().describe("Initial stack count (default: 1)"),
-      maxStacks: z.number().optional().describe("Maximum stacks allowed"),
-      effects: z.record(z.number()).optional().describe("Stat modifiers (e.g., {strength: -2, speed: +1})"),
-      sourceId: z.string().max(100).optional().describe("ID of the source (character, ability, item)"),
-      sourceType: z.string().max(100).optional().describe("Type of the source"),
+      description: "Apply a status effect to a character (handles stacking automatically)",
+      inputSchema: {
+        sessionId: z.string().max(100).describe("The session ID"),
+        targetId: z.string().max(100).describe("Character ID to apply effect to"),
+        name: z.string().min(1).max(LIMITS.NAME_MAX).describe("Effect name (e.g., 'Poisoned', 'Blessed', 'Stunned')"),
+        description: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("Description of the effect"),
+        effectType: z.enum(["buff", "debuff", "neutral"]).optional().describe("Effect category"),
+        duration: z.number().optional().describe("Duration in rounds (null for permanent)"),
+        stacks: z.number().optional().describe("Initial stack count (default: 1)"),
+        maxStacks: z.number().optional().describe("Maximum stacks allowed"),
+        effects: z.record(z.number()).optional().describe("Stat modifiers (e.g., {strength: -2, speed: +1})"),
+        sourceId: z.string().max(100).optional().describe("ID of the source (character, ability, item)"),
+        sourceType: z.string().max(100).optional().describe("Type of the source"),
+      },
+      annotations: ANNOTATIONS.CREATE,
     },
     async (params) => {
       const effect = statusTools.applyStatusEffect(params);
@@ -28,11 +32,14 @@ export function registerStatusTools(server: McpServer) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "get_status_effect",
-    "Get a status effect by ID",
     {
-      effectId: z.string().max(100).describe("The effect ID"),
+      description: "Get a status effect by ID",
+      inputSchema: {
+        effectId: z.string().max(100).describe("The effect ID"),
+      },
+      annotations: ANNOTATIONS.READ_ONLY,
     },
     async ({ effectId }) => {
       const effect = statusTools.getStatusEffect(effectId);
@@ -48,11 +55,14 @@ export function registerStatusTools(server: McpServer) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "remove_status_effect",
-    "Remove a specific status effect",
     {
-      effectId: z.string().max(100).describe("The effect ID"),
+      description: "Remove a specific status effect",
+      inputSchema: {
+        effectId: z.string().max(100).describe("The effect ID"),
+      },
+      annotations: ANNOTATIONS.DESTRUCTIVE,
     },
     async ({ effectId }) => {
       const success = statusTools.removeStatusEffect(effectId);
@@ -63,12 +73,15 @@ export function registerStatusTools(server: McpServer) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "list_status_effects",
-    "List all status effects on a character",
     {
-      targetId: z.string().max(100).describe("Character ID"),
-      effectType: z.enum(["buff", "debuff", "neutral"]).optional().describe("Filter by effect type"),
+      description: "List all status effects on a character",
+      inputSchema: {
+        targetId: z.string().max(100).describe("Character ID"),
+        effectType: z.enum(["buff", "debuff", "neutral"]).optional().describe("Filter by effect type"),
+      },
+      annotations: ANNOTATIONS.READ_ONLY,
     },
     async ({ targetId, effectType }) => {
       const effects = statusTools.listStatusEffects(targetId, effectType ? { effectType } : undefined);
@@ -78,12 +91,15 @@ export function registerStatusTools(server: McpServer) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "tick_status_durations",
-    "Reduce duration of all status effects (call at end of round). Returns expired and remaining effects.",
     {
-      sessionId: z.string().max(100).describe("The session ID"),
-      amount: z.number().optional().describe("Rounds to tick (default: 1)"),
+      description: "Reduce duration of all status effects (call at end of round). Returns expired and remaining effects.",
+      inputSchema: {
+        sessionId: z.string().max(100).describe("The session ID"),
+        amount: z.number().optional().describe("Rounds to tick (default: 1)"),
+      },
+      annotations: ANNOTATIONS.UPDATE,
     },
     async ({ sessionId, amount }) => {
       const result = statusTools.tickDurations(sessionId, amount);
@@ -93,12 +109,15 @@ export function registerStatusTools(server: McpServer) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "modify_effect_stacks",
-    "Add or remove stacks from a status effect",
     {
-      effectId: z.string().max(100).describe("The effect ID"),
-      delta: z.number().describe("Change in stacks (positive or negative)"),
+      description: "Add or remove stacks from a status effect",
+      inputSchema: {
+        effectId: z.string().max(100).describe("The effect ID"),
+        delta: z.number().describe("Change in stacks (positive or negative)"),
+      },
+      annotations: ANNOTATIONS.UPDATE,
     },
     async ({ effectId, delta }) => {
       const effect = statusTools.modifyStacks(effectId, delta);
@@ -114,13 +133,16 @@ export function registerStatusTools(server: McpServer) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "clear_status_effects",
-    "Remove all status effects from a character (or filter by type/name)",
     {
-      targetId: z.string().max(100).describe("Character ID"),
-      effectType: z.enum(["buff", "debuff", "neutral"]).optional().describe("Only clear this type"),
-      name: z.string().max(LIMITS.NAME_MAX).optional().describe("Only clear effects with this name"),
+      description: "Remove all status effects from a character (or filter by type/name)",
+      inputSchema: {
+        targetId: z.string().max(100).describe("Character ID"),
+        effectType: z.enum(["buff", "debuff", "neutral"]).optional().describe("Only clear this type"),
+        name: z.string().max(LIMITS.NAME_MAX).optional().describe("Only clear effects with this name"),
+      },
+      annotations: ANNOTATIONS.DESTRUCTIVE,
     },
     async ({ targetId, effectType, name }) => {
       const count = statusTools.clearEffects(targetId, { effectType, name });
@@ -130,11 +152,14 @@ export function registerStatusTools(server: McpServer) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     "get_effective_modifiers",
-    "Get the total stat modifiers from all status effects on a character",
     {
-      targetId: z.string().max(100).describe("Character ID"),
+      description: "Get the total stat modifiers from all status effects on a character",
+      inputSchema: {
+        targetId: z.string().max(100).describe("Character ID"),
+      },
+      annotations: ANNOTATIONS.READ_ONLY,
     },
     async ({ targetId }) => {
       const modifiers = statusTools.getEffectiveModifiers(targetId);

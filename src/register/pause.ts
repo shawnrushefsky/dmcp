@@ -2,6 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import * as pauseTools from "../tools/pause.js";
 import { LIMITS } from "../utils/validation.js";
+import { ANNOTATIONS } from "../utils/tool-annotations.js";
 
 // Zod schemas for nested types
 const NarrativeThreadSchema = z.object({
@@ -30,9 +31,10 @@ export function registerPauseTools(server: McpServer) {
   // PAUSE PREPARATION
   // ============================================================================
 
-  server.tool(
+  server.registerTool(
     "prepare_pause",
-    `Prepare to pause the game. Returns a checklist of context to save and current game state.
+    {
+      description: `Prepare to pause the game. Returns a checklist of context to save and current game state.
 
 WHEN TO CALL: Before ending a session or when the player says they need to stop.
 
@@ -43,8 +45,10 @@ This tool returns:
 - Instructions for what to save
 
 After calling this, use save_pause_state to persist your context.`,
-    {
-      sessionId: z.string().max(100).describe("The session ID"),
+      inputSchema: {
+        sessionId: z.string().max(100).describe("The session ID"),
+      },
+      annotations: ANNOTATIONS.READ_ONLY,
     },
     async ({ sessionId }) => {
       const checklist = pauseTools.preparePause(sessionId);
@@ -64,9 +68,10 @@ After calling this, use save_pause_state to persist your context.`,
   // SAVE PAUSE STATE
   // ============================================================================
 
-  server.tool(
+  server.registerTool(
     "save_pause_state",
-    `Save your context for seamless game resumption. Call this before ending a session.
+    {
+      description: `Save your context for seamless game resumption. Call this before ending a session.
 
 REQUIRED FIELDS:
 - currentScene: Where we are in the story
@@ -76,106 +81,108 @@ The more detail you provide, the smoother the resume will be for the next DM
 (which might be you in a new context window, or a different model entirely).
 
 Write as if briefing a replacement DM who's taking over mid-session.`,
-    {
-      sessionId: z.string().max(100).describe("The session ID"),
+      inputSchema: {
+        sessionId: z.string().max(100).describe("The session ID"),
 
-      // Required
-      currentScene: z
-        .string()
-        .max(LIMITS.CONTENT_MAX)
-        .describe(
-          "Description of where we are in the story - the scene, location, narrative moment"
-        ),
-      immediateSituation: z
-        .string()
-        .max(LIMITS.CONTENT_MAX)
-        .describe(
-          "What is happening RIGHT NOW - the exact moment we're pausing at. Be specific!"
-        ),
+        // Required
+        currentScene: z
+          .string()
+          .max(LIMITS.CONTENT_MAX)
+          .describe(
+            "Description of where we are in the story - the scene, location, narrative moment"
+          ),
+        immediateSituation: z
+          .string()
+          .max(LIMITS.CONTENT_MAX)
+          .describe(
+            "What is happening RIGHT NOW - the exact moment we're pausing at. Be specific!"
+          ),
 
-      // Scene context
-      sceneAtmosphere: z
-        .string()
-        .max(LIMITS.DESCRIPTION_MAX)
-        .optional()
-        .describe("Mood, lighting, sounds, emotional tension"),
-      recentTone: z
-        .string()
-        .max(LIMITS.NAME_MAX)
-        .optional()
-        .describe("Recent narrative tone (tense, comedic, romantic, etc.)"),
+        // Scene context
+        sceneAtmosphere: z
+          .string()
+          .max(LIMITS.DESCRIPTION_MAX)
+          .optional()
+          .describe("Mood, lighting, sounds, emotional tension"),
+        recentTone: z
+          .string()
+          .max(LIMITS.NAME_MAX)
+          .optional()
+          .describe("Recent narrative tone (tense, comedic, romantic, etc.)"),
 
-      // Player interaction
-      pendingPlayerAction: z
-        .string()
-        .max(LIMITS.DESCRIPTION_MAX)
-        .optional()
-        .describe("What action was the player about to take?"),
-      awaitingResponseTo: z
-        .string()
-        .max(LIMITS.DESCRIPTION_MAX)
-        .optional()
-        .describe("What question/prompt awaits player response?"),
-      presentedChoices: z
-        .array(z.string().max(LIMITS.DESCRIPTION_MAX))
-        .max(LIMITS.ARRAY_MAX)
-        .optional()
-        .describe("Formal choices presented to player"),
+        // Player interaction
+        pendingPlayerAction: z
+          .string()
+          .max(LIMITS.DESCRIPTION_MAX)
+          .optional()
+          .describe("What action was the player about to take?"),
+        awaitingResponseTo: z
+          .string()
+          .max(LIMITS.DESCRIPTION_MAX)
+          .optional()
+          .describe("What question/prompt awaits player response?"),
+        presentedChoices: z
+          .array(z.string().max(LIMITS.DESCRIPTION_MAX))
+          .max(LIMITS.ARRAY_MAX)
+          .optional()
+          .describe("Formal choices presented to player"),
 
-      // Player context
-      playerApparentGoals: z
-        .string()
-        .max(LIMITS.DESCRIPTION_MAX)
-        .optional()
-        .describe("What the player seems to be trying to accomplish"),
-      unresolvedHooks: z
-        .array(z.string().max(LIMITS.DESCRIPTION_MAX))
-        .max(LIMITS.ARRAY_MAX)
-        .optional()
-        .describe("Plot hooks player noticed but hasn't pursued"),
+        // Player context
+        playerApparentGoals: z
+          .string()
+          .max(LIMITS.DESCRIPTION_MAX)
+          .optional()
+          .describe("What the player seems to be trying to accomplish"),
+        unresolvedHooks: z
+          .array(z.string().max(LIMITS.DESCRIPTION_MAX))
+          .max(LIMITS.ARRAY_MAX)
+          .optional()
+          .describe("Plot hooks player noticed but hasn't pursued"),
 
-      // Narrative threads
-      activeThreads: z
-        .array(NarrativeThreadSchema)
-        .max(LIMITS.ARRAY_MAX)
-        .optional()
-        .describe("Ongoing storylines, investigations, subplots"),
+        // Narrative threads
+        activeThreads: z
+          .array(NarrativeThreadSchema)
+          .max(LIMITS.ARRAY_MAX)
+          .optional()
+          .describe("Ongoing storylines, investigations, subplots"),
 
-      // DM notes
-      dmShortTermPlans: z
-        .string()
-        .max(LIMITS.CONTENT_MAX)
-        .optional()
-        .describe("What was about to happen next? Planned encounters/reveals?"),
-      dmLongTermPlans: z
-        .string()
-        .max(LIMITS.CONTENT_MAX)
-        .optional()
-        .describe("Major plot arcs being developed"),
-      upcomingReveals: z
-        .array(z.string().max(LIMITS.DESCRIPTION_MAX))
-        .max(LIMITS.ARRAY_MAX)
-        .optional()
-        .describe("Secrets close to being discovered"),
+        // DM notes
+        dmShortTermPlans: z
+          .string()
+          .max(LIMITS.CONTENT_MAX)
+          .optional()
+          .describe("What was about to happen next? Planned encounters/reveals?"),
+        dmLongTermPlans: z
+          .string()
+          .max(LIMITS.CONTENT_MAX)
+          .optional()
+          .describe("Major plot arcs being developed"),
+        upcomingReveals: z
+          .array(z.string().max(LIMITS.DESCRIPTION_MAX))
+          .max(LIMITS.ARRAY_MAX)
+          .optional()
+          .describe("Secrets close to being discovered"),
 
-      // NPC state
-      npcAttitudes: z
-        .record(z.string(), z.string().max(LIMITS.NAME_MAX))
-        .optional()
-        .describe("NPC emotional states/attitudes (characterId -> disposition)"),
-      activeConversations: z
-        .array(ActiveConversationSchema)
-        .max(LIMITS.ARRAY_MAX)
-        .optional()
-        .describe("Ongoing conversations and where they left off"),
+        // NPC state
+        npcAttitudes: z
+          .record(z.string(), z.string().max(LIMITS.NAME_MAX))
+          .optional()
+          .describe("NPC emotional states/attitudes (characterId -> disposition)"),
+        activeConversations: z
+          .array(ActiveConversationSchema)
+          .max(LIMITS.ARRAY_MAX)
+          .optional()
+          .describe("Ongoing conversations and where they left off"),
 
-      // Metadata
-      pauseReason: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("Why is the game pausing?"),
-      modelUsed: z
-        .string()
-        .max(LIMITS.NAME_MAX)
-        .optional()
-        .describe("Which model/agent is saving this state"),
+        // Metadata
+        pauseReason: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("Why is the game pausing?"),
+        modelUsed: z
+          .string()
+          .max(LIMITS.NAME_MAX)
+          .optional()
+          .describe("Which model/agent is saving this state"),
+      },
+      annotations: ANNOTATIONS.CREATE,
     },
     async (params) => {
       const pauseState = pauseTools.savePauseState(params);
@@ -224,11 +231,14 @@ Write as if briefing a replacement DM who's taking over mid-session.`,
   // GET PAUSE STATE
   // ============================================================================
 
-  server.tool(
+  server.registerTool(
     "get_pause_state",
-    "Get the saved pause state for a session (if any). Use this to check what context was preserved.",
     {
-      sessionId: z.string().max(100).describe("The session ID"),
+      description: "Get the saved pause state for a session (if any). Use this to check what context was preserved.",
+      inputSchema: {
+        sessionId: z.string().max(100).describe("The session ID"),
+      },
+      annotations: ANNOTATIONS.READ_ONLY,
     },
     async ({ sessionId }) => {
       const pauseState = pauseTools.getPauseState(sessionId);
@@ -256,9 +266,10 @@ Write as if briefing a replacement DM who's taking over mid-session.`,
   // GET RESUME CONTEXT
   // ============================================================================
 
-  server.tool(
+  server.registerTool(
     "get_resume_context",
-    `Get everything needed to resume a paused game seamlessly.
+    {
+      description: `Get everything needed to resume a paused game seamlessly.
 
 WHEN TO CALL: At the start of a session when continuing a paused game.
 
@@ -270,8 +281,10 @@ Returns:
 - Warnings about things that need attention (active combat, etc.)
 
 Use this to get up to speed quickly and resume exactly where the game left off.`,
-    {
-      sessionId: z.string().max(100).describe("The session ID"),
+      inputSchema: {
+        sessionId: z.string().max(100).describe("The session ID"),
+      },
+      annotations: ANNOTATIONS.READ_ONLY,
     },
     async ({ sessionId }) => {
       const context = pauseTools.getResumeContext(sessionId);
@@ -317,9 +330,10 @@ Use this to get up to speed quickly and resume exactly where the game left off.`
   // CONTEXT SNAPSHOT (Lightweight incremental save)
   // ============================================================================
 
-  server.tool(
+  server.registerTool(
     "save_context_snapshot",
-    `Quick lightweight context save - use this DURING play to preserve context incrementally.
+    {
+      description: `Quick lightweight context save - use this DURING play to preserve context incrementally.
 
 WHEN TO USE:
 - After significant story beats
@@ -329,24 +343,26 @@ WHEN TO USE:
 
 This is faster than full save_pause_state but captures less detail.
 For end-of-session, use prepare_pause + save_pause_state instead.`,
-    {
-      sessionId: z.string().max(100).describe("The session ID"),
-      situation: z
-        .string()
-        .max(LIMITS.DESCRIPTION_MAX)
-        .describe(
-          "Brief description of current situation (what's happening right now)"
-        ),
-      notes: z.string().max(LIMITS.CONTENT_MAX).optional().describe("Any additional context to preserve"),
-      npcMood: z
-        .record(z.string(), z.string().max(LIMITS.NAME_MAX))
-        .optional()
-        .describe("Current NPC attitudes (characterId -> mood)"),
-      playerIntent: z
-        .string()
-        .max(LIMITS.DESCRIPTION_MAX)
-        .optional()
-        .describe("What the player seems to be trying to do"),
+      inputSchema: {
+        sessionId: z.string().max(100).describe("The session ID"),
+        situation: z
+          .string()
+          .max(LIMITS.DESCRIPTION_MAX)
+          .describe(
+            "Brief description of current situation (what's happening right now)"
+          ),
+        notes: z.string().max(LIMITS.CONTENT_MAX).optional().describe("Any additional context to preserve"),
+        npcMood: z
+          .record(z.string(), z.string().max(LIMITS.NAME_MAX))
+          .optional()
+          .describe("Current NPC attitudes (characterId -> mood)"),
+        playerIntent: z
+          .string()
+          .max(LIMITS.DESCRIPTION_MAX)
+          .optional()
+          .describe("What the player seems to be trying to do"),
+      },
+      annotations: ANNOTATIONS.CREATE,
     },
     async (params) => {
       const result = pauseTools.saveContextSnapshot(params);
@@ -360,13 +376,16 @@ For end-of-session, use prepare_pause + save_pause_state instead.`,
   // CHECK CONTEXT FRESHNESS
   // ============================================================================
 
-  server.tool(
+  server.registerTool(
     "check_context_freshness",
-    `Check if context needs to be saved. Returns a reminder if it's been too long since last save.
+    {
+      description: `Check if context needs to be saved. Returns a reminder if it's been too long since last save.
 
 Use this periodically during long sessions to get nudged about saving context.`,
-    {
-      sessionId: z.string().max(100).describe("The session ID"),
+      inputSchema: {
+        sessionId: z.string().max(100).describe("The session ID"),
+      },
+      annotations: ANNOTATIONS.READ_ONLY,
     },
     async ({ sessionId }) => {
       const result = pauseTools.checkContextFreshness(sessionId);
@@ -380,11 +399,14 @@ Use this periodically during long sessions to get nudged about saving context.`,
   // CLEAR PAUSE STATE
   // ============================================================================
 
-  server.tool(
+  server.registerTool(
     "clear_pause_state",
-    "Clear the saved pause state for a session. Use after successfully resuming to start fresh.",
     {
-      sessionId: z.string().max(100).describe("The session ID"),
+      description: "Clear the saved pause state for a session. Use after successfully resuming to start fresh.",
+      inputSchema: {
+        sessionId: z.string().max(100).describe("The session ID"),
+      },
+      annotations: ANNOTATIONS.DESTRUCTIVE,
     },
     async ({ sessionId }) => {
       const deleted = pauseTools.deletePauseState(sessionId);
@@ -405,9 +427,10 @@ Use this periodically during long sessions to get nudged about saving context.`,
   // EXTERNAL UPDATES - Multi-agent collaboration
   // ============================================================================
 
-  server.tool(
+  server.registerTool(
     "push_external_update",
-    `Push an update from an external agent into the game session.
+    {
+      description: `Push an update from an external agent into the game session.
 
 USE CASE: External agents (research agents, worldbuilders, lore generators, etc.)
 can push updates that the primary DM agent will receive and incorporate.
@@ -419,31 +442,33 @@ EXAMPLES:
 - An atmosphere generator provides environmental details
 
 The DM agent should periodically check for pending updates via get_pending_updates.`,
-    {
-      sessionId: z.string().max(100).describe("The session ID"),
-      sourceAgent: z.string().max(LIMITS.NAME_MAX).describe("ID/name of the agent pushing this update"),
-      sourceDescription: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("Description of what this agent does"),
-      updateType: z
-        .string()
-        .max(100)
-        .describe("Type of update (e.g., 'lore', 'npc_backstory', 'world_event', 'item_details', 'plot_suggestion')"),
-      category: z.string().max(100).optional().describe("Optional category for organization"),
-      title: z.string().max(LIMITS.NAME_MAX).describe("Brief title/summary of the update"),
-      content: z.string().max(LIMITS.CONTENT_MAX).describe("The full content/information being pushed"),
-      structuredData: z
-        .record(z.string(), z.unknown())
-        .optional()
-        .describe("Optional structured data (JSON) for programmatic use"),
-      targetEntityId: z.string().max(100).optional().describe("If this relates to a specific entity, its ID"),
-      targetEntityType: z
-        .string()
-        .max(100)
-        .optional()
-        .describe("Type of target entity (character, location, item, quest, etc.)"),
-      priority: z
-        .enum(["low", "normal", "high", "urgent"])
-        .optional()
-        .describe("Priority level (default: normal). Urgent updates demand immediate DM attention."),
+      inputSchema: {
+        sessionId: z.string().max(100).describe("The session ID"),
+        sourceAgent: z.string().max(LIMITS.NAME_MAX).describe("ID/name of the agent pushing this update"),
+        sourceDescription: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("Description of what this agent does"),
+        updateType: z
+          .string()
+          .max(100)
+          .describe("Type of update (e.g., 'lore', 'npc_backstory', 'world_event', 'item_details', 'plot_suggestion')"),
+        category: z.string().max(100).optional().describe("Optional category for organization"),
+        title: z.string().max(LIMITS.NAME_MAX).describe("Brief title/summary of the update"),
+        content: z.string().max(LIMITS.CONTENT_MAX).describe("The full content/information being pushed"),
+        structuredData: z
+          .record(z.string(), z.unknown())
+          .optional()
+          .describe("Optional structured data (JSON) for programmatic use"),
+        targetEntityId: z.string().max(100).optional().describe("If this relates to a specific entity, its ID"),
+        targetEntityType: z
+          .string()
+          .max(100)
+          .optional()
+          .describe("Type of target entity (character, location, item, quest, etc.)"),
+        priority: z
+          .enum(["low", "normal", "high", "urgent"])
+          .optional()
+          .describe("Priority level (default: normal). Urgent updates demand immediate DM attention."),
+      },
+      annotations: ANNOTATIONS.CREATE,
     },
     async (params) => {
       const update = pauseTools.pushExternalUpdate(params);
@@ -471,9 +496,10 @@ The DM agent should periodically check for pending updates via get_pending_updat
     }
   );
 
-  server.tool(
+  server.registerTool(
     "get_pending_updates",
-    `Check for pending updates from external agents.
+    {
+      description: `Check for pending updates from external agents.
 
 WHEN TO CALL:
 - At the start of each scene/turn
@@ -482,8 +508,10 @@ WHEN TO CALL:
 
 Returns all pending updates, prioritized by urgency.
 Use acknowledge_update, apply_update, or reject_update to process them.`,
-    {
-      sessionId: z.string().max(100).describe("The session ID"),
+      inputSchema: {
+        sessionId: z.string().max(100).describe("The session ID"),
+      },
+      annotations: ANNOTATIONS.READ_ONLY,
     },
     async ({ sessionId }) => {
       const result = pauseTools.getPendingUpdates(sessionId);
@@ -493,11 +521,14 @@ Use acknowledge_update, apply_update, or reject_update to process them.`,
     }
   );
 
-  server.tool(
+  server.registerTool(
     "acknowledge_update",
-    "Mark an external update as acknowledged (seen by DM). Use when you've read but haven't yet incorporated an update.",
     {
-      updateId: z.string().max(100).describe("The update ID"),
+      description: "Mark an external update as acknowledged (seen by DM). Use when you've read but haven't yet incorporated an update.",
+      inputSchema: {
+        updateId: z.string().max(100).describe("The update ID"),
+      },
+      annotations: ANNOTATIONS.UPDATE,
     },
     async ({ updateId }) => {
       const update = pauseTools.acknowledgeUpdate(updateId);
@@ -513,16 +544,19 @@ Use acknowledge_update, apply_update, or reject_update to process them.`,
     }
   );
 
-  server.tool(
+  server.registerTool(
     "apply_update",
-    "Mark an external update as applied (incorporated into the narrative). Use when you've woven the update into the story.",
     {
-      updateId: z.string().max(100).describe("The update ID"),
-      dmNotes: z
-        .string()
-        .max(LIMITS.DESCRIPTION_MAX)
-        .optional()
-        .describe("Notes on how the update was incorporated"),
+      description: "Mark an external update as applied (incorporated into the narrative). Use when you've woven the update into the story.",
+      inputSchema: {
+        updateId: z.string().max(100).describe("The update ID"),
+        dmNotes: z
+          .string()
+          .max(LIMITS.DESCRIPTION_MAX)
+          .optional()
+          .describe("Notes on how the update was incorporated"),
+      },
+      annotations: ANNOTATIONS.UPDATE,
     },
     async ({ updateId, dmNotes }) => {
       const update = pauseTools.applyUpdate(updateId, dmNotes);
@@ -551,16 +585,19 @@ Use acknowledge_update, apply_update, or reject_update to process them.`,
     }
   );
 
-  server.tool(
+  server.registerTool(
     "reject_update",
-    "Reject an external update (not appropriate for the narrative). Use when an update doesn't fit the current story direction.",
     {
-      updateId: z.string().max(100).describe("The update ID"),
-      dmNotes: z
-        .string()
-        .max(LIMITS.DESCRIPTION_MAX)
-        .optional()
-        .describe("Reason for rejection (helps external agents improve)"),
+      description: "Reject an external update (not appropriate for the narrative). Use when an update doesn't fit the current story direction.",
+      inputSchema: {
+        updateId: z.string().max(100).describe("The update ID"),
+        dmNotes: z
+          .string()
+          .max(LIMITS.DESCRIPTION_MAX)
+          .optional()
+          .describe("Reason for rejection (helps external agents improve)"),
+      },
+      annotations: ANNOTATIONS.UPDATE,
     },
     async ({ updateId, dmNotes }) => {
       const update = pauseTools.rejectUpdate(updateId, dmNotes);
@@ -589,15 +626,18 @@ Use acknowledge_update, apply_update, or reject_update to process them.`,
     }
   );
 
-  server.tool(
+  server.registerTool(
     "list_external_updates",
-    "List all external updates for a session with optional status filter.",
     {
-      sessionId: z.string().max(100).describe("The session ID"),
-      status: z
-        .enum(["pending", "acknowledged", "applied", "rejected"])
-        .optional()
-        .describe("Filter by status"),
+      description: "List all external updates for a session with optional status filter.",
+      inputSchema: {
+        sessionId: z.string().max(100).describe("The session ID"),
+        status: z
+          .enum(["pending", "acknowledged", "applied", "rejected"])
+          .optional()
+          .describe("Filter by status"),
+      },
+      annotations: ANNOTATIONS.READ_ONLY,
     },
     async ({ sessionId, status }) => {
       const updates = pauseTools.listExternalUpdates(sessionId, status);
@@ -620,11 +660,14 @@ Use acknowledge_update, apply_update, or reject_update to process them.`,
     }
   );
 
-  server.tool(
+  server.registerTool(
     "get_external_update",
-    "Get details of a specific external update by ID.",
     {
-      updateId: z.string().max(100).describe("The update ID"),
+      description: "Get details of a specific external update by ID.",
+      inputSchema: {
+        updateId: z.string().max(100).describe("The update ID"),
+      },
+      annotations: ANNOTATIONS.READ_ONLY,
     },
     async ({ updateId }) => {
       const update = pauseTools.getExternalUpdate(updateId);
@@ -640,11 +683,14 @@ Use acknowledge_update, apply_update, or reject_update to process them.`,
     }
   );
 
-  server.tool(
+  server.registerTool(
     "delete_external_update",
-    "Delete an external update entirely.",
     {
-      updateId: z.string().max(100).describe("The update ID"),
+      description: "Delete an external update entirely.",
+      inputSchema: {
+        updateId: z.string().max(100).describe("The update ID"),
+      },
+      annotations: ANNOTATIONS.DESTRUCTIVE,
     },
     async ({ updateId }) => {
       const deleted = pauseTools.deleteExternalUpdate(updateId);
@@ -660,4 +706,3 @@ Use acknowledge_update, apply_update, or reject_update to process them.`,
     }
   );
 }
-
