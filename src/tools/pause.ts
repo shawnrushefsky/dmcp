@@ -5,6 +5,8 @@ import type {
   PauseState,
   PauseChecklist,
   PauseChecklistItem,
+  GameStateAudit,
+  PersistenceReminder,
   ResumeContext,
   NarrativeThread,
   ActiveConversation,
@@ -25,9 +27,10 @@ import type {
 // ============================================================================
 
 /**
- * Prepares for a game pause by returning current state and a checklist
- * of context that should be saved. This helps agents understand what
- * ephemeral state needs to be captured.
+ * Prepares for a game pause by returning current state, a comprehensive
+ * game state audit, persistence reminders, and a checklist of context
+ * that should be saved. This helps agents understand what needs to be
+ * captured before ending a session.
  */
 export function preparePause(sessionId: string): PauseChecklist | null {
   const db = getDatabase();
@@ -39,36 +42,189 @@ export function preparePause(sessionId: string): PauseChecklist | null {
 
   if (!sessionRow) return null;
 
-  // Gather current state counts
-  const questCount = db
-    .prepare(
-      `SELECT COUNT(*) as count FROM quests WHERE session_id = ? AND status = 'active'`
-    )
+  // ============================================================================
+  // COMPREHENSIVE GAME STATE AUDIT
+  // ============================================================================
+
+  // Characters
+  const characterStats = db
+    .prepare(`
+      SELECT
+        COUNT(*) as total,
+        SUM(CASE WHEN is_player = 1 THEN 1 ELSE 0 END) as players,
+        SUM(CASE WHEN is_player = 0 THEN 1 ELSE 0 END) as npcs,
+        SUM(CASE WHEN notes IS NOT NULL AND notes != '' THEN 1 ELSE 0 END) as with_notes
+      FROM characters WHERE session_id = ?
+    `)
+    .get(sessionId) as { total: number; players: number; npcs: number; with_notes: number };
+
+  // Characters with conditions
+  const charactersWithConditions = db
+    .prepare(`
+      SELECT COUNT(DISTINCT c.id) as count
+      FROM characters c
+      JOIN status_effects se ON se.target_id = c.id
+      WHERE c.session_id = ?
+    `)
     .get(sessionId) as { count: number };
 
+  // Locations
+  const locationStats = db
+    .prepare(`SELECT COUNT(*) as total FROM locations WHERE session_id = ?`)
+    .get(sessionId) as { count: number };
+
+  const connectedLocations = db
+    .prepare(`
+      SELECT COUNT(DISTINCT l.id) as count
+      FROM locations l
+      JOIN location_exits le ON le.from_location_id = l.id OR le.to_location_id = l.id
+      WHERE l.session_id = ?
+    `)
+    .get(sessionId) as { count: number };
+
+  // Quests
+  const questStats = db
+    .prepare(`
+      SELECT
+        SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active,
+        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
+        SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed
+      FROM quests WHERE session_id = ?
+    `)
+    .get(sessionId) as { active: number; completed: number; failed: number };
+
+  // Items
+  const itemStats = db
+    .prepare(`
+      SELECT
+        COUNT(*) as total,
+        SUM(CASE WHEN owner_type = 'character' THEN 1 ELSE 0 END) as in_inventories,
+        SUM(CASE WHEN owner_type = 'location' THEN 1 ELSE 0 END) as in_locations
+      FROM items WHERE session_id = ?
+    `)
+    .get(sessionId) as { total: number; in_inventories: number; in_locations: number };
+
+  // Combat
   const combatRow = db
-    .prepare(
-      `SELECT COUNT(*) as count FROM combats WHERE session_id = ? AND status = 'active'`
-    )
+    .prepare(`SELECT * FROM combats WHERE session_id = ? AND status = 'active' LIMIT 1`)
+    .get(sessionId) as Record<string, unknown> | undefined;
+
+  // Resources
+  const resourceStats = db
+    .prepare(`
+      SELECT
+        SUM(CASE WHEN owner_type = 'session' THEN 1 ELSE 0 END) as session_level,
+        SUM(CASE WHEN owner_type = 'character' THEN 1 ELSE 0 END) as character_level
+      FROM resources WHERE session_id = ?
+    `)
+    .get(sessionId) as { session_level: number; character_level: number };
+
+  // Timers
+  const timerStats = db
+    .prepare(`
+      SELECT
+        SUM(CASE WHEN triggered = 0 THEN 1 ELSE 0 END) as active,
+        SUM(CASE WHEN triggered = 1 THEN 1 ELSE 0 END) as triggered
+      FROM timers WHERE session_id = ?
+    `)
+    .get(sessionId) as { active: number; triggered: number };
+
+  // Scheduled events
+  const eventStats = db
+    .prepare(`
+      SELECT
+        SUM(CASE WHEN triggered = 0 THEN 1 ELSE 0 END) as pending,
+        SUM(CASE WHEN triggered = 1 THEN 1 ELSE 0 END) as triggered
+      FROM scheduled_events WHERE session_id = ?
+    `)
+    .get(sessionId) as { pending: number; triggered: number };
+
+  // Relationships
+  const relationshipCount = db
+    .prepare(`SELECT COUNT(*) as count FROM relationships WHERE session_id = ?`)
     .get(sessionId) as { count: number };
 
-  const timerCount = db
-    .prepare(
-      `SELECT COUNT(*) as count FROM timers WHERE session_id = ? AND triggered = 0`
-    )
+  // Secrets
+  const secretStats = db
+    .prepare(`
+      SELECT
+        COUNT(*) as total,
+        SUM(CASE WHEN is_public = 1 THEN 1 ELSE 0 END) as revealed
+      FROM secrets WHERE session_id = ?
+    `)
+    .get(sessionId) as { total: number; revealed: number };
+
+  // Factions
+  const factionStats = db
+    .prepare(`
+      SELECT
+        SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active,
+        SUM(CASE WHEN status = 'disbanded' THEN 1 ELSE 0 END) as disbanded
+      FROM factions WHERE session_id = ?
+    `)
+    .get(sessionId) as { active: number; disbanded: number };
+
+  // Abilities
+  const abilityStats = db
+    .prepare(`
+      SELECT
+        SUM(CASE WHEN owner_type = 'template' THEN 1 ELSE 0 END) as templates,
+        SUM(CASE WHEN owner_type = 'character' THEN 1 ELSE 0 END) as character_owned
+      FROM abilities WHERE session_id = ?
+    `)
+    .get(sessionId) as { templates: number; character_owned: number };
+
+  // Notes
+  const noteStats = db
+    .prepare(`
+      SELECT
+        COUNT(*) as total,
+        SUM(CASE WHEN pinned = 1 THEN 1 ELSE 0 END) as pinned
+      FROM notes WHERE session_id = ?
+    `)
+    .get(sessionId) as { total: number; pinned: number };
+
+  // Status effects
+  const statusStats = db
+    .prepare(`
+      SELECT
+        COUNT(*) as count,
+        COUNT(DISTINCT target_id) as affected
+      FROM status_effects se
+      JOIN characters c ON c.id = se.target_id
+      WHERE c.session_id = ?
+    `)
+    .get(sessionId) as { count: number; affected: number };
+
+  // Tags
+  const tagCount = db
+    .prepare(`SELECT COUNT(DISTINCT tag) as count FROM tags WHERE session_id = ?`)
     .get(sessionId) as { count: number };
 
-  const eventCount = db
-    .prepare(
-      `SELECT COUNT(*) as count FROM scheduled_events WHERE session_id = ? AND triggered = 0`
-    )
+  // Random tables
+  const tableCount = db
+    .prepare(`SELECT COUNT(*) as count FROM random_tables WHERE session_id = ?`)
     .get(sessionId) as { count: number };
 
-  const recentEventCount = db
-    .prepare(
-      `SELECT COUNT(*) as count FROM narrative_events WHERE session_id = ? AND timestamp > datetime('now', '-1 hour')`
-    )
+  // Narrative events
+  const narrativeStats = db
+    .prepare(`
+      SELECT
+        COUNT(*) as total,
+        SUM(CASE WHEN timestamp > datetime('now', '-1 hour') THEN 1 ELSE 0 END) as recent_hour
+      FROM narrative_events WHERE session_id = ?
+    `)
+    .get(sessionId) as { total: number; recent_hour: number };
+
+  // Images
+  const imageCount = db
+    .prepare(`SELECT COUNT(*) as count FROM images WHERE session_id = ?`)
     .get(sessionId) as { count: number };
+
+  // Calendar/Time
+  const calendarRow = db
+    .prepare(`SELECT * FROM calendars WHERE session_id = ?`)
+    .get(sessionId) as Record<string, unknown> | undefined;
 
   // Get current location name
   let playerLocation: string | null = null;
@@ -79,10 +235,249 @@ export function preparePause(sessionId: string): PauseChecklist | null {
     playerLocation = locRow?.name || null;
   }
 
+  // Build the game state audit
+  const gameStateAudit: GameStateAudit = {
+    characters: {
+      total: characterStats.total || 0,
+      players: characterStats.players || 0,
+      npcs: characterStats.npcs || 0,
+      withNotes: characterStats.with_notes || 0,
+      withConditions: charactersWithConditions.count || 0,
+    },
+    locations: {
+      total: locationStats.count || 0,
+      connected: connectedLocations.count || 0,
+    },
+    quests: {
+      active: questStats.active || 0,
+      completed: questStats.completed || 0,
+      failed: questStats.failed || 0,
+    },
+    items: {
+      total: itemStats.total || 0,
+      inInventories: itemStats.in_inventories || 0,
+      inLocations: itemStats.in_locations || 0,
+    },
+    combat: {
+      active: !!combatRow,
+      combatId: combatRow?.id as string | null || null,
+      round: combatRow?.round as number | null || null,
+      participantCount: combatRow
+        ? (JSON.parse((combatRow.participants as string) || "[]")).length
+        : 0,
+    },
+    resources: {
+      sessionLevel: resourceStats.session_level || 0,
+      characterLevel: resourceStats.character_level || 0,
+    },
+    timers: {
+      active: timerStats.active || 0,
+      triggered: timerStats.triggered || 0,
+    },
+    scheduledEvents: {
+      pending: eventStats.pending || 0,
+      triggered: eventStats.triggered || 0,
+    },
+    relationships: {
+      total: relationshipCount.count || 0,
+    },
+    secrets: {
+      total: secretStats.total || 0,
+      revealed: secretStats.revealed || 0,
+      hidden: (secretStats.total || 0) - (secretStats.revealed || 0),
+    },
+    factions: {
+      active: factionStats.active || 0,
+      disbanded: factionStats.disbanded || 0,
+    },
+    abilities: {
+      templates: abilityStats.templates || 0,
+      characterOwned: abilityStats.character_owned || 0,
+    },
+    notes: {
+      total: noteStats.total || 0,
+      pinned: noteStats.pinned || 0,
+    },
+    statusEffects: {
+      activeCount: statusStats.count || 0,
+      affectedCharacters: statusStats.affected || 0,
+    },
+    tags: {
+      uniqueTags: tagCount.count || 0,
+    },
+    randomTables: {
+      total: tableCount.count || 0,
+    },
+    narrativeEvents: {
+      total: narrativeStats.total || 0,
+      recentHour: narrativeStats.recent_hour || 0,
+    },
+    images: {
+      total: imageCount.count || 0,
+    },
+    time: {
+      hasCalendar: !!calendarRow,
+      currentTime: calendarRow
+        ? JSON.stringify(safeJsonParse(calendarRow.current_time as string, null))
+        : null,
+    },
+  };
+
+  // ============================================================================
+  // PERSISTENCE REMINDERS
+  // ============================================================================
+
+  const persistenceReminders: PersistenceReminder[] = [];
+
+  // CRITICAL: Active combat must be resolved or saved
+  if (gameStateAudit.combat.active) {
+    persistenceReminders.push({
+      category: "critical",
+      entityType: "combat",
+      tool: "end_combat OR get_combat",
+      reminder: "ACTIVE COMBAT IN PROGRESS",
+      reason: `Combat is active (Round ${gameStateAudit.combat.round}). Either resolve it before pausing or ensure the full combat state is captured in your pause notes.`,
+      entityIds: [gameStateAudit.combat.combatId!],
+    });
+  }
+
+  // CRITICAL: Status effects that may expire
+  if (gameStateAudit.statusEffects.activeCount > 0) {
+    persistenceReminders.push({
+      category: "critical",
+      entityType: "status_effects",
+      tool: "list_status_effects",
+      reminder: "Active status effects on characters",
+      reason: `${gameStateAudit.statusEffects.activeCount} status effect(s) on ${gameStateAudit.statusEffects.affectedCharacters} character(s). Note any that are narratively important.`,
+    });
+  }
+
+  // IMPORTANT: Recent narrative events should be logged
+  if (narrativeStats.recent_hour === 0) {
+    persistenceReminders.push({
+      category: "important",
+      entityType: "narrative_events",
+      tool: "log_event",
+      reminder: "No events logged in the last hour",
+      reason: "Consider logging key story moments before pausing. This helps with recaps and continuity.",
+    });
+  }
+
+  // IMPORTANT: Active timers need context
+  if (gameStateAudit.timers.active > 0) {
+    persistenceReminders.push({
+      category: "important",
+      entityType: "timers",
+      tool: "list_timers",
+      reminder: "Active timers running",
+      reason: `${gameStateAudit.timers.active} timer(s) are active. Document their narrative significance in your pause state.`,
+    });
+  }
+
+  // IMPORTANT: Pending scheduled events
+  if (gameStateAudit.scheduledEvents.pending > 0) {
+    persistenceReminders.push({
+      category: "important",
+      entityType: "scheduled_events",
+      tool: "list_scheduled_events",
+      reminder: "Pending scheduled events",
+      reason: `${gameStateAudit.scheduledEvents.pending} event(s) are scheduled. Note any that are imminent.`,
+    });
+  }
+
+  // IMPORTANT: Characters without notes
+  if (gameStateAudit.characters.npcs > 0 && gameStateAudit.characters.withNotes < gameStateAudit.characters.npcs) {
+    const npcsWithoutNotes = gameStateAudit.characters.npcs - gameStateAudit.characters.withNotes;
+    if (npcsWithoutNotes > 0) {
+      persistenceReminders.push({
+        category: "suggested",
+        entityType: "characters",
+        tool: "update_character",
+        reminder: "NPCs missing character notes",
+        reason: `${npcsWithoutNotes} NPC(s) have no notes. Consider updating notes for NPCs the player interacted with.`,
+      });
+    }
+  }
+
+  // SUGGESTED: Quest progress
+  if (gameStateAudit.quests.active > 0) {
+    persistenceReminders.push({
+      category: "suggested",
+      entityType: "quests",
+      tool: "complete_objective OR update_quest",
+      reminder: "Review active quest progress",
+      reason: `${gameStateAudit.quests.active} quest(s) active. Update objectives if any were completed or failed.`,
+    });
+  }
+
+  // SUGGESTED: Relationship changes
+  if (gameStateAudit.relationships.total > 0) {
+    persistenceReminders.push({
+      category: "suggested",
+      entityType: "relationships",
+      tool: "modify_relationship",
+      reminder: "Update relationship values if attitudes changed",
+      reason: `${gameStateAudit.relationships.total} relationship(s) tracked. Adjust values if NPCs' feelings toward the player changed.`,
+    });
+  }
+
+  // SUGGESTED: Secrets revealed or discovered
+  if (gameStateAudit.secrets.hidden > 0) {
+    persistenceReminders.push({
+      category: "suggested",
+      entityType: "secrets",
+      tool: "reveal_secret",
+      reminder: "Update secrets if any were discovered",
+      reason: `${gameStateAudit.secrets.hidden} secret(s) still hidden. Mark any as revealed if the player discovered them.`,
+    });
+  }
+
+  // SUGGESTED: Resources changed
+  if (gameStateAudit.resources.sessionLevel + gameStateAudit.resources.characterLevel > 0) {
+    persistenceReminders.push({
+      category: "suggested",
+      entityType: "resources",
+      tool: "modify_resource",
+      reminder: "Update resources if any changed",
+      reason: "Review gold, reputation, or other tracked resources for changes during the session.",
+    });
+  }
+
+  // SUGGESTED: Items gained or lost
+  if (gameStateAudit.items.total > 0) {
+    persistenceReminders.push({
+      category: "suggested",
+      entityType: "items",
+      tool: "create_item OR transfer_item OR delete_item",
+      reminder: "Update inventory for items gained/lost",
+      reason: "Ensure any items picked up, dropped, or used are reflected in the game state.",
+    });
+  }
+
+  // SUGGESTED: Create a DM note for the session
+  persistenceReminders.push({
+    category: "suggested",
+    entityType: "notes",
+    tool: "create_note",
+    reminder: "Consider creating a session recap note",
+    reason: "A pinned recap note can help with continuity across sessions.",
+  });
+
+  // SUGGESTED: Update the in-game time
+  if (gameStateAudit.time.hasCalendar) {
+    persistenceReminders.push({
+      category: "suggested",
+      entityType: "time",
+      tool: "advance_time OR set_time",
+      reminder: "Update the in-game calendar",
+      reason: "Ensure the in-game time reflects how much time passed during this session.",
+    });
+  }
+
   // Check for existing pause state
   const existingPause = getPauseState(sessionId);
 
-  // Build the checklist
+  // Build the ephemeral context checklist
   const checklist: PauseChecklistItem[] = [
     // Required items
     {
@@ -220,26 +615,63 @@ export function preparePause(sessionId: string): PauseChecklist | null {
     },
   ];
 
+  // Build comprehensive instructions
+  const criticalCount = persistenceReminders.filter(r => r.category === "critical").length;
+  const importantCount = persistenceReminders.filter(r => r.category === "important").length;
+
   const instructions = `
-PAUSE PREPARATION CHECKLIST
-===========================
+═══════════════════════════════════════════════════════════════════════════════
+                           PAUSE PREPARATION CHECKLIST
+═══════════════════════════════════════════════════════════════════════════════
 
-Before pausing, save your context using save_pause_state. This captures the
-ephemeral state in your "head" that isn't in the database.
+This checklist helps you persist EVERYTHING before ending the session.
 
-REQUIRED fields must be filled - they capture what's happening RIGHT NOW.
-Optional fields help preserve nuance - fill in what's relevant.
+${criticalCount > 0 ? `⚠️  ${criticalCount} CRITICAL item(s) require immediate attention!` : ""}
+${importantCount > 0 ? `📋 ${importantCount} IMPORTANT item(s) should be reviewed.` : ""}
+
+═══════════════════════════════════════════════════════════════════════════════
+                              STEP 1: PERSIST GAME DATA
+═══════════════════════════════════════════════════════════════════════════════
+
+Review the PERSISTENCE REMINDERS section. These are things that exist in the
+database but may need updating based on what happened during play:
+
+  ${persistenceReminders.filter(r => r.category === "critical").map(r => `🔴 [CRITICAL] ${r.reminder}`).join("\n  ") || "No critical items"}
+  ${persistenceReminders.filter(r => r.category === "important").map(r => `🟡 [IMPORTANT] ${r.reminder}`).join("\n  ") || "No important items"}
+  ${persistenceReminders.filter(r => r.category === "suggested").map(r => `🟢 [SUGGESTED] ${r.reminder}`).join("\n  ") || "No suggestions"}
+
+═══════════════════════════════════════════════════════════════════════════════
+                              STEP 2: SAVE DM CONTEXT
+═══════════════════════════════════════════════════════════════════════════════
+
+After persisting game data, call save_pause_state with your ephemeral context.
+This captures what's in your "head" that ISN'T in the database:
+
+REQUIRED:
+  • currentScene - Where we are in the story
+  • immediateSituation - What's happening RIGHT NOW (be specific!)
+
+OPTIONAL (fill in what's relevant):
+  • Scene atmosphere, tone, pending player actions
+  • Active narrative threads and DM plans
+  • NPC attitudes and ongoing conversations
+  • Player goals and unresolved plot hooks
 
 TIPS:
-- Be specific about the EXACT moment - "hand on door handle" not "at the door"
-- Capture emotional states and atmosphere - these set the tone for resumption
-- Note what YOU were planning, not just what happened
-- Record player intent as you understand it
+  • Be specific about the EXACT moment - "hand on door handle" not "at the door"
+  • Capture emotional states and atmosphere for resumption
+  • Note what YOU were planning, not just what happened
+  • Write as if briefing a replacement DM mid-session
 
-The next DM (even if it's you in a new context window) will use this to
-resume seamlessly. Write as if briefing a replacement DM mid-session.
+═══════════════════════════════════════════════════════════════════════════════
+                              STEP 3: VERIFY
+═══════════════════════════════════════════════════════════════════════════════
 
-After filling in your context, call save_pause_state with your data.
+After saving, the game can be resumed using get_resume_context which will
+provide the next DM (or you in a new context window) with everything needed
+to continue seamlessly.
+
+═══════════════════════════════════════════════════════════════════════════════
 `.trim();
 
   return {
@@ -247,12 +679,14 @@ After filling in your context, call save_pause_state with your data.
     sessionName: sessionRow.name as string,
     currentState: {
       playerLocation,
-      activeQuests: questCount.count,
-      activeCombat: combatRow.count > 0,
-      activeTimers: timerCount.count,
-      pendingEvents: eventCount.count,
-      recentEventCount: recentEventCount.count,
+      activeQuests: questStats.active || 0,
+      activeCombat: !!combatRow,
+      activeTimers: timerStats.active || 0,
+      pendingEvents: eventStats.pending || 0,
+      recentEventCount: narrativeStats.recent_hour || 0,
     },
+    gameStateAudit,
+    persistenceReminders,
     checklist,
     existingPauseState: existingPause,
     instructions,

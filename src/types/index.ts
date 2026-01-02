@@ -741,7 +741,13 @@ export interface PauseChecklist {
     recentEventCount: number;
   };
 
-  // Checklist of things to save
+  // Comprehensive game state audit - everything that exists in the session
+  gameStateAudit: GameStateAudit;
+
+  // Persistence reminders - things the DM should consider updating
+  persistenceReminders: PersistenceReminder[];
+
+  // Checklist of things to save (ephemeral DM context)
   checklist: PauseChecklistItem[];
 
   // Existing pause state if any
@@ -749,6 +755,101 @@ export interface PauseChecklist {
 
   // Instructions for the agent
   instructions: string;
+}
+
+// Comprehensive audit of all game data
+export interface GameStateAudit {
+  characters: {
+    total: number;
+    players: number;
+    npcs: number;
+    withNotes: number;
+    withConditions: number;
+  };
+  locations: {
+    total: number;
+    connected: number;
+  };
+  quests: {
+    active: number;
+    completed: number;
+    failed: number;
+  };
+  items: {
+    total: number;
+    inInventories: number;
+    inLocations: number;
+  };
+  combat: {
+    active: boolean;
+    combatId: string | null;
+    round: number | null;
+    participantCount: number;
+  };
+  resources: {
+    sessionLevel: number;
+    characterLevel: number;
+  };
+  timers: {
+    active: number;
+    triggered: number;
+  };
+  scheduledEvents: {
+    pending: number;
+    triggered: number;
+  };
+  relationships: {
+    total: number;
+  };
+  secrets: {
+    total: number;
+    revealed: number;
+    hidden: number;
+  };
+  factions: {
+    active: number;
+    disbanded: number;
+  };
+  abilities: {
+    templates: number;
+    characterOwned: number;
+  };
+  notes: {
+    total: number;
+    pinned: number;
+  };
+  statusEffects: {
+    activeCount: number;
+    affectedCharacters: number;
+  };
+  tags: {
+    uniqueTags: number;
+  };
+  randomTables: {
+    total: number;
+  };
+  narrativeEvents: {
+    total: number;
+    recentHour: number;
+  };
+  images: {
+    total: number;
+  };
+  time: {
+    hasCalendar: boolean;
+    currentTime: string | null;
+  };
+}
+
+// Reminder for DM to consider persisting something
+export interface PersistenceReminder {
+  category: "critical" | "important" | "suggested";
+  entityType: string;
+  tool: string;
+  reminder: string;
+  reason: string;
+  entityIds?: string[];
+  entityNames?: string[];
 }
 
 export interface PauseChecklistItem {
