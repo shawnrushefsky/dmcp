@@ -337,13 +337,13 @@ export function createHttpServer(port: number = 3456): express.Application {
     }
   );
 
-  // Search within a game
+  // Search within a game - full-text search across all entity types
   app.get("/api/games/:gameId/search", (req: Request, res: Response) => {
     const { gameId } = req.params;
     const query = (req.query.q as string || "").toLowerCase().trim();
 
     if (!query || query.length < 2) {
-      res.json({ characters: [], locations: [], quests: [] });
+      res.json({ characters: [], locations: [], quests: [], items: [], factions: [], notes: [], events: [] });
       return;
     }
 
@@ -353,56 +353,166 @@ export function createHttpServer(port: number = 3456): express.Application {
       return;
     }
 
+    // Helper to extract a snippet around the match
+    const getSnippet = (text: string, maxLen: number = 80): string => {
+      if (!text) return "";
+      const lowerText = text.toLowerCase();
+      const idx = lowerText.indexOf(query);
+      if (idx === -1) return text.slice(0, maxLen) + (text.length > maxLen ? "..." : "");
+
+      const start = Math.max(0, idx - 20);
+      const end = Math.min(text.length, idx + query.length + 60);
+      let snippet = text.slice(start, end);
+      if (start > 0) snippet = "..." + snippet;
+      if (end < text.length) snippet = snippet + "...";
+      return snippet;
+    };
+
+    // Helper to check if text matches query
+    const matches = (text: string | undefined | null): boolean => {
+      return !!text && text.toLowerCase().includes(query);
+    };
+
     const characters = listCharacters(gameId);
     const locations = listLocations(gameId);
     const quests = listQuests(gameId);
+    const items = listGameItems(gameId);
+    const factions = listFactions(gameId);
+    const notes = listNotes(gameId);
+    const events = getHistory(gameId, { limit: 100 }); // Search recent events
 
-    // Filter by fuzzy name match
+    // Search characters by name and notes
     const matchingCharacters = characters
-      .filter((c: Character) => c.name.toLowerCase().includes(query))
+      .filter((c: Character) => matches(c.name) || matches(c.notes))
       .slice(0, 5)
       .map((c: Character) => {
         const result = listEntityImages(c.id, "character");
         const primary = result.primaryImage || result.images[0];
+        const matchField = matches(c.name) ? "name" : "notes";
         return {
           id: c.id,
           name: c.name,
           type: "character" as const,
           isPlayer: c.isPlayer,
           primaryImageId: primary?.id || null,
+          matchField,
+          snippet: matchField === "notes" ? getSnippet(c.notes) : null,
         };
       });
 
+    // Search locations by name and description
     const matchingLocations = locations
-      .filter((l: Location) => l.name.toLowerCase().includes(query))
+      .filter((l: Location) => matches(l.name) || matches(l.description))
       .slice(0, 5)
       .map((l: Location) => {
         const result = listEntityImages(l.id, "location");
         const primary = result.primaryImage || result.images[0];
+        const matchField = matches(l.name) ? "name" : "description";
         return {
           id: l.id,
           name: l.name,
           type: "location" as const,
           primaryImageId: primary?.id || null,
+          matchField,
+          snippet: matchField === "description" ? getSnippet(l.description) : null,
         };
       });
 
+    // Search quests by name and description
+    type QuestType = { id: string; name: string; status: string; description?: string };
     const matchingQuests = quests
-      .filter(
-        (q: { name: string }) => q.name.toLowerCase().includes(query)
-      )
+      .filter((q: QuestType) => matches(q.name) || matches(q.description))
       .slice(0, 5)
-      .map((q: { id: string; name: string; status: string }) => ({
-        id: q.id,
-        name: q.name,
-        type: "quest" as const,
-        status: q.status,
+      .map((q: QuestType) => {
+        const matchField = matches(q.name) ? "name" : "description";
+        return {
+          id: q.id,
+          name: q.name,
+          type: "quest" as const,
+          status: q.status,
+          matchField,
+          snippet: matchField === "description" ? getSnippet(q.description || "") : null,
+        };
+      });
+
+    // Search items by name and description
+    type ItemType = { id: string; name: string; properties?: { description?: string } };
+    const matchingItems = items
+      .filter((i: ItemType) => matches(i.name) || matches(i.properties?.description))
+      .slice(0, 5)
+      .map((i: ItemType) => {
+        const result = listEntityImages(i.id, "item");
+        const primary = result.primaryImage || result.images[0];
+        const matchField = matches(i.name) ? "name" : "description";
+        return {
+          id: i.id,
+          name: i.name,
+          type: "item" as const,
+          primaryImageId: primary?.id || null,
+          matchField,
+          snippet: matchField === "description" ? getSnippet(i.properties?.description || "") : null,
+        };
+      });
+
+    // Search factions by name and description
+    const matchingFactions = factions
+      .filter((f: Faction) => matches(f.name) || matches(f.description))
+      .slice(0, 5)
+      .map((f: Faction) => {
+        const result = listEntityImages(f.id, "faction");
+        const primary = result.primaryImage || result.images[0];
+        const matchField = matches(f.name) ? "name" : "description";
+        return {
+          id: f.id,
+          name: f.name,
+          type: "faction" as const,
+          status: f.status,
+          primaryImageId: primary?.id || null,
+          matchField,
+          snippet: matchField === "description" ? getSnippet(f.description || "") : null,
+        };
+      });
+
+    // Search notes by title and content
+    type NoteType = { id: string; title: string; content: string; category: string | null };
+    const matchingNotes = notes
+      .filter((n: NoteType) => matches(n.title) || matches(n.content))
+      .slice(0, 5)
+      .map((n: NoteType) => {
+        const matchField = matches(n.title) ? "title" : "content";
+        return {
+          id: n.id,
+          name: n.title,
+          type: "note" as const,
+          category: n.category || undefined,
+          matchField,
+          snippet: matchField === "content" ? getSnippet(n.content) : null,
+        };
+      });
+
+    // Search narrative events by content
+    type EventType = { id: string; eventType: string; content: string; timestamp: string };
+    const matchingEvents = events
+      .filter((e: EventType) => matches(e.content) || matches(e.eventType))
+      .slice(0, 5)
+      .map((e: EventType) => ({
+        id: e.id,
+        name: e.eventType,
+        type: "event" as const,
+        eventType: e.eventType,
+        timestamp: e.timestamp,
+        matchField: "content" as const,
+        snippet: getSnippet(e.content),
       }));
 
     res.json({
       characters: matchingCharacters,
       locations: matchingLocations,
       quests: matchingQuests,
+      items: matchingItems,
+      factions: matchingFactions,
+      notes: matchingNotes,
+      events: matchingEvents,
     });
   });
 

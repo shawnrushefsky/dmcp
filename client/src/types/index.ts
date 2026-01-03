@@ -260,6 +260,74 @@ export interface Breadcrumb {
   icon?: 'home' | 'game' | 'character' | 'location' | 'quest' | 'image'
 }
 
+// Search result types
+export type SearchEntityType = 'character' | 'location' | 'quest' | 'item' | 'faction' | 'note' | 'event'
+
+export interface BaseSearchResult {
+  id: string
+  name: string
+  type: SearchEntityType
+  matchField?: string
+  snippet?: string | null
+}
+
+export interface CharacterSearchResult extends BaseSearchResult {
+  type: 'character'
+  isPlayer: boolean
+  primaryImageId: string | null
+}
+
+export interface LocationSearchResult extends BaseSearchResult {
+  type: 'location'
+  primaryImageId: string | null
+}
+
+export interface QuestSearchResult extends BaseSearchResult {
+  type: 'quest'
+  status: string
+}
+
+export interface ItemSearchResult extends BaseSearchResult {
+  type: 'item'
+  primaryImageId: string | null
+}
+
+export interface FactionSearchResult extends BaseSearchResult {
+  type: 'faction'
+  status: string
+  primaryImageId: string | null
+}
+
+export interface NoteSearchResult extends BaseSearchResult {
+  type: 'note'
+  category?: string
+}
+
+export interface EventSearchResult extends BaseSearchResult {
+  type: 'event'
+  eventType: string
+  timestamp: string
+}
+
+export type SearchResultItem =
+  | CharacterSearchResult
+  | LocationSearchResult
+  | QuestSearchResult
+  | ItemSearchResult
+  | FactionSearchResult
+  | NoteSearchResult
+  | EventSearchResult
+
+export interface SearchResults {
+  characters: CharacterSearchResult[]
+  locations: LocationSearchResult[]
+  quests: QuestSearchResult[]
+  items: ItemSearchResult[]
+  factions: FactionSearchResult[]
+  notes: NoteSearchResult[]
+  events: EventSearchResult[]
+}
+
 // Image Generation Preset - a named collection of settings for a specific use case
 export interface ImageGenerationPreset {
   id: string

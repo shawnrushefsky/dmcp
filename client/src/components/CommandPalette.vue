@@ -3,6 +3,7 @@ import { ref, computed, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
 import { isCommandPaletteOpen } from '../composables/useKeyboardShortcuts'
+import type { SearchResultItem } from '../types'
 import AvatarPlaceholder from './AvatarPlaceholder.vue'
 
 const router = useRouter()
@@ -13,16 +14,7 @@ const query = ref('')
 const inputRef = ref<HTMLInputElement | null>(null)
 const selectedIndex = ref(0)
 
-interface SearchItem {
-  id: string
-  name: string
-  type: 'character' | 'location' | 'quest'
-  isPlayer?: boolean
-  primaryImageId?: string | null
-  status?: string
-}
-
-const searchResults = ref<SearchItem[]>([])
+const searchResults = ref<SearchResultItem[]>([])
 const isSearching = ref(false)
 
 // Get game ID from current route
@@ -44,11 +36,16 @@ watch(query, (newQuery) => {
   isSearching.value = true
   searchTimeout = setTimeout(async () => {
     const results = await search(gameId.value!, newQuery)
+    // Flatten all results into a single array, ordered by type
     searchResults.value = [
       ...results.characters,
       ...results.locations,
       ...results.quests,
-    ] as SearchItem[]
+      ...results.items,
+      ...results.factions,
+      ...results.notes,
+      ...results.events,
+    ]
     isSearching.value = false
     selectedIndex.value = 0
   }, 150)
@@ -70,17 +67,26 @@ function close() {
   isCommandPaletteOpen.value = false
 }
 
-function navigateTo(item: SearchItem) {
+function navigateTo(item: SearchResultItem) {
   const paths: Record<string, string> = {
     character: `/characters/${item.id}`,
     location: `/locations/${item.id}`,
     quest: `/quests/${item.id}`,
+    item: `/items/${item.id}`,
+    faction: `/factions/${item.id}`,
+    note: gameId.value ? `/games/${gameId.value}/notes` : '/',
+    event: gameId.value ? `/games/${gameId.value}/history` : '/',
   }
   const path = paths[item.type]
   if (path) {
     router.push(path)
   }
   close()
+}
+
+// Check if result has a primary image
+function hasPrimaryImage(item: SearchResultItem): item is SearchResultItem & { primaryImageId: string } {
+  return 'primaryImageId' in item && !!item.primaryImageId
 }
 
 function handleKeyDown(event: KeyboardEvent) {
@@ -104,6 +110,10 @@ function getTypeIcon(type: string): string {
     character: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
     location: 'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z',
     quest: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01',
+    item: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',
+    faction: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z',
+    note: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+    event: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
   }
   return icons[type] || ''
 }
@@ -152,7 +162,7 @@ function getTypeIcon(type: string): string {
             >
               <div class="result-icon">
                 <img
-                  v-if="item.primaryImageId"
+                  v-if="hasPrimaryImage(item)"
                   :src="`/images/${item.primaryImageId}/file?width=80&height=80`"
                   :alt="item.name"
                   class="result-thumb"
@@ -170,9 +180,12 @@ function getTypeIcon(type: string): string {
                 <span class="result-name">{{ item.name }}</span>
                 <span class="result-type">
                   {{ item.type }}
-                  <span v-if="item.isPlayer" class="pc-badge">PC</span>
-                  <span v-if="item.status" class="status-badge" :class="item.status">{{ item.status }}</span>
+                  <span v-if="item.type === 'character' && item.isPlayer" class="pc-badge">PC</span>
+                  <span v-if="'status' in item && item.status" class="status-badge" :class="item.status">{{ item.status }}</span>
+                  <span v-if="item.type === 'note' && item.category" class="category-badge">{{ item.category }}</span>
+                  <span v-if="item.type === 'event'" class="event-type-badge">{{ item.eventType }}</span>
                 </span>
+                <span v-if="item.snippet" class="result-snippet">{{ item.snippet }}</span>
               </div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="arrow-icon">
                 <path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" />
@@ -363,6 +376,26 @@ function getTypeIcon(type: string): string {
 
 .status-badge.completed {
   color: var(--text-muted, #9090a0);
+}
+
+.category-badge,
+.event-type-badge {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--bg-elevated, #252545);
+  color: var(--text-muted, #9090a0);
+}
+
+.result-snippet {
+  display: block;
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--text-muted, #9090a0);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 400px;
 }
 
 .arrow-icon {

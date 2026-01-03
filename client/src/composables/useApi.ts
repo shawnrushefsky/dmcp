@@ -14,6 +14,7 @@ import type {
   Faction,
   ImagePresetsResponse,
   ImageGenerationPreset,
+  SearchResults,
 } from '../types'
 
 const API_BASE = '/api'
@@ -242,36 +243,14 @@ export function useApi() {
     }
   }
 
-  interface SearchResult {
-    characters: Array<{
-      id: string
-      name: string
-      type: 'character'
-      isPlayer: boolean
-      primaryImageId: string | null
-    }>
-    locations: Array<{
-      id: string
-      name: string
-      type: 'location'
-      primaryImageId: string | null
-    }>
-    quests: Array<{
-      id: string
-      name: string
-      type: 'quest'
-      status: string
-    }>
-  }
-
-  async function search(gameId: string, query: string): Promise<SearchResult> {
+  async function search(gameId: string, query: string): Promise<SearchResults> {
     // Don't set loading for search (it's non-blocking)
     try {
-      return await fetchJson<SearchResult>(
+      return await fetchJson<SearchResults>(
         `${API_BASE}/games/${gameId}/search?q=${encodeURIComponent(query)}`
       )
     } catch {
-      return { characters: [], locations: [], quests: [] }
+      return { characters: [], locations: [], quests: [], items: [], factions: [], notes: [], events: [] }
     }
   }
 
