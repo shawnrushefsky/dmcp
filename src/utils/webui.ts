@@ -19,10 +19,10 @@ export function getWebUiBaseUrl(): string {
 }
 
 /**
- * Get the web UI URL for a session
+ * Get the web UI URL for a game
  */
-export function getSessionUrl(sessionId: string): string {
-  return `${getWebUiBaseUrl()}/sessions/${sessionId}`;
+export function getGameUrl(gameId: string): string {
+  return `${getWebUiBaseUrl()}/games/${gameId}`;
 }
 
 /**

@@ -10,7 +10,7 @@ export function registerFactionTools(server: McpServer) {
     {
       description: "Create a new faction/organization",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         name: z.string().min(1).max(LIMITS.NAME_MAX).describe("Faction name"),
         description: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("Faction description"),
         leaderId: z.string().max(100).optional().describe("Character ID of the leader"),
@@ -103,15 +103,15 @@ export function registerFactionTools(server: McpServer) {
   server.registerTool(
     "list_factions",
     {
-      description: "List factions in a session",
+      description: "List factions in a game",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         status: z.enum(["active", "disbanded", "hidden"]).optional().describe("Filter by status"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId, status }) => {
-      const factions = factionTools.listFactions(sessionId, status ? { status } : undefined);
+    async ({ gameId, status }) => {
+      const factions = factionTools.listFactions(gameId, status ? { status } : undefined);
       return {
         content: [{ type: "text", text: JSON.stringify(factions, null, 2) }],
       };

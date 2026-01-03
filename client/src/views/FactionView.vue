@@ -4,17 +4,17 @@ import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
 import { useEntityLinker } from '../composables/useEntityLinker'
 import { useTheme } from '../composables/useTheme'
-import type { Faction, Breadcrumb, SessionState, EntityImages, Character, Location } from '../types'
+import type { Faction, Breadcrumb, GameState, EntityImages, Character, Location } from '../types'
 import Breadcrumbs from '../components/Breadcrumbs.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
 
 const route = useRoute()
-const { getFaction, getSession, getEntityImages, getCharacter, getLocation, loading } = useApi()
-const { linkText, setSessionState } = useEntityLinker()
+const { getFaction, getGame, getEntityImages, getCharacter, getLocation, loading } = useApi()
+const { linkText, setGameState } = useEntityLinker()
 const { setSession } = useTheme()
 
 const faction = ref<Faction | null>(null)
-const sessionState = ref<SessionState | null>(null)
+const gameState = ref<GameState | null>(null)
 const images = ref<EntityImages>({ images: [], primaryImage: null })
 const leader = ref<Character | null>(null)
 const headquarters = ref<Location | null>(null)
@@ -25,8 +25,8 @@ const breadcrumbs = computed<Breadcrumb[]>(() => {
   if (!faction.value) return []
   return [
     { label: 'Games', href: '/' },
-    { label: sessionState.value?.session.name || 'Loading...', href: `/sessions/${faction.value.sessionId}` },
-    { label: 'Factions', href: `/sessions/${faction.value.sessionId}/factions` },
+    { label: gameState.value?.game.name || 'Loading...', href: `/games/${faction.value.gameId}` },
+    { label: 'Factions', href: `/games/${faction.value.gameId}/factions` },
     { label: faction.value.name },
   ]
 })
@@ -41,20 +41,20 @@ const statusClass = computed(() => {
   }
 })
 
-// Update entity linker when session state changes
-watch(sessionState, (newState) => setSessionState(newState))
+// Update entity linker when game state changes
+watch(gameState, (newState) => setGameState(newState))
 
 onMounted(async () => {
   const f = await getFaction(factionId.value)
   faction.value = f
 
   if (f) {
-    setSession(f.sessionId)
+    setSession(f.gameId)
     const [state, imgs] = await Promise.all([
-      getSession(f.sessionId),
+      getGame(f.gameId),
       getEntityImages(factionId.value, 'faction'),
     ])
-    sessionState.value = state
+    gameState.value = state
     images.value = imgs
 
     // Fetch leader and headquarters if set

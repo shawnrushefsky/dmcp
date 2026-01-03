@@ -14,7 +14,7 @@ export function registerTagTools(server: McpServer) {
     {
       description: "Add and/or remove tags from an entity in a single call. More efficient than separate add/remove calls.",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         entityId: z.string().max(100).describe("The entity ID to modify tags on"),
         entityType: z.string().max(100).describe("Type of entity (e.g., 'character', 'location', 'item', 'quest')"),
         add: z.array(z.object({
@@ -27,7 +27,7 @@ export function registerTagTools(server: McpServer) {
       outputSchema: tagModifyOutputSchema,
       annotations: ANNOTATIONS.UPDATE,
     },
-    async ({ sessionId, entityId, entityType, add, remove }) => {
+    async ({ gameId, entityId, entityType, add, remove }) => {
       if (!add?.length && !remove?.length) {
         return {
           content: [{ type: "text", text: "No tags to add or remove" }],
@@ -35,7 +35,7 @@ export function registerTagTools(server: McpServer) {
         };
       }
 
-      const result = tagTools.modifyTags({ sessionId, entityId, entityType, add, remove });
+      const result = tagTools.modifyTags({ gameId, entityId, entityType, add, remove });
       const output = {
         entityId: result.entityId,
         entityType: result.entityType,
@@ -61,14 +61,14 @@ export function registerTagTools(server: McpServer) {
   server.registerTool(
     "list_tags",
     {
-      description: "List all unique tags in a session with counts",
+      description: "List all unique tags in a game with counts",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId }) => {
-      const tags = tagTools.listTags(sessionId);
+    async ({ gameId }) => {
+      const tags = tagTools.listTags(gameId);
       return {
         content: [{ type: "text", text: JSON.stringify(tags, null, 2) }],
       };
@@ -104,14 +104,14 @@ export function registerTagTools(server: McpServer) {
     {
       description: "Find all entities with a specific tag",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         tag: z.string().max(LIMITS.NAME_MAX).describe("The tag to search for"),
         entityType: z.string().max(100).optional().describe("Filter by entity type"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId, tag, entityType }) => {
-      const entities = tagTools.findByTag(sessionId, tag, entityType);
+    async ({ gameId, tag, entityType }) => {
+      const entities = tagTools.findByTag(gameId, tag, entityType);
       return {
         content: [{ type: "text", text: JSON.stringify(entities, null, 2) }],
       };
@@ -124,16 +124,16 @@ export function registerTagTools(server: McpServer) {
   server.registerTool(
     "rename_tag",
     {
-      description: "Rename a tag across all entities in a session",
+      description: "Rename a tag across all entities in a game",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         oldTag: z.string().max(LIMITS.NAME_MAX).describe("The current tag name"),
         newTag: z.string().min(1).max(LIMITS.NAME_MAX).describe("The new tag name"),
       },
       annotations: ANNOTATIONS.UPDATE,
     },
-    async ({ sessionId, oldTag, newTag }) => {
-      const count = tagTools.renameTag(sessionId, oldTag, newTag);
+    async ({ gameId, oldTag, newTag }) => {
+      const count = tagTools.renameTag(gameId, oldTag, newTag);
       return {
         content: [{ type: "text", text: `Renamed ${count} tag(s)` }],
       };

@@ -4,17 +4,17 @@ import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
 import { useEntityLinker } from '../composables/useEntityLinker'
 import { useTheme } from '../composables/useTheme'
-import type { Quest, Breadcrumb, SessionState } from '../types'
+import type { Quest, Breadcrumb, GameState } from '../types'
 import Breadcrumbs from '../components/Breadcrumbs.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
 
 const route = useRoute()
-const { getQuest, getSession, loading } = useApi()
-const { linkText, setSessionState } = useEntityLinker()
+const { getQuest, getGame, loading } = useApi()
+const { linkText, setGameState } = useEntityLinker()
 const { setSession } = useTheme()
 
 const quest = ref<Quest | null>(null)
-const sessionState = ref<SessionState | null>(null)
+const gameState = ref<GameState | null>(null)
 
 const questId = computed(() => route.params.questId as string)
 
@@ -22,22 +22,22 @@ const breadcrumbs = computed<Breadcrumb[]>(() => {
   if (!quest.value) return []
   return [
     { label: 'Games', href: '/' },
-    { label: sessionState.value?.session.name || 'Loading...', href: `/sessions/${quest.value.sessionId}` },
+    { label: gameState.value?.game.name || 'Loading...', href: `/games/${quest.value.gameId}` },
     { label: quest.value.name },
   ]
 })
 
-// Update entity linker when session state changes
-watch(sessionState, (newState) => setSessionState(newState))
+// Update entity linker when game state changes
+watch(gameState, (newState) => setGameState(newState))
 
 onMounted(async () => {
   const q = await getQuest(questId.value)
   quest.value = q
 
-  // Fetch session state for entity linking and theming
+  // Fetch game state for entity linking and theming
   if (q) {
-    setSession(q.sessionId)
-    sessionState.value = await getSession(q.sessionId)
+    setSession(q.gameId)
+    gameState.value = await getGame(q.gameId)
   }
 })
 </script>

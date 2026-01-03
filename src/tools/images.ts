@@ -106,7 +106,7 @@ function inferMimeType(base64: string): string {
 function mapRowToStoredImage(row: Record<string, unknown>): StoredImage {
   return {
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     entityId: row.entity_id as string,
     entityType: row.entity_type as "character" | "location" | "item" | "scene" | "faction",
     filePath: row.file_path as string,
@@ -194,7 +194,7 @@ export async function storeImage(params: StoreImageParams): Promise<StoredImage>
   // Build file path
   const ext = getExtension(mimeType);
   const relativePath = join(
-    params.sessionId,
+    params.gameId,
     `${params.entityType}s`,
     params.entityId,
     `${id}.${ext}`
@@ -218,7 +218,7 @@ export async function storeImage(params: StoreImageParams): Promise<StoredImage>
   // Insert database record
   const stmt = db.prepare(`
     INSERT INTO stored_images (
-      id, session_id, entity_id, entity_type, file_path, file_size, mime_type,
+      id, game_id, entity_id, entity_type, file_path, file_size, mime_type,
       width, height, label, description, source, source_url, generation_tool,
       generation_prompt, is_primary, created_at
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -226,7 +226,7 @@ export async function storeImage(params: StoreImageParams): Promise<StoredImage>
 
   stmt.run(
     id,
-    params.sessionId,
+    params.gameId,
     params.entityId,
     params.entityType,
     relativePath,
@@ -246,7 +246,7 @@ export async function storeImage(params: StoreImageParams): Promise<StoredImage>
 
   return {
     id,
-    sessionId: params.sessionId,
+    gameId: params.gameId,
     entityId: params.entityId,
     entityType: params.entityType,
     entityName,
@@ -377,7 +377,7 @@ export interface EntityMissingImage {
 }
 
 export interface EntitiesMissingImagesResult {
-  sessionId: string;
+  gameId: string;
   entities: EntityMissingImage[];
   totalMissing: number;
   byType: {
@@ -389,12 +389,12 @@ export interface EntitiesMissingImagesResult {
 }
 
 export function listEntitiesMissingImages(
-  sessionId: string,
+  gameId: string,
   entityType?: "character" | "location" | "item" | "faction"
 ): EntitiesMissingImagesResult {
   const db = getDatabase();
   const result: EntitiesMissingImagesResult = {
-    sessionId,
+    gameId,
     entities: [],
     totalMissing: 0,
     byType: { characters: 0, locations: 0, items: 0, factions: 0 },
@@ -413,8 +413,8 @@ export function listEntitiesMissingImages(
   // Check characters
   if (!entityType || entityType === "character") {
     const characters = db.prepare(`
-      SELECT id, name, is_player, image_gen FROM characters WHERE session_id = ?
-    `).all(sessionId) as { id: string; name: string; is_player: number; image_gen: string | null }[];
+      SELECT id, name, is_player, image_gen FROM characters WHERE game_id = ?
+    `).all(gameId) as { id: string; name: string; is_player: number; image_gen: string | null }[];
 
     for (const char of characters) {
       if (!hasPrimaryImage(char.id, "character")) {
@@ -433,8 +433,8 @@ export function listEntitiesMissingImages(
   // Check locations
   if (!entityType || entityType === "location") {
     const locations = db.prepare(`
-      SELECT id, name, image_gen FROM locations WHERE session_id = ?
-    `).all(sessionId) as { id: string; name: string; image_gen: string | null }[];
+      SELECT id, name, image_gen FROM locations WHERE game_id = ?
+    `).all(gameId) as { id: string; name: string; image_gen: string | null }[];
 
     for (const loc of locations) {
       if (!hasPrimaryImage(loc.id, "location")) {
@@ -452,8 +452,8 @@ export function listEntitiesMissingImages(
   // Check items
   if (!entityType || entityType === "item") {
     const items = db.prepare(`
-      SELECT id, name, image_gen FROM items WHERE session_id = ?
-    `).all(sessionId) as { id: string; name: string; image_gen: string | null }[];
+      SELECT id, name, image_gen FROM items WHERE game_id = ?
+    `).all(gameId) as { id: string; name: string; image_gen: string | null }[];
 
     for (const item of items) {
       if (!hasPrimaryImage(item.id, "item")) {
@@ -471,8 +471,8 @@ export function listEntitiesMissingImages(
   // Check factions
   if (!entityType || entityType === "faction") {
     const factions = db.prepare(`
-      SELECT id, name FROM factions WHERE session_id = ?
-    `).all(sessionId) as { id: string; name: string }[];
+      SELECT id, name FROM factions WHERE game_id = ?
+    `).all(gameId) as { id: string; name: string }[];
 
     for (const faction of factions) {
       if (!hasPrimaryImage(faction.id, "faction")) {
@@ -560,7 +560,7 @@ export function updateImageMetadata(
       const oldFullPath = join(IMAGES_DIR, current.filePath);
       const ext = current.filePath.split(".").pop() || "png";
       newFilePath = join(
-        current.sessionId,
+        current.gameId,
         `${newEntityType}s`,
         newEntityId,
         `${imageId}.${ext}`
@@ -597,20 +597,20 @@ export function updateImageMetadata(
   };
 }
 
-// Cleanup helper - delete all images for a session
-export function deleteSessionImages(sessionId: string): number {
+// Cleanup helper - delete all images for a game
+export function deleteGameImages(gameId: string): number {
   const db = getDatabase();
 
   // Delete files
-  const sessionDir = join(IMAGES_DIR, sessionId);
+  const sessionDir = join(IMAGES_DIR, gameId);
   if (existsSync(sessionDir)) {
     rmSync(sessionDir, { recursive: true, force: true });
   }
 
   // Delete records (cascade should handle this, but be explicit)
   const result = db
-    .prepare(`DELETE FROM stored_images WHERE session_id = ?`)
-    .run(sessionId);
+    .prepare(`DELETE FROM stored_images WHERE game_id = ?`)
+    .run(gameId);
   return result.changes;
 }
 
@@ -633,18 +633,18 @@ export function getPrimaryImage(
   return mapRowToStoredImage(row);
 }
 
-// List all images in a session
-export function listSessionImages(sessionId: string): StoredImage[] {
+// List all images in a game
+export function listGameImages(gameId: string): StoredImage[] {
   const db = getDatabase();
   const rows = db
     .prepare(
       `
     SELECT * FROM stored_images
-    WHERE session_id = ?
+    WHERE game_id = ?
     ORDER BY created_at DESC
   `
     )
-    .all(sessionId) as Record<string, unknown>[];
+    .all(gameId) as Record<string, unknown>[];
 
   return rows.map(mapRowToStoredImage);
 }

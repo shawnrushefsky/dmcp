@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import type {
-  Session,
-  SessionState,
+  Game,
+  GameState,
   MapData,
   Character,
   CharacterSheet,
@@ -30,11 +30,11 @@ export function useApi() {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  async function getSessions(): Promise<Session[]> {
+  async function getGames(): Promise<Game[]> {
     loading.value = true
     error.value = null
     try {
-      return await fetchJson<Session[]>(`${API_BASE}/sessions`)
+      return await fetchJson<Game[]>(`${API_BASE}/games`)
     } catch (e) {
       error.value = (e as Error).message
       return []
@@ -43,11 +43,11 @@ export function useApi() {
     }
   }
 
-  async function getSession(sessionId: string): Promise<SessionState | null> {
+  async function getGame(gameId: string): Promise<GameState | null> {
     loading.value = true
     error.value = null
     try {
-      return await fetchJson<SessionState>(`${API_BASE}/sessions/${sessionId}`)
+      return await fetchJson<GameState>(`${API_BASE}/games/${gameId}`)
     } catch (e) {
       error.value = (e as Error).message
       return null
@@ -56,11 +56,11 @@ export function useApi() {
     }
   }
 
-  async function getMap(sessionId: string): Promise<MapData | null> {
+  async function getMap(gameId: string): Promise<MapData | null> {
     loading.value = true
     error.value = null
     try {
-      return await fetchJson<MapData>(`${API_BASE}/sessions/${sessionId}/map`)
+      return await fetchJson<MapData>(`${API_BASE}/games/${gameId}/map`)
     } catch (e) {
       error.value = (e as Error).message
       return null
@@ -147,12 +147,12 @@ export function useApi() {
     }
   }
 
-  async function getHistory(sessionId: string, limit = 50): Promise<NarrativeEvent[]> {
+  async function getHistory(gameId: string, limit = 50): Promise<NarrativeEvent[]> {
     loading.value = true
     error.value = null
     try {
       return await fetchJson<NarrativeEvent[]>(
-        `${API_BASE}/sessions/${sessionId}/history?limit=${limit}`
+        `${API_BASE}/games/${gameId}/history?limit=${limit}`
       )
     } catch (e) {
       error.value = (e as Error).message
@@ -162,11 +162,11 @@ export function useApi() {
     }
   }
 
-  async function getSessionImages(sessionId: string): Promise<StoredImage[]> {
+  async function getGameImages(gameId: string): Promise<StoredImage[]> {
     loading.value = true
     error.value = null
     try {
-      return await fetchJson<StoredImage[]>(`${API_BASE}/sessions/${sessionId}/images`)
+      return await fetchJson<StoredImage[]>(`${API_BASE}/games/${gameId}/images`)
     } catch (e) {
       error.value = (e as Error).message
       return []
@@ -225,14 +225,14 @@ export function useApi() {
   }
 
   async function getCharactersAtLocation(
-    sessionId: string,
+    gameId: string,
     locationId: string
   ): Promise<Character[]> {
     loading.value = true
     error.value = null
     try {
       return await fetchJson<Character[]>(
-        `${API_BASE}/sessions/${sessionId}/characters?locationId=${locationId}`
+        `${API_BASE}/games/${gameId}/characters?locationId=${locationId}`
       )
     } catch (e) {
       error.value = (e as Error).message
@@ -264,11 +264,11 @@ export function useApi() {
     }>
   }
 
-  async function search(sessionId: string, query: string): Promise<SearchResult> {
+  async function search(gameId: string, query: string): Promise<SearchResult> {
     // Don't set loading for search (it's non-blocking)
     try {
       return await fetchJson<SearchResult>(
-        `${API_BASE}/sessions/${sessionId}/search?q=${encodeURIComponent(query)}`
+        `${API_BASE}/games/${gameId}/search?q=${encodeURIComponent(query)}`
       )
     } catch {
       return { characters: [], locations: [], quests: [] }
@@ -276,13 +276,13 @@ export function useApi() {
   }
 
   async function getImageGenerationPresets(
-    sessionId: string
+    gameId: string
   ): Promise<ImagePresetsResponse> {
     loading.value = true
     error.value = null
     try {
       return await fetchJson<ImagePresetsResponse>(
-        `${API_BASE}/sessions/${sessionId}/image-presets`
+        `${API_BASE}/games/${gameId}/image-presets`
       )
     } catch (e) {
       error.value = (e as Error).message
@@ -293,14 +293,14 @@ export function useApi() {
   }
 
   async function getImageGenerationPreset(
-    sessionId: string,
+    gameId: string,
     presetId: string
   ): Promise<ImageGenerationPreset | null> {
     loading.value = true
     error.value = null
     try {
       return await fetchJson<ImageGenerationPreset>(
-        `${API_BASE}/sessions/${sessionId}/image-presets/${presetId}`
+        `${API_BASE}/games/${gameId}/image-presets/${presetId}`
       )
     } catch (e) {
       error.value = (e as Error).message
@@ -313,8 +313,8 @@ export function useApi() {
   return {
     loading,
     error,
-    getSessions,
-    getSession,
+    getGames,
+    getGame,
     getMap,
     getCharacter,
     getCharacterSheet,
@@ -323,7 +323,7 @@ export function useApi() {
     getFaction,
     getItem,
     getHistory,
-    getSessionImages,
+    getGameImages,
     getImage,
     getEntityImages,
     getInventory,

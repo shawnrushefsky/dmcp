@@ -4,7 +4,7 @@ import { safeJsonParse } from "../utils/json.js";
 import type { Character, CharacterStatus, VoiceDescription, ImageGeneration } from "../types/index.js";
 
 export function createCharacter(params: {
-  sessionId: string;
+  gameId: string;
   name: string;
   isPlayer: boolean;
   attributes?: Record<string, number>;
@@ -29,13 +29,13 @@ export function createCharacter(params: {
   };
 
   const stmt = db.prepare(`
-    INSERT INTO characters (id, session_id, name, is_player, attributes, skills, status, location_id, notes, voice, image_gen, created_at)
+    INSERT INTO characters (id, game_id, name, is_player, attributes, skills, status, location_id, notes, voice, image_gen, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   stmt.run(
     id,
-    params.sessionId,
+    params.gameId,
     params.name,
     params.isPlayer ? 1 : 0,
     JSON.stringify(params.attributes || {}),
@@ -50,7 +50,7 @@ export function createCharacter(params: {
 
   return {
     id,
-    sessionId: params.sessionId,
+    gameId: params.gameId,
     name: params.name,
     isPlayer: params.isPlayer,
     attributes: params.attributes || {},
@@ -73,7 +73,7 @@ export function getCharacter(id: string): Character | null {
 
   return {
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     name: row.name as string,
     isPlayer: (row.is_player as number) === 1,
     attributes: safeJsonParse<Record<string, number>>(row.attributes as string, {}),
@@ -161,15 +161,15 @@ export function deleteCharacter(id: string): boolean {
 }
 
 export function listCharacters(
-  sessionId: string,
+  gameId: string,
   filter?: {
     isPlayer?: boolean;
     locationId?: string;
   }
 ): Character[] {
   const db = getDatabase();
-  let query = `SELECT * FROM characters WHERE session_id = ?`;
-  const params: (string | number)[] = [sessionId];
+  let query = `SELECT * FROM characters WHERE game_id = ?`;
+  const params: (string | number)[] = [gameId];
 
   if (filter?.isPlayer !== undefined) {
     query += ` AND is_player = ?`;
@@ -186,7 +186,7 @@ export function listCharacters(
 
   return rows.map((row) => ({
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     name: row.name as string,
     isPlayer: (row.is_player as number) === 1,
     attributes: safeJsonParse<Record<string, number>>(row.attributes as string, {}),
@@ -205,7 +205,7 @@ export function listCharacters(
  * Returns the best match or null if no reasonable match found.
  */
 export function getCharacterByName(
-  sessionId: string,
+  gameId: string,
   name: string
 ): Character | null {
   const db = getDatabase();
@@ -213,8 +213,8 @@ export function getCharacterByName(
 
   // First try exact match (case-insensitive)
   const exactMatch = db.prepare(
-    `SELECT * FROM characters WHERE session_id = ? AND LOWER(name) = ?`
-  ).get(sessionId, searchName) as Record<string, unknown> | undefined;
+    `SELECT * FROM characters WHERE game_id = ? AND LOWER(name) = ?`
+  ).get(gameId, searchName) as Record<string, unknown> | undefined;
 
   if (exactMatch) {
     return mapRowToCharacter(exactMatch);
@@ -222,8 +222,8 @@ export function getCharacterByName(
 
   // Try contains match
   const containsMatch = db.prepare(
-    `SELECT * FROM characters WHERE session_id = ? AND LOWER(name) LIKE ?`
-  ).get(sessionId, `%${searchName}%`) as Record<string, unknown> | undefined;
+    `SELECT * FROM characters WHERE game_id = ? AND LOWER(name) LIKE ?`
+  ).get(gameId, `%${searchName}%`) as Record<string, unknown> | undefined;
 
   if (containsMatch) {
     return mapRowToCharacter(containsMatch);
@@ -234,8 +234,8 @@ export function getCharacterByName(
   if (words.length > 0) {
     const lastName = words[words.length - 1];
     const lastNameMatch = db.prepare(
-      `SELECT * FROM characters WHERE session_id = ? AND LOWER(name) LIKE ?`
-    ).get(sessionId, `%${lastName}%`) as Record<string, unknown> | undefined;
+      `SELECT * FROM characters WHERE game_id = ? AND LOWER(name) LIKE ?`
+    ).get(gameId, `%${lastName}%`) as Record<string, unknown> | undefined;
 
     if (lastNameMatch) {
       return mapRowToCharacter(lastNameMatch);
@@ -249,7 +249,7 @@ export function getCharacterByName(
 function mapRowToCharacter(row: Record<string, unknown>): Character {
   return {
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     name: row.name as string,
     isPlayer: (row.is_player as number) === 1,
     attributes: safeJsonParse<Record<string, number>>(row.attributes as string, {}),

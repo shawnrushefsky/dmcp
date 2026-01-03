@@ -1,9 +1,9 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import * as sessionTools from "../tools/session.js";
+import * as gameTools from "../tools/game.js";
 import * as rulesTools from "../tools/rules.js";
 import { LIMITS } from "../utils/validation.js";
-import { getSessionUrl, getWebUiBaseUrl } from "../utils/webui.js";
+import { getGameUrl, getWebUiBaseUrl } from "../utils/webui.js";
 import { ANNOTATIONS } from "../utils/tool-annotations.js";
 
 export function registerCoreTools(server: McpServer) {
@@ -19,12 +19,12 @@ export function registerCoreTools(server: McpServer) {
       annotations: ANNOTATIONS.READ_ONLY,
     },
     async () => {
-      const menu = sessionTools.getGameMenu();
+      const menu = gameTools.getGameMenu();
       const menuWithUrls = {
         ...menu,
-        sessions: menu.sessions.map((s) => ({
-          ...s,
-          webUiUrl: getSessionUrl(s.id),
+        games: menu.games.map((g) => ({
+          ...g,
+          webUiUrl: getGameUrl(g.id),
         })),
         webUi: {
           baseUrl: getWebUiBaseUrl(),
@@ -40,7 +40,7 @@ export function registerCoreTools(server: McpServer) {
   );
 
   server.registerTool(
-    "create_session",
+    "create_game",
     {
       description: "Create a new game session with a setting and style",
       inputSchema: {
@@ -51,13 +51,13 @@ export function registerCoreTools(server: McpServer) {
       annotations: ANNOTATIONS.CREATE,
     },
     async ({ name, setting, style }) => {
-      const session = sessionTools.createSession({ name, setting, style });
-      const webUiUrl = getSessionUrl(session.id);
+      const game = gameTools.createGame({ name, setting, style });
+      const webUiUrl = getGameUrl(game.id);
       return {
         content: [{
           type: "text",
           text: JSON.stringify({
-            ...session,
+            ...game,
             webUi: {
               url: webUiUrl,
               message: `View game at: ${webUiUrl}`,
@@ -69,28 +69,28 @@ export function registerCoreTools(server: McpServer) {
   );
 
   server.registerTool(
-    "load_session",
+    "load_game",
     {
       description: "Load an existing game session by ID",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID to load"),
+        gameId: z.string().max(100).describe("The game ID to load"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId }) => {
-      const session = sessionTools.loadSession(sessionId);
-      if (!session) {
+    async ({ gameId }) => {
+      const game = gameTools.loadGame(gameId);
+      if (!game) {
         return {
-          content: [{ type: "text", text: `Session ${sessionId} not found` }],
+          content: [{ type: "text", text: `Session ${gameId} not found` }],
           isError: true,
         };
       }
-      const webUiUrl = getSessionUrl(session.id);
+      const webUiUrl = getGameUrl(game.id);
       return {
         content: [{
           type: "text",
           text: JSON.stringify({
-            ...session,
+            ...game,
             webUi: {
               url: webUiUrl,
               message: `View game at: ${webUiUrl}`,
@@ -102,17 +102,18 @@ export function registerCoreTools(server: McpServer) {
   );
 
   server.registerTool(
-    "list_sessions",
+    "list_games",
     {
-      description: "List all saved game sessions",
+      description: "List all saved games",
       inputSchema: {},
       annotations: ANNOTATIONS.READ_ONLY,
     },
     async () => {
-      const sessions = sessionTools.listSessions();
+      // Use lightweight summaries (no rules/preferences) for listing
+      const sessions = gameTools.listGameSummaries();
       const sessionsWithUrls = sessions.map((s) => ({
         ...s,
-        webUiUrl: getSessionUrl(s.id),
+        webUiUrl: getGameUrl(s.id),
       }));
       return {
         content: [{
@@ -129,23 +130,23 @@ export function registerCoreTools(server: McpServer) {
   );
 
   server.registerTool(
-    "get_session_state",
+    "get_game_state",
     {
-      description: "Get full current state overview for a session",
+      description: "Get full current state overview for a game",
       inputSchema: {
-        sessionId: z.string().describe("The session ID"),
+        gameId: z.string().describe("The game ID"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId }) => {
-      const state = sessionTools.getSessionState(sessionId);
+    async ({ gameId }) => {
+      const state = gameTools.getGameState(gameId);
       if (!state) {
         return {
-          content: [{ type: "text", text: `Session ${sessionId} not found` }],
+          content: [{ type: "text", text: `Session ${gameId} not found` }],
           isError: true,
         };
       }
-      const webUiUrl = getSessionUrl(sessionId);
+      const webUiUrl = getGameUrl(gameId);
       return {
         content: [{
           type: "text",
@@ -165,55 +166,55 @@ export function registerCoreTools(server: McpServer) {
   );
 
   server.registerTool(
-    "delete_session",
+    "delete_game",
     {
       description: "Delete a game session and all its data. This is IRREVERSIBLE and removes all characters, locations, quests, and history.",
       inputSchema: {
-        sessionId: z.string().describe("The session ID to delete"),
+        gameId: z.string().describe("The game ID to delete"),
       },
       annotations: ANNOTATIONS.DESTRUCTIVE,
     },
-    async ({ sessionId }) => {
-      const success = sessionTools.deleteSession(sessionId);
+    async ({ gameId }) => {
+      const success = gameTools.deleteGame(gameId);
       return {
-        content: [{ type: "text", text: success ? "Session deleted" : "Session not found" }],
+        content: [{ type: "text", text: success ? "Game deleted" : "Game not found" }],
         isError: !success,
       };
     }
   );
 
   server.registerTool(
-    "update_session",
+    "update_game",
     {
       description: "Update a game session's name, setting, or style",
       inputSchema: {
-        sessionId: z.string().describe("The session ID to update"),
-        name: z.string().min(1).max(LIMITS.NAME_MAX).optional().describe("New name for the session"),
+        gameId: z.string().describe("The game ID to update"),
+        name: z.string().min(1).max(LIMITS.NAME_MAX).optional().describe("New name for the game"),
         setting: z.string().min(1).max(LIMITS.DESCRIPTION_MAX).optional().describe("New setting description"),
         style: z.string().min(1).max(LIMITS.NAME_MAX).optional().describe("New narrative style"),
       },
       annotations: ANNOTATIONS.UPDATE,
     },
-    async ({ sessionId, name, setting, style }) => {
+    async ({ gameId, name, setting, style }) => {
       if (!name && !setting && !style) {
         return {
           content: [{ type: "text", text: "No updates provided" }],
           isError: true,
         };
       }
-      const session = sessionTools.updateSession(sessionId, { name, setting, style });
-      if (!session) {
+      const game = gameTools.updateGame(gameId, { name, setting, style });
+      if (!game) {
         return {
-          content: [{ type: "text", text: "Session not found" }],
+          content: [{ type: "text", text: "Game not found" }],
           isError: true,
         };
       }
-      const webUiUrl = getSessionUrl(session.id);
+      const webUiUrl = getGameUrl(game.id);
       return {
         content: [{
           type: "text",
           text: JSON.stringify({
-            ...session,
+            ...game,
             webUi: {
               url: webUiUrl,
               message: `View game at: ${webUiUrl}`,
@@ -229,25 +230,25 @@ export function registerCoreTools(server: McpServer) {
     {
       description: "Set or remove the title image for a game session",
       inputSchema: {
-        sessionId: z.string().describe("The session ID"),
+        gameId: z.string().describe("The game ID"),
         imageId: z.string().nullable().describe("The image ID to set as title image, or null to remove"),
       },
       annotations: ANNOTATIONS.SET,
     },
-    async ({ sessionId, imageId }) => {
-      const session = sessionTools.setSessionTitleImage(sessionId, imageId);
-      if (!session) {
+    async ({ gameId, imageId }) => {
+      const game = gameTools.setSessionTitleImage(gameId, imageId);
+      if (!game) {
         return {
-          content: [{ type: "text", text: "Session not found" }],
+          content: [{ type: "text", text: "Game not found" }],
           isError: true,
         };
       }
-      const webUiUrl = getSessionUrl(session.id);
+      const webUiUrl = getGameUrl(game.id);
       return {
         content: [{
           type: "text",
           text: JSON.stringify({
-            ...session,
+            ...game,
             webUi: {
               url: webUiUrl,
               message: `View game at: ${webUiUrl}`,
@@ -617,7 +618,7 @@ export function registerCoreTools(server: McpServer) {
     {
       description: "Save the player's game preferences after the interview",
       inputSchema: {
-        sessionId: z.string().describe("The session ID"),
+        gameId: z.string().describe("The game ID"),
         preferences: z.object({
           genre: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
           tone: z.object({ value: z.string().nullable(), delegatedToDM: z.boolean(), notes: z.string().optional() }),
@@ -645,11 +646,11 @@ export function registerCoreTools(server: McpServer) {
       },
       annotations: ANNOTATIONS.CREATE,
     },
-    async ({ sessionId, preferences }) => {
-      const success = sessionTools.updateSessionPreferences(sessionId, preferences);
+    async ({ gameId, preferences }) => {
+      const success = gameTools.updateGamePreferences(gameId, preferences);
       if (!success) {
         return {
-          content: [{ type: "text", text: "Session not found" }],
+          content: [{ type: "text", text: "Game not found" }],
           isError: true,
         };
       }
@@ -682,14 +683,14 @@ export function registerCoreTools(server: McpServer) {
   server.registerTool(
     "get_game_preferences",
     {
-      description: "Get the saved game preferences for a session",
+      description: "Get the saved game preferences for a game",
       inputSchema: {
-        sessionId: z.string().describe("The session ID"),
+        gameId: z.string().describe("The game ID"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId }) => {
-      const preferences = sessionTools.getSessionPreferences(sessionId);
+    async ({ gameId }) => {
+      const preferences = gameTools.getGamePreferences(gameId);
       if (!preferences) {
         return {
           content: [{ type: "text", text: "No preferences found for this session" }],
@@ -800,15 +801,15 @@ export function registerCoreTools(server: McpServer) {
   server.registerTool(
     "list_image_generation_presets",
     {
-      description: "List all image generation presets for a session. Presets allow different configurations for different use cases (character portraits, location art, items with text, etc.)",
+      description: "List all image generation presets for a game. Presets allow different configurations for different use cases (character portraits, location art, items with text, etc.)",
       inputSchema: {
-        sessionId: z.string().describe("The session ID"),
+        gameId: z.string().describe("The game ID"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId }) => {
-      const presets = sessionTools.listImageGenerationPresets(sessionId);
-      const defaultPreset = sessionTools.getDefaultImagePreset(sessionId);
+    async ({ gameId }) => {
+      const presets = gameTools.listImageGenerationPresets(gameId);
+      const defaultPreset = gameTools.getDefaultImagePreset(gameId);
       return {
         content: [{
           type: "text",
@@ -834,13 +835,13 @@ export function registerCoreTools(server: McpServer) {
     {
       description: "Get a specific image generation preset by ID, including full configuration details",
       inputSchema: {
-        sessionId: z.string().describe("The session ID"),
+        gameId: z.string().describe("The game ID"),
         presetId: z.string().describe("The preset ID"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId, presetId }) => {
-      const preset = sessionTools.getImageGenerationPreset(sessionId, presetId);
+    async ({ gameId, presetId }) => {
+      const preset = gameTools.getImageGenerationPreset(gameId, presetId);
       if (!preset) {
         return {
           content: [{ type: "text", text: "Preset not found" }],
@@ -856,14 +857,14 @@ export function registerCoreTools(server: McpServer) {
   server.registerTool(
     "get_default_image_preset",
     {
-      description: "Get the default image generation preset for a session",
+      description: "Get the default image generation preset for a game",
       inputSchema: {
-        sessionId: z.string().describe("The session ID"),
+        gameId: z.string().describe("The game ID"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId }) => {
-      const preset = sessionTools.getDefaultImagePreset(sessionId);
+    async ({ gameId }) => {
+      const preset = gameTools.getDefaultImagePreset(gameId);
       if (!preset) {
         return {
           content: [{
@@ -886,7 +887,7 @@ export function registerCoreTools(server: McpServer) {
     {
       description: "Create a new image generation preset. Use different presets for different purposes: character portraits, location art, items with text, etc. Each preset can have its own tool, model, style, and workflow configuration.",
       inputSchema: {
-        sessionId: z.string().describe("The session ID"),
+        gameId: z.string().describe("The game ID"),
         name: z.string().describe("Human-readable preset name (e.g., 'Character Portraits', 'Location Art', 'Items with Text')"),
         description: z.string().optional().describe("What this preset is for"),
         entityTypes: z.array(z.enum(["character", "location", "item", "scene", "faction"])).optional()
@@ -896,8 +897,8 @@ export function registerCoreTools(server: McpServer) {
       },
       annotations: ANNOTATIONS.CREATE,
     },
-    async ({ sessionId, name, description, entityTypes, isDefault, config }) => {
-      const preset = sessionTools.createImageGenerationPreset(sessionId, {
+    async ({ gameId, name, description, entityTypes, isDefault, config }) => {
+      const preset = gameTools.createImageGenerationPreset(gameId, {
         name,
         description,
         entityTypes,
@@ -928,7 +929,7 @@ export function registerCoreTools(server: McpServer) {
     {
       description: "Update an existing image generation preset. Only specified fields are updated; others are preserved.",
       inputSchema: {
-        sessionId: z.string().describe("The session ID"),
+        gameId: z.string().describe("The game ID"),
         presetId: z.string().describe("The preset ID to update"),
         name: z.string().optional().describe("New preset name"),
         description: z.string().optional().describe("New description"),
@@ -939,8 +940,8 @@ export function registerCoreTools(server: McpServer) {
       },
       annotations: ANNOTATIONS.UPDATE,
     },
-    async ({ sessionId, presetId, name, description, entityTypes, isDefault, config }) => {
-      const preset = sessionTools.updateImageGenerationPreset(sessionId, presetId, {
+    async ({ gameId, presetId, name, description, entityTypes, isDefault, config }) => {
+      const preset = gameTools.updateImageGenerationPreset(gameId, presetId, {
         name,
         description,
         entityTypes,
@@ -964,13 +965,13 @@ export function registerCoreTools(server: McpServer) {
     {
       description: "Delete an image generation preset. This is IRREVERSIBLE.",
       inputSchema: {
-        sessionId: z.string().describe("The session ID"),
+        gameId: z.string().describe("The game ID"),
         presetId: z.string().describe("The preset ID to delete"),
       },
       annotations: ANNOTATIONS.DELETE,
     },
-    async ({ sessionId, presetId }) => {
-      const success = sessionTools.deleteImageGenerationPreset(sessionId, presetId);
+    async ({ gameId, presetId }) => {
+      const success = gameTools.deleteImageGenerationPreset(gameId, presetId);
       if (!success) {
         return {
           content: [{ type: "text", text: "Preset not found" }],
@@ -988,13 +989,13 @@ export function registerCoreTools(server: McpServer) {
     {
       description: "Set which image generation preset should be used by default",
       inputSchema: {
-        sessionId: z.string().describe("The session ID"),
+        gameId: z.string().describe("The game ID"),
         presetId: z.string().describe("The preset ID to make default"),
       },
       annotations: ANNOTATIONS.SET,
     },
-    async ({ sessionId, presetId }) => {
-      const success = sessionTools.setDefaultImagePreset(sessionId, presetId);
+    async ({ gameId, presetId }) => {
+      const success = gameTools.setDefaultImagePreset(gameId, presetId);
       if (!success) {
         return {
           content: [{ type: "text", text: "Preset not found" }],
@@ -1014,9 +1015,9 @@ export function registerCoreTools(server: McpServer) {
   server.registerTool(
     "set_rules",
     {
-      description: "Store a rule system for the session",
+      description: "Store a rule system for the game",
       inputSchema: {
-        sessionId: z.string().describe("The session ID"),
+        gameId: z.string().describe("The game ID"),
         rules: z.object({
           name: z.string(),
           description: z.string(),
@@ -1068,8 +1069,8 @@ export function registerCoreTools(server: McpServer) {
       },
       annotations: ANNOTATIONS.SET,
     },
-    async ({ sessionId, rules }) => {
-      const success = rulesTools.setRules(sessionId, rules);
+    async ({ gameId, rules }) => {
+      const success = rulesTools.setRules(gameId, rules);
       return {
         content: [{ type: "text", text: success ? "Rules set successfully" : "Failed to set rules" }],
         isError: !success,
@@ -1080,14 +1081,14 @@ export function registerCoreTools(server: McpServer) {
   server.registerTool(
     "get_rules",
     {
-      description: "Get the current rule system for a session",
+      description: "Get the current rule system for a game",
       inputSchema: {
-        sessionId: z.string().describe("The session ID"),
+        gameId: z.string().describe("The game ID"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId }) => {
-      const rules = rulesTools.getRules(sessionId);
+    async ({ gameId }) => {
+      const rules = rulesTools.getRules(gameId);
       if (!rules) {
         return {
           content: [{ type: "text", text: "No rules set for this session" }],
@@ -1104,13 +1105,13 @@ export function registerCoreTools(server: McpServer) {
     {
       description: "Partially update the rule system",
       inputSchema: {
-        sessionId: z.string().describe("The session ID"),
+        gameId: z.string().describe("The game ID"),
         updates: z.record(z.string(), z.unknown()).describe("Partial rule updates"),
       },
       annotations: ANNOTATIONS.UPDATE,
     },
-    async ({ sessionId, updates }) => {
-      const rules = rulesTools.updateRules(sessionId, updates);
+    async ({ gameId, updates }) => {
+      const rules = rulesTools.updateRules(gameId, updates);
       if (!rules) {
         return {
           content: [{ type: "text", text: "No rules to update" }],

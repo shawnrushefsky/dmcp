@@ -4,7 +4,7 @@ import { safeJsonParse } from "../utils/json.js";
 import type { Item, ItemProperties, ImageGeneration } from "../types/index.js";
 
 export function createItem(params: {
-  sessionId: string;
+  gameId: string;
   ownerId: string;
   ownerType: "character" | "location";
   name: string;
@@ -21,13 +21,13 @@ export function createItem(params: {
   };
 
   const stmt = db.prepare(`
-    INSERT INTO items (id, session_id, owner_id, owner_type, name, properties, image_gen)
+    INSERT INTO items (id, game_id, owner_id, owner_type, name, properties, image_gen)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
 
   stmt.run(
     id,
-    params.sessionId,
+    params.gameId,
     params.ownerId,
     params.ownerType,
     params.name,
@@ -37,7 +37,7 @@ export function createItem(params: {
 
   return {
     id,
-    sessionId: params.sessionId,
+    gameId: params.gameId,
     ownerId: params.ownerId,
     ownerType: params.ownerType,
     name: params.name,
@@ -55,7 +55,7 @@ export function getItem(id: string): Item | null {
 
   return {
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     ownerId: row.owner_id as string,
     ownerType: row.owner_type as "character" | "location",
     name: row.name as string,
@@ -143,7 +143,7 @@ export function getInventory(
 
   return rows.map((row) => ({
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     ownerId: row.owner_id as string,
     ownerType: row.owner_type as "character" | "location",
     name: row.name as string,
@@ -153,20 +153,20 @@ export function getInventory(
 }
 
 export function findItemByName(
-  sessionId: string,
+  gameId: string,
   name: string
 ): Item | null {
   const db = getDatabase();
   const stmt = db.prepare(`
-    SELECT * FROM items WHERE session_id = ? AND name = ? LIMIT 1
+    SELECT * FROM items WHERE game_id = ? AND name = ? LIMIT 1
   `);
-  const row = stmt.get(sessionId, name) as Record<string, unknown> | undefined;
+  const row = stmt.get(gameId, name) as Record<string, unknown> | undefined;
 
   if (!row) return null;
 
   return {
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     ownerId: row.owner_id as string,
     ownerType: row.owner_type as "character" | "location",
     name: row.name as string,
@@ -175,14 +175,14 @@ export function findItemByName(
   };
 }
 
-export function listSessionItems(sessionId: string): Item[] {
+export function listGameItems(gameId: string): Item[] {
   const db = getDatabase();
-  const stmt = db.prepare(`SELECT * FROM items WHERE session_id = ?`);
-  const rows = stmt.all(sessionId) as Record<string, unknown>[];
+  const stmt = db.prepare(`SELECT * FROM items WHERE game_id = ?`);
+  const rows = stmt.all(gameId) as Record<string, unknown>[];
 
   return rows.map((row) => ({
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     ownerId: row.owner_id as string,
     ownerType: row.owner_type as "character" | "location",
     name: row.name as string,

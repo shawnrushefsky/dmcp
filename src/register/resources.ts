@@ -10,9 +10,9 @@ export function registerResourceTools(server: McpServer) {
     {
       description: "Create a new resource (currency, reputation, counter, etc.)",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
-        ownerType: z.enum(["session", "character"]).describe("Owner type: 'session' for party/global resources, 'character' for personal resources"),
-        ownerId: z.string().max(100).optional().describe("Character ID if ownerType is 'character' (omit for session-level resources)"),
+        gameId: z.string().max(100).describe("The game ID"),
+        ownerType: z.enum(["game", "character"]).describe("Owner type: 'game' for party/global resources, 'character' for personal resources"),
+        ownerId: z.string().max(100).optional().describe("Character ID if ownerType is 'character' (omit for game-level resources)"),
         name: z.string().min(1).max(LIMITS.NAME_MAX).describe("Resource name (e.g., 'Gold', 'Sanity', 'Thieves Guild Reputation')"),
         description: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("Resource description"),
         category: z.string().max(100).optional().describe("Category for grouping (e.g., 'currency', 'reputation', 'pool', 'counter')"),
@@ -102,17 +102,17 @@ export function registerResourceTools(server: McpServer) {
   server.registerTool(
     "list_resources",
     {
-      description: "List resources in a session",
+      description: "List resources in a game",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
-        ownerType: z.enum(["session", "character"]).optional().describe("Filter by owner type"),
+        gameId: z.string().max(100).describe("The game ID"),
+        ownerType: z.enum(["game", "character"]).optional().describe("Filter by owner type"),
         ownerId: z.string().max(100).optional().describe("Filter by owner ID (for character resources)"),
         category: z.string().max(100).optional().describe("Filter by category"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId, ownerType, ownerId, category }) => {
-      const resources = resourceTools.listResources(sessionId, { ownerType, ownerId, category });
+    async ({ gameId, ownerType, ownerId, category }) => {
+      const resources = resourceTools.listResources(gameId, { ownerType, ownerId, category });
       return {
         content: [{ type: "text", text: JSON.stringify(resources, null, 2) }],
       };

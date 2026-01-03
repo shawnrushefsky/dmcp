@@ -4,7 +4,7 @@ import { safeJsonParse } from "../utils/json.js";
 import type { Location, LocationProperties, Exit, ImageGeneration } from "../types/index.js";
 
 export function createLocation(params: {
-  sessionId: string;
+  gameId: string;
   name: string;
   description: string;
   properties?: Partial<LocationProperties>;
@@ -21,13 +21,13 @@ export function createLocation(params: {
   };
 
   const stmt = db.prepare(`
-    INSERT INTO locations (id, session_id, name, description, properties, image_gen)
+    INSERT INTO locations (id, game_id, name, description, properties, image_gen)
     VALUES (?, ?, ?, ?, ?, ?)
   `);
 
   stmt.run(
     id,
-    params.sessionId,
+    params.gameId,
     params.name,
     params.description,
     JSON.stringify(properties),
@@ -36,7 +36,7 @@ export function createLocation(params: {
 
   return {
     id,
-    sessionId: params.sessionId,
+    gameId: params.gameId,
     name: params.name,
     description: params.description,
     properties,
@@ -53,7 +53,7 @@ export function getLocation(id: string): Location | null {
 
   return {
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     name: row.name as string,
     description: row.description as string,
     properties: safeJsonParse<LocationProperties>(row.properties as string, { exits: [], features: [], atmosphere: "" }),
@@ -103,14 +103,14 @@ export function updateLocation(
   };
 }
 
-export function listLocations(sessionId: string): Location[] {
+export function listLocations(gameId: string): Location[] {
   const db = getDatabase();
-  const stmt = db.prepare(`SELECT * FROM locations WHERE session_id = ?`);
-  const rows = stmt.all(sessionId) as Record<string, unknown>[];
+  const stmt = db.prepare(`SELECT * FROM locations WHERE game_id = ?`);
+  const rows = stmt.all(gameId) as Record<string, unknown>[];
 
   return rows.map((row) => ({
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     name: row.name as string,
     description: row.description as string,
     properties: safeJsonParse<LocationProperties>(row.properties as string, { exits: [], features: [], atmosphere: "" }),
@@ -206,7 +206,7 @@ export function getExits(locationId: string): Exit[] {
  * Returns the best match or null if no reasonable match found.
  */
 export function getLocationByName(
-  sessionId: string,
+  gameId: string,
   name: string
 ): Location | null {
   const db = getDatabase();
@@ -214,8 +214,8 @@ export function getLocationByName(
 
   // First try exact match (case-insensitive)
   const exactMatch = db.prepare(
-    `SELECT * FROM locations WHERE session_id = ? AND LOWER(name) = ?`
-  ).get(sessionId, searchName) as Record<string, unknown> | undefined;
+    `SELECT * FROM locations WHERE game_id = ? AND LOWER(name) = ?`
+  ).get(gameId, searchName) as Record<string, unknown> | undefined;
 
   if (exactMatch) {
     return mapRowToLocation(exactMatch);
@@ -223,8 +223,8 @@ export function getLocationByName(
 
   // Try contains match
   const containsMatch = db.prepare(
-    `SELECT * FROM locations WHERE session_id = ? AND LOWER(name) LIKE ?`
-  ).get(sessionId, `%${searchName}%`) as Record<string, unknown> | undefined;
+    `SELECT * FROM locations WHERE game_id = ? AND LOWER(name) LIKE ?`
+  ).get(gameId, `%${searchName}%`) as Record<string, unknown> | undefined;
 
   if (containsMatch) {
     return mapRowToLocation(containsMatch);
@@ -235,8 +235,8 @@ export function getLocationByName(
   if (words.length > 0) {
     const lastWord = words[words.length - 1];
     const lastWordMatch = db.prepare(
-      `SELECT * FROM locations WHERE session_id = ? AND LOWER(name) LIKE ?`
-    ).get(sessionId, `%${lastWord}%`) as Record<string, unknown> | undefined;
+      `SELECT * FROM locations WHERE game_id = ? AND LOWER(name) LIKE ?`
+    ).get(gameId, `%${lastWord}%`) as Record<string, unknown> | undefined;
 
     if (lastWordMatch) {
       return mapRowToLocation(lastWordMatch);
@@ -250,7 +250,7 @@ export function getLocationByName(
 function mapRowToLocation(row: Record<string, unknown>): Location {
   return {
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     name: row.name as string,
     description: row.description as string,
     properties: safeJsonParse<LocationProperties>(row.properties as string, { exits: [], features: [], atmosphere: "" }),
@@ -297,7 +297,7 @@ interface MapData {
 }
 
 export function renderMap(
-  sessionId: string,
+  gameId: string,
   options?: {
     centerId?: string;
     radius?: number;
@@ -305,7 +305,7 @@ export function renderMap(
     playerLocationId?: string;
   }
 ): MapData | null {
-  const locations = listLocations(sessionId);
+  const locations = listLocations(gameId);
   if (locations.length === 0) return null;
 
   // Build location lookup

@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import * as imageTools from "../tools/images.js";
-import * as sessionTools from "../tools/session.js";
+import * as gameTools from "../tools/game.js";
 import { LIMITS } from "../utils/validation.js";
 import { ANNOTATIONS } from "../utils/tool-annotations.js";
 
@@ -11,7 +11,7 @@ export function registerImageTools(server: McpServer) {
     {
       description: "Store an image for an entity (from base64 data, URL, or local file path)",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         entityId: z
           .string()
           .max(100)
@@ -178,9 +178,9 @@ export function registerImageTools(server: McpServer) {
   server.registerTool(
     "list_entities_missing_images",
     {
-      description: "List all entities in a session that don't have a primary image. Useful for batch image generation workflows. Returns entities grouped by type with counts.",
+      description: "List all entities in a game that don't have a primary image. Useful for batch image generation workflows. Returns entities grouped by type with counts.",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         entityType: z
           .enum(["character", "location", "item", "faction"])
           .optional()
@@ -188,8 +188,8 @@ export function registerImageTools(server: McpServer) {
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId, entityType }) => {
-      const result = imageTools.listEntitiesMissingImages(sessionId, entityType);
+    async ({ gameId, entityType }) => {
+      const result = imageTools.listEntitiesMissingImages(gameId, entityType);
       return {
         content: [{
           type: "text",
@@ -291,7 +291,7 @@ export function registerImageTools(server: McpServer) {
       inputSchema: {
         entityId: z.string().max(100).describe("The entity ID (character, location, item, or faction)"),
         entityType: z.enum(["character", "location", "item", "faction"]).describe("Type of entity"),
-        sessionId: z.string().max(100).optional().describe("Session ID (optional, inferred from entity if not provided)"),
+        gameId: z.string().max(100).optional().describe("Session ID (optional, inferred from entity if not provided)"),
         templateId: z.string().max(100).optional().describe("Specific template ID to use (optional, uses default for entity type if not provided)"),
       },
       outputSchema: {
@@ -311,9 +311,9 @@ export function registerImageTools(server: McpServer) {
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ entityId, entityType, sessionId, templateId }) => {
+    async ({ entityId, entityType, gameId, templateId }) => {
       const { buildImagePrompt } = await import("../tools/image-prompt.js");
-      const result = buildImagePrompt(entityId, entityType, sessionId, templateId);
+      const result = buildImagePrompt(entityId, entityType, gameId, templateId);
       if (!result) {
         return {
           content: [{ type: "text", text: `Entity not found: ${entityType} ${entityId}` }],
@@ -334,14 +334,14 @@ export function registerImageTools(server: McpServer) {
   server.registerTool(
     "list_image_prompt_templates",
     {
-      description: "List all image prompt templates for a session. Templates allow configurable prompt building from entity data using placeholder syntax.",
+      description: "List all image prompt templates for a game. Templates allow configurable prompt building from entity data using placeholder syntax.",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId }) => {
-      const templates = sessionTools.listImagePromptTemplates(sessionId);
+    async ({ gameId }) => {
+      const templates = gameTools.listImagePromptTemplates(gameId);
       const summary = templates.map(t => ({
         id: t.id,
         name: t.name,
@@ -367,13 +367,13 @@ export function registerImageTools(server: McpServer) {
     {
       description: "Get full details of an image prompt template including the template strings.",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         templateId: z.string().max(100).describe("The template ID"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId, templateId }) => {
-      const template = sessionTools.getImagePromptTemplate(sessionId, templateId);
+    async ({ gameId, templateId }) => {
+      const template = gameTools.getImagePromptTemplate(gameId, templateId);
       if (!template) {
         return {
           content: [{ type: "text", text: "Template not found" }],
@@ -396,7 +396,7 @@ export function registerImageTools(server: McpServer) {
 
 Available fields include: name, notes, subject.primaryDescription, subject.physicalTraits.*, subject.attire.*, subject.environment.*, style.*, composition.*, and any imageGen data.`,
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         name: z.string().min(1).max(LIMITS.NAME_MAX).describe("Template name"),
         entityType: z.enum(["character", "location", "item", "faction"]).describe("Which entity type this template handles"),
         promptTemplate: z.string().max(LIMITS.CONTENT_MAX).describe("Main prompt template with placeholders"),
@@ -411,8 +411,8 @@ Available fields include: name, notes, subject.primaryDescription, subject.physi
       },
       annotations: ANNOTATIONS.CREATE,
     },
-    async ({ sessionId, ...params }) => {
-      const template = sessionTools.createImagePromptTemplate(sessionId, params);
+    async ({ gameId, ...params }) => {
+      const template = gameTools.createImagePromptTemplate(gameId, params);
       return {
         content: [{ type: "text", text: JSON.stringify(template, null, 2) }],
       };
@@ -424,7 +424,7 @@ Available fields include: name, notes, subject.primaryDescription, subject.physi
     {
       description: "Update an existing image prompt template. Only specified fields are updated.",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         templateId: z.string().max(100).describe("The template ID to update"),
         name: z.string().min(1).max(LIMITS.NAME_MAX).optional().describe("New template name"),
         description: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("New description"),
@@ -439,8 +439,8 @@ Available fields include: name, notes, subject.primaryDescription, subject.physi
       },
       annotations: ANNOTATIONS.UPDATE,
     },
-    async ({ sessionId, templateId, ...updates }) => {
-      const template = sessionTools.updateImagePromptTemplate(sessionId, templateId, updates);
+    async ({ gameId, templateId, ...updates }) => {
+      const template = gameTools.updateImagePromptTemplate(gameId, templateId, updates);
       if (!template) {
         return {
           content: [{ type: "text", text: "Template not found" }],
@@ -458,13 +458,13 @@ Available fields include: name, notes, subject.primaryDescription, subject.physi
     {
       description: "Delete an image prompt template. This is IRREVERSIBLE.",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         templateId: z.string().max(100).describe("The template ID to delete"),
       },
       annotations: ANNOTATIONS.DESTRUCTIVE,
     },
-    async ({ sessionId, templateId }) => {
-      const success = sessionTools.deleteImagePromptTemplate(sessionId, templateId);
+    async ({ gameId, templateId }) => {
+      const success = gameTools.deleteImagePromptTemplate(gameId, templateId);
       return {
         content: [{ type: "text", text: success ? "Template deleted" : "Template not found" }],
         isError: !success,

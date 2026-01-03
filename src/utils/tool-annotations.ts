@@ -21,7 +21,7 @@ export const READ_ONLY: ToolAnnotations = {
 
 /**
  * Operations that create new entities.
- * Examples: create_session, create_character, create_location
+ * Examples: create_game, create_character, create_location
  */
 export const CREATE: ToolAnnotations = {
   readOnlyHint: false,
@@ -52,7 +52,7 @@ export const IDEMPOTENT_UPDATE: ToolAnnotations = {
 /**
  * Operations that delete or remove entities permanently.
  * These should trigger human-in-the-loop confirmation in MCP clients.
- * Examples: delete_session, delete_character, remove_combatant
+ * Examples: delete_game, delete_character, remove_combatant
  */
 export const DESTRUCTIVE: ToolAnnotations = {
   readOnlyHint: false,

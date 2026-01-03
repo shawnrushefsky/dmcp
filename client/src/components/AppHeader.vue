@@ -16,16 +16,16 @@ const breadcrumbs = computed<Breadcrumb[]>(() => {
   const name = route.name as string
   const params = route.params
 
-  if (name === 'session' || name?.startsWith('session-')) {
-    if (params.sessionId) {
+  if (name === 'game' || name?.startsWith('game-')) {
+    if (params.gameId) {
       crumbs.push({
         label: 'Game',
-        href: name === 'session' ? undefined : `/sessions/${params.sessionId}`,
+        href: name === 'game' ? undefined : `/games/${params.gameId}`,
       })
     }
-    if (name === 'session-map') crumbs.push({ label: 'Map' })
-    if (name === 'session-images') crumbs.push({ label: 'Images' })
-    if (name === 'session-history') crumbs.push({ label: 'History' })
+    if (name === 'game-map') crumbs.push({ label: 'Map' })
+    if (name === 'game-images') crumbs.push({ label: 'Images' })
+    if (name === 'game-history') crumbs.push({ label: 'History' })
   }
 
   return crumbs

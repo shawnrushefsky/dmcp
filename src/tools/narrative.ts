@@ -4,7 +4,7 @@ import { safeJsonParse } from "../utils/json.js";
 import type { NarrativeEvent, QuestObjective } from "../types/index.js";
 
 export function logEvent(params: {
-  sessionId: string;
+  gameId: string;
   eventType: string;
   content: string;
   metadata?: Record<string, unknown>;
@@ -14,13 +14,13 @@ export function logEvent(params: {
   const timestamp = new Date().toISOString();
 
   const stmt = db.prepare(`
-    INSERT INTO narrative_events (id, session_id, event_type, content, metadata, timestamp)
+    INSERT INTO narrative_events (id, game_id, event_type, content, metadata, timestamp)
     VALUES (?, ?, ?, ?, ?, ?)
   `);
 
   stmt.run(
     id,
-    params.sessionId,
+    params.gameId,
     params.eventType,
     params.content,
     JSON.stringify(params.metadata || {}),
@@ -29,7 +29,7 @@ export function logEvent(params: {
 
   return {
     id,
-    sessionId: params.sessionId,
+    gameId: params.gameId,
     eventType: params.eventType,
     content: params.content,
     metadata: params.metadata || {},
@@ -46,7 +46,7 @@ export function getEvent(id: string): NarrativeEvent | null {
 
   return {
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     eventType: row.event_type as string,
     content: row.content as string,
     metadata: safeJsonParse<Record<string, unknown>>(row.metadata as string, {}),
@@ -55,7 +55,7 @@ export function getEvent(id: string): NarrativeEvent | null {
 }
 
 export function getHistory(
-  sessionId: string,
+  gameId: string,
   options?: {
     limit?: number;
     offset?: number;
@@ -64,8 +64,8 @@ export function getHistory(
   }
 ): NarrativeEvent[] {
   const db = getDatabase();
-  let query = `SELECT * FROM narrative_events WHERE session_id = ?`;
-  const params: (string | number)[] = [sessionId];
+  let query = `SELECT * FROM narrative_events WHERE game_id = ?`;
+  const params: (string | number)[] = [gameId];
 
   if (options?.eventType) {
     query += ` AND event_type = ?`;
@@ -96,7 +96,7 @@ export function getHistory(
   return rows
     .map((row) => ({
       id: row.id as string,
-      sessionId: row.session_id as string,
+      gameId: row.game_id as string,
       eventType: row.event_type as string,
       content: row.content as string,
       metadata: safeJsonParse<Record<string, unknown>>(row.metadata as string, {}),
@@ -106,13 +106,13 @@ export function getHistory(
 }
 
 export function getRecentHistory(
-  sessionId: string,
+  gameId: string,
   count: number = 10
 ): NarrativeEvent[] {
-  return getHistory(sessionId, { limit: count });
+  return getHistory(gameId, { limit: count });
 }
 
-export function getSummary(sessionId: string): {
+export function getSummary(gameId: string): {
   totalEvents: number;
   eventTypes: Record<string, number>;
   firstEvent: string | null;
@@ -123,15 +123,15 @@ export function getSummary(sessionId: string): {
 
   const countResult = db
     .prepare(
-      `SELECT COUNT(*) as count FROM narrative_events WHERE session_id = ?`
+      `SELECT COUNT(*) as count FROM narrative_events WHERE game_id = ?`
     )
-    .get(sessionId) as { count: number };
+    .get(gameId) as { count: number };
 
   const typeResults = db
     .prepare(
-      `SELECT event_type, COUNT(*) as count FROM narrative_events WHERE session_id = ? GROUP BY event_type`
+      `SELECT event_type, COUNT(*) as count FROM narrative_events WHERE game_id = ? GROUP BY event_type`
     )
-    .all(sessionId) as { event_type: string; count: number }[];
+    .all(gameId) as { event_type: string; count: number }[];
 
   const eventTypes: Record<string, number> = {};
   for (const row of typeResults) {
@@ -140,17 +140,17 @@ export function getSummary(sessionId: string): {
 
   const firstResult = db
     .prepare(
-      `SELECT timestamp FROM narrative_events WHERE session_id = ? ORDER BY timestamp ASC LIMIT 1`
+      `SELECT timestamp FROM narrative_events WHERE game_id = ? ORDER BY timestamp ASC LIMIT 1`
     )
-    .get(sessionId) as { timestamp: string } | undefined;
+    .get(gameId) as { timestamp: string } | undefined;
 
   const lastResult = db
     .prepare(
-      `SELECT timestamp FROM narrative_events WHERE session_id = ? ORDER BY timestamp DESC LIMIT 1`
+      `SELECT timestamp FROM narrative_events WHERE game_id = ? ORDER BY timestamp DESC LIMIT 1`
     )
-    .get(sessionId) as { timestamp: string } | undefined;
+    .get(gameId) as { timestamp: string } | undefined;
 
-  const recentEvents = getRecentHistory(sessionId, 5);
+  const recentEvents = getRecentHistory(gameId, 5);
 
   return {
     totalEvents: countResult.count,
@@ -168,15 +168,15 @@ export function deleteEvent(id: string): boolean {
   return result.changes > 0;
 }
 
-export function clearHistory(sessionId: string): number {
+export function clearHistory(gameId: string): number {
   const db = getDatabase();
-  const stmt = db.prepare(`DELETE FROM narrative_events WHERE session_id = ?`);
-  const result = stmt.run(sessionId);
+  const stmt = db.prepare(`DELETE FROM narrative_events WHERE game_id = ?`);
+  const result = stmt.run(gameId);
   return result.changes;
 }
 
 export interface StoryExportData {
-  session: {
+  game: {
     name: string;
     setting: string;
     style: string;
@@ -207,41 +207,41 @@ export interface StoryExportData {
 }
 
 export function exportStoryData(
-  sessionId: string,
+  gameId: string,
   style: string
 ): StoryExportData | null {
   const db = getDatabase();
 
-  // Get session info
-  const session = db
-    .prepare(`SELECT name, setting, style, created_at FROM sessions WHERE id = ?`)
-    .get(sessionId) as { name: string; setting: string; style: string; created_at: string } | undefined;
+  // Get game info
+  const game = db
+    .prepare(`SELECT name, setting, style, created_at FROM games WHERE id = ?`)
+    .get(gameId) as { name: string; setting: string; style: string; created_at: string } | undefined;
 
-  if (!session) return null;
+  if (!game) return null;
 
   // Get all characters
   const characters = db
-    .prepare(`SELECT name, is_player, notes FROM characters WHERE session_id = ?`)
-    .all(sessionId) as Array<{ name: string; is_player: number; notes: string }>;
+    .prepare(`SELECT name, is_player, notes FROM characters WHERE game_id = ?`)
+    .all(gameId) as Array<{ name: string; is_player: number; notes: string }>;
 
   // Get all locations
   const locations = db
-    .prepare(`SELECT name, description FROM locations WHERE session_id = ?`)
-    .all(sessionId) as Array<{ name: string; description: string }>;
+    .prepare(`SELECT name, description FROM locations WHERE game_id = ?`)
+    .all(gameId) as Array<{ name: string; description: string }>;
 
   // Get all quests
   const quests = db
-    .prepare(`SELECT name, description, status, objectives FROM quests WHERE session_id = ?`)
-    .all(sessionId) as Array<{ name: string; description: string; status: string; objectives: string }>;
+    .prepare(`SELECT name, description, status, objectives FROM quests WHERE game_id = ?`)
+    .all(gameId) as Array<{ name: string; description: string; status: string; objectives: string }>;
 
   // Get all narrative events in chronological order
   const events = db
-    .prepare(`SELECT * FROM narrative_events WHERE session_id = ? ORDER BY timestamp ASC`)
-    .all(sessionId) as Array<Record<string, unknown>>;
+    .prepare(`SELECT * FROM narrative_events WHERE game_id = ? ORDER BY timestamp ASC`)
+    .all(gameId) as Array<Record<string, unknown>>;
 
   const narrativeEvents: NarrativeEvent[] = events.map((row) => ({
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     eventType: row.event_type as string,
     content: row.content as string,
     metadata: safeJsonParse<Record<string, unknown>>(row.metadata as string, {}),
@@ -252,11 +252,11 @@ export function exportStoryData(
   const chapters = groupEventsIntoChapters(narrativeEvents);
 
   return {
-    session: {
-      name: session.name,
-      setting: session.setting,
-      style: session.style,
-      createdAt: session.created_at,
+    game: {
+      name: game.name,
+      setting: game.setting,
+      style: game.style,
+      createdAt: game.created_at,
     },
     characters: characters.map((c) => ({
       name: c.name,

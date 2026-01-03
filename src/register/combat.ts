@@ -39,7 +39,7 @@ export function registerCombatTools(server: McpServer) {
     {
       description: "Perform a skill or ability check",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         characterId: z.string().max(100).describe("The character making the check"),
         skill: z.string().max(100).optional().describe("Skill to use"),
         attribute: z.string().max(100).optional().describe("Attribute to use"),
@@ -68,7 +68,7 @@ export function registerCombatTools(server: McpServer) {
     {
       description: "Opposed check between two characters",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         attackerId: z.string().max(100).describe("First character ID"),
         defenderId: z.string().max(100).describe("Second character ID"),
         attackerSkill: z.string().max(100).optional().describe("Skill for first character"),
@@ -102,7 +102,7 @@ export function registerCombatTools(server: McpServer) {
     {
       description: "Initialize a combat encounter",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         locationId: z.string().max(100).describe("Location where combat occurs"),
         participantIds: z.array(z.string().max(100)).max(LIMITS.ARRAY_MAX).describe("Character IDs of all combatants"),
       },
@@ -142,14 +142,14 @@ export function registerCombatTools(server: McpServer) {
   server.registerTool(
     "get_active_combat",
     {
-      description: "Get the active combat for a session",
+      description: "Get the active combat for a game",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId }) => {
-      const combat = combatTools.getActiveCombat(sessionId);
+    async ({ gameId }) => {
+      const combat = combatTools.getActiveCombat(gameId);
       if (!combat) {
         return {
           content: [{ type: "text", text: "No active combat" }],

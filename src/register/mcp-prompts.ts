@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import * as sessionTools from "../tools/session.js";
+import * as gameTools from "../tools/game.js";
 import * as characterTools from "../tools/character.js";
 import * as narrativeTools from "../tools/narrative.js";
 import * as pauseTools from "../tools/pause.js";
@@ -18,29 +18,29 @@ export function registerMcpPrompts(server: McpServer) {
     {
       description: "Initialize DM persona with full game context and preferences",
       argsSchema: {
-        sessionId: z.string().describe("The session ID to load context from"),
+        gameId: z.string().describe("The game ID to load context from"),
       },
     },
-    async ({ sessionId }) => {
-      const session = sessionTools.loadSession(sessionId);
-      if (!session) {
+    async ({ gameId }) => {
+      const game = gameTools.loadGame(gameId);
+      if (!game) {
         return {
           messages: [
             {
               role: "user",
               content: {
                 type: "text",
-                text: `Error: Session ${sessionId} not found.`,
+                text: `Error: Game ${gameId} not found.`,
               },
             },
           ],
         };
       }
 
-      const state = sessionTools.getSessionState(sessionId);
-      const preferences = session.preferences;
+      const state = gameTools.getGameState(gameId);
+      const preferences = game.preferences;
 
-      let promptText = `You are the Dungeon Master for "${session.name}", a ${session.style} ${session.setting} game.\n\n`;
+      let promptText = `You are the Dungeon Master for "${game.name}", a ${game.style} ${game.setting} game.\n\n`;
 
       if (preferences) {
         promptText += `## Player Preferences\n`;
@@ -139,30 +139,30 @@ export function registerMcpPrompts(server: McpServer) {
     {
       description: "Generate a narrative recap of the game so far",
       argsSchema: {
-        sessionId: z.string().describe("The session ID"),
+        gameId: z.string().describe("The game ID"),
       },
     },
-    async ({ sessionId }) => {
-      const session = sessionTools.loadSession(sessionId);
-      if (!session) {
+    async ({ gameId }) => {
+      const game = gameTools.loadGame(gameId);
+      if (!game) {
         return {
           messages: [
             {
               role: "user",
               content: {
                 type: "text",
-                text: `Error: Session ${sessionId} not found.`,
+                text: `Error: Game ${gameId} not found.`,
               },
             },
           ],
         };
       }
 
-      const summary = narrativeTools.getSummary(sessionId);
+      const summary = narrativeTools.getSummary(gameId);
 
-      let promptText = `# Session Recap: ${session.name}\n\n`;
-      promptText += `**Setting**: ${session.setting}\n`;
-      promptText += `**Style**: ${session.style}\n\n`;
+      let promptText = `# Session Recap: ${game.name}\n\n`;
+      promptText += `**Setting**: ${game.setting}\n`;
+      promptText += `**Style**: ${game.style}\n\n`;
 
       promptText += `## Statistics\n`;
       promptText += `- Total Events: ${summary.totalEvents}\n`;
@@ -263,7 +263,7 @@ export function registerMcpPrompts(server: McpServer) {
 
       promptText += `---\n\n`;
       promptText += `After gathering preferences, use:\n`;
-      promptText += `1. \`create_session\` to create the game\n`;
+      promptText += `1. \`create_game\` to create the game\n`;
       promptText += `2. \`save_game_preferences\` to store their choices\n`;
       promptText += `3. \`set_rules\` to establish the rule system\n`;
 
@@ -287,23 +287,23 @@ export function registerMcpPrompts(server: McpServer) {
     {
       description: "Resume a paused game with full context restoration",
       argsSchema: {
-        sessionId: z.string().describe("The session ID to resume"),
+        gameId: z.string().describe("The game ID to resume"),
       },
     },
-    async ({ sessionId }) => {
-      const resumeContext = pauseTools.getResumeContext(sessionId);
+    async ({ gameId }) => {
+      const resumeContext = pauseTools.getResumeContext(gameId);
 
       if (!resumeContext) {
         // No pause state - try basic session load
-        const session = sessionTools.loadSession(sessionId);
-        if (!session) {
+        const game = gameTools.loadGame(gameId);
+        if (!game) {
           return {
             messages: [
               {
                 role: "user",
                 content: {
                   type: "text",
-                  text: `Error: Session ${sessionId} not found.`,
+                  text: `Error: Game ${gameId} not found.`,
                 },
               },
             ],
@@ -316,14 +316,14 @@ export function registerMcpPrompts(server: McpServer) {
               role: "user",
               content: {
                 type: "text",
-                text: `# Resuming: ${session.name}\n\nNo pause state was saved for this session. Use \`get_session_state\` and \`get_history\` to understand the current game state before continuing.`,
+                text: `# Resuming: ${game.name}\n\nNo pause state was saved for this game. Use \`get_game_state\` and \`get_history\` to understand the current game state before continuing.`,
               },
             },
           ],
         };
       }
 
-      let promptText = `# Resuming Game: ${resumeContext.gameState.session.name}\n\n`;
+      let promptText = `# Resuming Game: ${resumeContext.gameState.game.name}\n\n`;
 
       // Pause state context
       const ps = resumeContext.pauseState;
@@ -607,19 +607,19 @@ export function registerMcpPrompts(server: McpServer) {
     {
       description: "Comprehensive checklist for properly saving/pausing a game - ensures all entities are persisted",
       argsSchema: {
-        sessionId: z.string().describe("The session ID to save"),
+        gameId: z.string().describe("The game ID to save"),
       },
     },
-    async ({ sessionId }) => {
-      const session = sessionTools.loadSession(sessionId);
-      if (!session) {
+    async ({ gameId }) => {
+      const game = gameTools.loadGame(gameId);
+      if (!game) {
         return {
           messages: [
             {
               role: "user",
               content: {
                 type: "text",
-                text: `Error: Session ${sessionId} not found.`,
+                text: `Error: Game ${gameId} not found.`,
               },
             },
           ],
@@ -627,17 +627,17 @@ export function registerMcpPrompts(server: McpServer) {
       }
 
       // Gather current state
-      const characters = characterTools.listCharacters(sessionId);
-      const locations = worldTools.listLocations(sessionId);
-      const quests = questTools.listQuests(sessionId);
-      const relationships = relationshipTools.listRelationships(sessionId);
-      const recentEvents = narrativeTools.getHistory(sessionId, { limit: 20 });
+      const characters = characterTools.listCharacters(gameId);
+      const locations = worldTools.listLocations(gameId);
+      const quests = questTools.listQuests(gameId);
+      const relationships = relationshipTools.listRelationships(gameId);
+      const recentEvents = narrativeTools.getHistory(gameId, { limit: 20 });
 
       // Build character and location name lists for reference
       const characterNames = characters.map(c => c.name.toLowerCase());
       const locationNames = locations.map(l => l.name.toLowerCase());
 
-      let promptText = `# Save Game Checklist: ${session.name}\n\n`;
+      let promptText = `# Save Game Checklist: ${game.name}\n\n`;
       promptText += `Before pausing the game, work through this checklist to ensure all game state is properly persisted.\n\n`;
 
       // ========================================

@@ -10,7 +10,7 @@ export function registerStatusTools(server: McpServer) {
     {
       description: "Apply a status effect to a character (handles stacking automatically)",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         targetId: z.string().max(100).describe("Character ID to apply effect to"),
         name: z.string().min(1).max(LIMITS.NAME_MAX).describe("Effect name (e.g., 'Poisoned', 'Blessed', 'Stunned')"),
         description: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("Description of the effect"),
@@ -96,13 +96,13 @@ export function registerStatusTools(server: McpServer) {
     {
       description: "Reduce duration of all status effects (call at end of round). Returns expired and remaining effects.",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         amount: z.number().optional().describe("Rounds to tick (default: 1)"),
       },
       annotations: ANNOTATIONS.UPDATE,
     },
-    async ({ sessionId, amount }) => {
-      const result = statusTools.tickDurations(sessionId, amount);
+    async ({ gameId, amount }) => {
+      const result = statusTools.tickDurations(gameId, amount);
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };

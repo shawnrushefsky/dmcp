@@ -5,7 +5,7 @@ import { fileURLToPath } from "url";
 import { dirname } from "path";
 
 // Import tool functions
-import { listSessions, loadSession, listImageGenerationPresets, getImageGenerationPreset, getDefaultImagePreset } from "../tools/session.js";
+import { listGames, loadGame, listImageGenerationPresets, getImageGenerationPreset, getDefaultImagePreset } from "../tools/game.js";
 import {
   getCharacter,
   listCharacters,
@@ -16,14 +16,14 @@ import {
   getImage,
   getImageData,
   listEntityImages,
-  listSessionImages,
+  listGameImages,
 } from "../tools/images.js";
-import { getInventory, getItem, listSessionItems } from "../tools/inventory.js";
+import { getInventory, getItem, listGameItems } from "../tools/inventory.js";
 import { listQuests, getQuest } from "../tools/quest.js";
 import { getHistory } from "../tools/narrative.js";
 import {
   getDisplayConfig,
-  getSessionDisplayConfig,
+  getGameDisplayConfig,
 } from "../tools/display.js";
 import { listFactions, getFaction } from "../tools/faction.js";
 import { listResources, getResource } from "../tools/resource.js";
@@ -34,7 +34,7 @@ import { listTimers, getTimer } from "../tools/timers.js";
 import { listSecrets } from "../tools/secrets.js";
 import { getTime, listScheduledEvents } from "../tools/time.js";
 import { getActiveCombat } from "../tools/combat.js";
-import type { Character, Location } from "../types/index.js";
+import type { Character, Location, Faction } from "../types/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -56,23 +56,23 @@ export function createHttpServer(port: number = 3456): express.Application {
     res.json(getDisplayConfig());
   });
 
-  // Per-session theme endpoint
-  app.get("/api/sessions/:sessionId/theme", (req: Request, res: Response) => {
-    res.json(getSessionDisplayConfig(req.params.sessionId));
+  // Per-game theme endpoint
+  app.get("/api/games/:gameId/theme", (req: Request, res: Response) => {
+    res.json(getGameDisplayConfig(req.params.gameId));
   });
 
   // Image generation presets
-  app.get("/api/sessions/:sessionId/image-presets", (req: Request, res: Response) => {
-    const presets = listImageGenerationPresets(req.params.sessionId);
-    const defaultPreset = getDefaultImagePreset(req.params.sessionId);
+  app.get("/api/games/:gameId/image-presets", (req: Request, res: Response) => {
+    const presets = listImageGenerationPresets(req.params.gameId);
+    const defaultPreset = getDefaultImagePreset(req.params.gameId);
     res.json({
       presets,
       defaultPresetId: defaultPreset?.id || null,
     });
   });
 
-  app.get("/api/sessions/:sessionId/image-presets/:presetId", (req: Request, res: Response) => {
-    const preset = getImageGenerationPreset(req.params.sessionId, req.params.presetId);
+  app.get("/api/games/:gameId/image-presets/:presetId", (req: Request, res: Response) => {
+    const preset = getImageGenerationPreset(req.params.gameId, req.params.presetId);
     if (!preset) {
       res.status(404).json({ error: "Preset not found" });
       return;
@@ -80,21 +80,21 @@ export function createHttpServer(port: number = 3456): express.Application {
     res.json(preset);
   });
 
-  // Sessions
-  app.get("/api/sessions", (_req: Request, res: Response) => {
-    res.json(listSessions());
+  // Games
+  app.get("/api/games", (_req: Request, res: Response) => {
+    res.json(listGames());
   });
 
-  app.get("/api/sessions/:sessionId", (req: Request, res: Response) => {
-    const sessionId = req.params.sessionId;
-    const session = loadSession(sessionId);
-    if (!session) {
-      res.status(404).json({ error: "Session not found" });
+  app.get("/api/games/:gameId", (req: Request, res: Response) => {
+    const gameId = req.params.gameId;
+    const game = loadGame(gameId);
+    if (!game) {
+      res.status(404).json({ error: "Game not found" });
       return;
     }
-    const characters = listCharacters(sessionId);
-    const locations = listLocations(sessionId);
-    const quests = listQuests(sessionId);
+    const characters = listCharacters(gameId);
+    const locations = listLocations(gameId);
+    const quests = listQuests(gameId);
 
     // Add primary image IDs to characters and locations
     const charactersWithImages = characters.map((c: Character) => {
@@ -110,26 +110,33 @@ export function createHttpServer(port: number = 3456): express.Application {
     });
 
     // Get counts for all entity types (for conditional UI display)
-    const factions = listFactions(sessionId);
-    const resources = listResources(sessionId);
-    const notes = listNotes(sessionId);
-    const relationships = listRelationships(sessionId);
-    const abilities = listAbilities(sessionId);
-    const timers = listTimers(sessionId);
-    const secrets = listSecrets(sessionId);
-    const images = listSessionImages(sessionId);
-    const items = listSessionItems(sessionId);
-    const events = getHistory(sessionId, { limit: 1 });
-    const activeCombat = getActiveCombat(sessionId);
-    const gameTime = getTime(sessionId);
+    const factions = listFactions(gameId);
+
+    // Add primary image IDs to factions
+    const factionsWithImages = factions.map((f: Faction) => {
+      const result = listEntityImages(f.id, "faction");
+      const primary = result.primaryImage || result.images[0];
+      return { ...f, primaryImageId: primary?.id || null };
+    });
+    const resources = listResources(gameId);
+    const notes = listNotes(gameId);
+    const relationships = listRelationships(gameId);
+    const abilities = listAbilities(gameId);
+    const timers = listTimers(gameId);
+    const secrets = listSecrets(gameId);
+    const images = listGameImages(gameId);
+    const items = listGameItems(gameId);
+    const events = getHistory(gameId, { limit: 1 });
+    const activeCombat = getActiveCombat(gameId);
+    const gameTime = getTime(gameId);
 
     res.json({
-      session,
+      game,
       characters: charactersWithImages,
       locations: locationsWithImages,
       quests,
       // Include full data for populated entity types
-      factions,
+      factions: factionsWithImages,
       resources,
       notes,
       // Include counts for UI tab visibility
@@ -154,10 +161,10 @@ export function createHttpServer(port: number = 3456): express.Application {
     });
   });
 
-  app.get("/api/sessions/:sessionId/map", (req: Request, res: Response) => {
-    const characters = listCharacters(req.params.sessionId);
+  app.get("/api/games/:gameId/map", (req: Request, res: Response) => {
+    const characters = listCharacters(req.params.gameId);
     const playerChar = characters.find((c: Character) => c.isPlayer);
-    const mapData = renderMap(req.params.sessionId, {
+    const mapData = renderMap(req.params.gameId, {
       playerLocationId: playerChar?.locationId || undefined,
     });
     if (!mapData) {
@@ -167,22 +174,22 @@ export function createHttpServer(port: number = 3456): express.Application {
     res.json(mapData);
   });
 
-  app.get("/api/sessions/:sessionId/history", (req: Request, res: Response) => {
+  app.get("/api/games/:gameId/history", (req: Request, res: Response) => {
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
-    const history = getHistory(req.params.sessionId, { limit });
+    const history = getHistory(req.params.gameId, { limit });
     res.json(history);
   });
 
-  app.get("/api/sessions/:sessionId/images", (req: Request, res: Response) => {
-    const images = listSessionImages(req.params.sessionId);
+  app.get("/api/games/:gameId/images", (req: Request, res: Response) => {
+    const images = listGameImages(req.params.gameId);
     res.json(images);
   });
 
   app.get(
-    "/api/sessions/:sessionId/characters",
+    "/api/games/:gameId/characters",
     (req: Request, res: Response) => {
       const locationId = req.query.locationId as string | undefined;
-      const characters = listCharacters(req.params.sessionId, { locationId });
+      const characters = listCharacters(req.params.gameId, { locationId });
       res.json(characters);
     }
   );
@@ -323,9 +330,9 @@ export function createHttpServer(port: number = 3456): express.Application {
     }
   );
 
-  // Search within a session
-  app.get("/api/sessions/:sessionId/search", (req: Request, res: Response) => {
-    const { sessionId } = req.params;
+  // Search within a game
+  app.get("/api/games/:gameId/search", (req: Request, res: Response) => {
+    const { gameId } = req.params;
     const query = (req.query.q as string || "").toLowerCase().trim();
 
     if (!query || query.length < 2) {
@@ -333,15 +340,15 @@ export function createHttpServer(port: number = 3456): express.Application {
       return;
     }
 
-    const session = loadSession(sessionId);
-    if (!session) {
-      res.status(404).json({ error: "Session not found" });
+    const game = loadGame(gameId);
+    if (!game) {
+      res.status(404).json({ error: "Game not found" });
       return;
     }
 
-    const characters = listCharacters(sessionId);
-    const locations = listLocations(sessionId);
-    const quests = listQuests(sessionId);
+    const characters = listCharacters(gameId);
+    const locations = listLocations(gameId);
+    const quests = listQuests(gameId);
 
     // Filter by fuzzy name match
     const matchingCharacters = characters

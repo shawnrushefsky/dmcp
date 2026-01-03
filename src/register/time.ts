@@ -21,9 +21,9 @@ export function registerTimeTools(server: McpServer) {
   server.registerTool(
     "set_calendar",
     {
-      description: "Configure the calendar system for a session (months, days per month, hours per day, etc.)",
+      description: "Configure the calendar system for a game (months, days per month, hours per day, etc.)",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         config: z.object({
           monthNames: z.array(z.string().max(100)).max(24).optional().describe("Names of months"),
           daysPerMonth: z.array(z.number()).max(24).optional().describe("Days in each month"),
@@ -36,8 +36,8 @@ export function registerTimeTools(server: McpServer) {
       },
       annotations: ANNOTATIONS.SET,
     },
-    async ({ sessionId, config, currentTime }) => {
-      const gameTime = timeTools.setCalendar(sessionId, config || {}, currentTime);
+    async ({ gameId, config, currentTime }) => {
+      const gameTime = timeTools.setCalendar(gameId, config || {}, currentTime);
       return {
         content: [{ type: "text", text: JSON.stringify(gameTime, null, 2) }],
       };
@@ -49,15 +49,15 @@ export function registerTimeTools(server: McpServer) {
     {
       description: "Get the current in-game time",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId }) => {
-      const gameTime = timeTools.getTime(sessionId);
+    async ({ gameId }) => {
+      const gameTime = timeTools.getTime(gameId);
       if (!gameTime) {
         return {
-          content: [{ type: "text", text: "No calendar set for this session. Use set_calendar first." }],
+          content: [{ type: "text", text: "No calendar set for this game. Use set_calendar first." }],
           isError: true,
         };
       }
@@ -73,13 +73,13 @@ export function registerTimeTools(server: McpServer) {
     {
       description: "Set the current in-game time to a specific value",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         time: gameDateTimeSchema.describe("The time to set"),
       },
       annotations: ANNOTATIONS.SET,
     },
-    async ({ sessionId, time }) => {
-      const gameTime = timeTools.setTime(sessionId, time);
+    async ({ gameId, time }) => {
+      const gameTime = timeTools.setTime(gameId, time);
       if (!gameTime) {
         return {
           content: [{ type: "text", text: "No calendar set for this session" }],
@@ -98,22 +98,22 @@ export function registerTimeTools(server: McpServer) {
     {
       description: "Advance time by a duration, returning any triggered scheduled events",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         days: z.number().optional().describe("Days to advance"),
         hours: z.number().optional().describe("Hours to advance"),
         minutes: z.number().optional().describe("Minutes to advance"),
       },
       annotations: ANNOTATIONS.UPDATE,
     },
-    async ({ sessionId, days, hours, minutes }) => {
-      const result = timeTools.advanceTime(sessionId, { days, hours, minutes });
+    async ({ gameId, days, hours, minutes }) => {
+      const result = timeTools.advanceTime(gameId, { days, hours, minutes });
       if (!result) {
         return {
           content: [{ type: "text", text: "No calendar set for this session" }],
           isError: true,
         };
       }
-      const gameTime = timeTools.getTime(sessionId)!;
+      const gameTime = timeTools.getTime(gameId)!;
       const formatted = timeTools.formatDateTime(result.newTime, gameTime.calendarConfig);
       return {
         content: [{
@@ -133,7 +133,7 @@ export function registerTimeTools(server: McpServer) {
     {
       description: "Schedule an event to trigger at a specific in-game time",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         name: z.string().min(1).max(LIMITS.NAME_MAX).describe("Event name"),
         description: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("Event description"),
         triggerTime: gameDateTimeSchema.describe("When the event should trigger"),
@@ -155,13 +155,13 @@ export function registerTimeTools(server: McpServer) {
     {
       description: "List upcoming scheduled events",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         includeTriggered: z.boolean().optional().describe("Include already-triggered events"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId, includeTriggered }) => {
-      const events = timeTools.listScheduledEvents(sessionId, includeTriggered);
+    async ({ gameId, includeTriggered }) => {
+      const events = timeTools.listScheduledEvents(gameId, includeTriggered);
       return {
         content: [{ type: "text", text: JSON.stringify(events, null, 2) }],
       };
@@ -195,7 +195,7 @@ export function registerTimeTools(server: McpServer) {
     {
       description: "Create a countdown, stopwatch, or segmented clock",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         name: z.string().min(1).max(LIMITS.NAME_MAX).describe("Timer name (e.g., 'Doom Clock', 'Ritual Progress')"),
         description: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("Timer description"),
         timerType: z.enum(["countdown", "stopwatch", "clock"]).describe("Type: countdown (decreases), stopwatch (increases), clock (segmented like Blades in the Dark)"),
@@ -289,15 +289,15 @@ export function registerTimeTools(server: McpServer) {
   server.registerTool(
     "list_timers",
     {
-      description: "List active timers in a session",
+      description: "List active timers in a game",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         includeTriggered: z.boolean().optional().describe("Include triggered timers"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId, includeTriggered }) => {
-      const timers = timerTools.listTimers(sessionId, includeTriggered);
+    async ({ gameId, includeTriggered }) => {
+      const timers = timerTools.listTimers(gameId, includeTriggered);
       return {
         content: [{ type: "text", text: JSON.stringify(timers, null, 2) }],
       };

@@ -6,7 +6,7 @@ import {
   resetDisplayConfig,
   applyThemePreset,
   listThemePresets,
-  getSessionDisplayConfig,
+  getGameDisplayConfig,
   setSessionDisplayConfig,
   applySessionThemePreset,
   resetSessionTheme,
@@ -181,16 +181,16 @@ export function registerDisplayTools(server: McpServer): void {
 
   // Get session theme
   server.registerTool(
-    "get_session_theme",
+    "get_game_theme",
     {
       description: "Get the display configuration for a specific game session",
       inputSchema: {
-        sessionId: z.string().describe("The session ID"),
+        gameId: z.string().describe("The game ID"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId }) => {
-      const config = getSessionDisplayConfig(sessionId);
+    async ({ gameId }) => {
+      const config = getGameDisplayConfig(gameId);
       return {
         content: [
           {
@@ -206,9 +206,9 @@ export function registerDisplayTools(server: McpServer): void {
   server.registerTool(
     "set_session_theme",
     {
-      description: "Set display configuration for a specific game session. Each session can have its own visual theme.",
+      description: "Set display configuration for a specific game. Each game can have its own visual theme.",
       inputSchema: {
-        sessionId: z.string().describe("The session ID"),
+        gameId: z.string().describe("The game ID"),
         bgColor: z.string().optional().describe("Background color"),
         bgSecondary: z.string().optional().describe("Secondary background"),
         bgElevated: z.string().optional().describe("Elevated surface background"),
@@ -234,13 +234,13 @@ export function registerDisplayTools(server: McpServer): void {
       },
       annotations: ANNOTATIONS.SET,
     },
-    async ({ sessionId, ...config }) => {
-      const updated = setSessionDisplayConfig(sessionId, config);
+    async ({ gameId, ...config }) => {
+      const updated = setSessionDisplayConfig(gameId, config);
       return {
         content: [
           {
             type: "text",
-            text: `Session theme updated for ${sessionId}:\n${JSON.stringify(updated, null, 2)}`,
+            text: `Game theme updated for ${gameId}:\n${JSON.stringify(updated, null, 2)}`,
           },
         ],
       };
@@ -251,15 +251,15 @@ export function registerDisplayTools(server: McpServer): void {
   server.registerTool(
     "apply_session_theme_preset",
     {
-      description: "Apply a predefined theme preset to a specific game session. This allows different games to have completely different visual themes.",
+      description: "Apply a predefined theme preset to a specific game. This allows different games to have completely different visual themes.",
       inputSchema: {
-        sessionId: z.string().describe("The session ID"),
+        gameId: z.string().describe("The game ID"),
         preset: z.enum(themePresetNames).describe("Theme preset name"),
       },
       annotations: ANNOTATIONS.SET,
     },
-    async ({ sessionId, preset }) => {
-      const config = applySessionThemePreset(sessionId, preset);
+    async ({ gameId, preset }) => {
+      const config = applySessionThemePreset(gameId, preset);
       if (!config) {
         return {
           content: [{ type: "text", text: `Unknown preset: ${preset}` }],
@@ -270,7 +270,7 @@ export function registerDisplayTools(server: McpServer): void {
         content: [
           {
             type: "text",
-            text: `Applied '${preset}' theme to session ${sessionId}:\n${JSON.stringify(config, null, 2)}`,
+            text: `Applied '${preset}' theme to session ${gameId}:\n${JSON.stringify(config, null, 2)}`,
           },
         ],
       };
@@ -281,19 +281,19 @@ export function registerDisplayTools(server: McpServer): void {
   server.registerTool(
     "reset_session_theme",
     {
-      description: "Remove a session's custom theme, reverting to the global theme",
+      description: "Remove a game's custom theme, reverting to the global theme",
       inputSchema: {
-        sessionId: z.string().describe("The session ID"),
+        gameId: z.string().describe("The game ID"),
       },
       annotations: ANNOTATIONS.SET,
     },
-    async ({ sessionId }) => {
-      resetSessionTheme(sessionId);
+    async ({ gameId }) => {
+      resetSessionTheme(gameId);
       return {
         content: [
           {
             type: "text",
-            text: `Session theme reset. Session ${sessionId} will now use the global theme.`,
+            text: `Session theme reset. Session ${gameId} will now use the global theme.`,
           },
         ],
       };
@@ -304,21 +304,21 @@ export function registerDisplayTools(server: McpServer): void {
   server.registerTool(
     "auto_theme_session",
     {
-      description: "Automatically apply an appropriate theme to a session based on its genre and setting. Call this when creating a new game to set up the visual style.",
+      description: "Automatically apply an appropriate theme to a game based on its genre and setting. Call this when creating a new game to set up the visual style.",
       inputSchema: {
-        sessionId: z.string().describe("The session ID"),
+        gameId: z.string().describe("The game ID"),
         genre: z.string().describe("Game genre (e.g., 'fantasy', 'sci-fi', 'western', 'noir')"),
         setting: z.string().optional().describe("Optional setting description for more accurate theme matching"),
       },
       annotations: ANNOTATIONS.SET,
     },
-    async ({ sessionId, genre, setting }) => {
-      const config = inferAndApplyTheme(sessionId, genre, setting);
+    async ({ gameId, genre, setting }) => {
+      const config = inferAndApplyTheme(gameId, genre, setting);
       return {
         content: [
           {
             type: "text",
-            text: `Auto-themed session ${sessionId} based on genre "${genre}":\n${JSON.stringify(config, null, 2)}`,
+            text: `Auto-themed session ${gameId} based on genre "${genre}":\n${JSON.stringify(config, null, 2)}`,
           },
         ],
       };

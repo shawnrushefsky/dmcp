@@ -2,22 +2,22 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
-import type { SessionState, ImagePresetsResponse, Breadcrumb } from '../types'
-import SessionTabs from '../components/SessionTabs.vue'
+import type { GameState, ImagePresetsResponse, Breadcrumb } from '../types'
+import GameTabs from '../components/GameTabs.vue'
 import Breadcrumbs from '../components/Breadcrumbs.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
 
 const route = useRoute()
-const { getSession, getImageGenerationPresets, loading } = useApi()
-const state = ref<SessionState | null>(null)
+const { getGame, getImageGenerationPresets, loading } = useApi()
+const state = ref<GameState | null>(null)
 const presetsData = ref<ImagePresetsResponse>({ presets: [], defaultPresetId: null })
 const expandedPresets = ref<Set<string>>(new Set())
 
-const sessionId = computed(() => route.params.sessionId as string)
+const gameId = computed(() => route.params.gameId as string)
 
 const breadcrumbs = computed<Breadcrumb[]>(() => [
   { label: 'Games', href: '/' },
-  { label: state.value?.session.name || 'Loading...', href: `/sessions/${sessionId.value}` },
+  { label: state.value?.game.name || 'Loading...', href: `/games/${gameId.value}` },
   { label: 'Settings' },
 ])
 
@@ -50,11 +50,11 @@ function isExpanded(presetId: string): boolean {
 }
 
 onMounted(async () => {
-  const [sessionResult, presetsResult] = await Promise.all([
-    getSession(sessionId.value),
-    getImageGenerationPresets(sessionId.value),
+  const [gameResult, presetsResult] = await Promise.all([
+    getGame(gameId.value),
+    getImageGenerationPresets(gameId.value),
   ])
-  state.value = sessionResult
+  state.value = gameResult
   presetsData.value = presetsResult
 })
 </script>
@@ -76,7 +76,7 @@ onMounted(async () => {
     <Breadcrumbs :items="breadcrumbs" />
     <h2>Settings</h2>
 
-    <SessionTabs :session-id="sessionId" active="settings" :counts="state.counts" />
+    <GameTabs :game-id="gameId" active="settings" :counts="state.counts" />
 
     <!-- Image Generation Presets -->
     <section class="settings-section">

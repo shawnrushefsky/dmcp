@@ -2,23 +2,23 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
-import type { MapData, SessionState } from '../types'
-import SessionTabs from '../components/SessionTabs.vue'
+import type { MapData, GameState } from '../types'
+import GameTabs from '../components/GameTabs.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
 
 const route = useRoute()
-const { getSession, getMap, loading } = useApi()
-const state = ref<SessionState | null>(null)
+const { getGame, getMap, loading } = useApi()
+const state = ref<GameState | null>(null)
 const mapData = ref<MapData | null>(null)
 
-const sessionId = computed(() => route.params.sessionId as string)
+const gameId = computed(() => route.params.gameId as string)
 
 onMounted(async () => {
-  const [sessionResult, mapResult] = await Promise.all([
-    getSession(sessionId.value),
-    getMap(sessionId.value),
+  const [gameResult, mapResult] = await Promise.all([
+    getGame(gameId.value),
+    getMap(gameId.value),
   ])
-  state.value = sessionResult
+  state.value = gameResult
   mapData.value = mapResult
 })
 </script>
@@ -41,7 +41,7 @@ onMounted(async () => {
   <div v-else-if="state" class="animate-fade-in">
     <h2>World Map</h2>
 
-    <SessionTabs :session-id="sessionId" active="map" :counts="state.counts" />
+    <GameTabs :game-id="gameId" active="map" :counts="state.counts" />
 
     <template v-if="mapData && mapData.nodes.length > 0">
       <h3>Locations</h3>

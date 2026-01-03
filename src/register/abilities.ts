@@ -10,7 +10,7 @@ export function registerAbilityTools(server: McpServer) {
     {
       description: "Create an ability template or character-owned ability",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         ownerType: z.enum(["template", "character"]).describe("'template' for reusable, 'character' for owned"),
         ownerId: z.string().max(100).optional().describe("Character ID if ownerType is 'character'"),
         name: z.string().min(1).max(LIMITS.NAME_MAX).describe("Ability name"),
@@ -109,15 +109,15 @@ export function registerAbilityTools(server: McpServer) {
     {
       description: "List abilities with optional filters",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         ownerType: z.enum(["template", "character"]).optional().describe("Filter by owner type"),
         ownerId: z.string().max(100).optional().describe("Filter by owner ID"),
         category: z.string().max(100).optional().describe("Filter by category"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId, ...filter }) => {
-      const abilities = abilityTools.listAbilities(sessionId, filter);
+    async ({ gameId, ...filter }) => {
+      const abilities = abilityTools.listAbilities(gameId, filter);
       return {
         content: [{ type: "text", text: JSON.stringify(abilities, null, 2) }],
       };
@@ -172,13 +172,13 @@ export function registerAbilityTools(server: McpServer) {
     {
       description: "Reduce all ability cooldowns (call at end of round)",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         amount: z.number().optional().describe("Rounds to tick (default: 1)"),
       },
       annotations: ANNOTATIONS.UPDATE,
     },
-    async ({ sessionId, amount }) => {
-      const updated = abilityTools.tickCooldowns(sessionId, amount);
+    async ({ gameId, amount }) => {
+      const updated = abilityTools.tickCooldowns(gameId, amount);
       return {
         content: [{ type: "text", text: JSON.stringify({ updatedCount: updated.length, abilities: updated }, null, 2) }],
       };

@@ -14,8 +14,8 @@ function clampValue(
 }
 
 export function createResource(params: {
-  sessionId: string;
-  ownerType: "session" | "character";
+  gameId: string;
+  ownerType: "game" | "character";
   ownerId?: string;
   name: string;
   description?: string;
@@ -28,20 +28,20 @@ export function createResource(params: {
   const id = uuidv4();
   const now = new Date().toISOString();
 
-  const ownerId = params.ownerType === "session" ? null : (params.ownerId || null);
+  const ownerId = params.ownerType === "game" ? null : (params.ownerId || null);
   const initialValue = params.value ?? 0;
   const minValue = params.minValue ?? null;
   const maxValue = params.maxValue ?? null;
   const value = clampValue(initialValue, minValue, maxValue);
 
   const stmt = db.prepare(`
-    INSERT INTO resources (id, session_id, owner_id, owner_type, name, description, category, value, min_value, max_value, created_at)
+    INSERT INTO resources (id, game_id, owner_id, owner_type, name, description, category, value, min_value, max_value, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   stmt.run(
     id,
-    params.sessionId,
+    params.gameId,
     ownerId,
     params.ownerType,
     params.name,
@@ -55,7 +55,7 @@ export function createResource(params: {
 
   return {
     id,
-    sessionId: params.sessionId,
+    gameId: params.gameId,
     ownerId,
     ownerType: params.ownerType,
     name: params.name,
@@ -77,9 +77,9 @@ export function getResource(id: string): Resource | null {
 
   return {
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     ownerId: row.owner_id as string | null,
-    ownerType: row.owner_type as "session" | "character",
+    ownerType: row.owner_type as "game" | "character",
     name: row.name as string,
     description: row.description as string,
     category: row.category as string | null,
@@ -140,16 +140,16 @@ export function deleteResource(id: string): boolean {
 }
 
 export function listResources(
-  sessionId: string,
+  gameId: string,
   filter?: {
-    ownerType?: "session" | "character";
+    ownerType?: "game" | "character";
     ownerId?: string;
     category?: string;
   }
 ): Resource[] {
   const db = getDatabase();
-  let query = `SELECT * FROM resources WHERE session_id = ?`;
-  const params: (string | number)[] = [sessionId];
+  let query = `SELECT * FROM resources WHERE game_id = ?`;
+  const params: (string | number)[] = [gameId];
 
   if (filter?.ownerType !== undefined) {
     query += ` AND owner_type = ?`;
@@ -173,9 +173,9 @@ export function listResources(
 
   return rows.map((row) => ({
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     ownerId: row.owner_id as string | null,
-    ownerType: row.owner_type as "session" | "character",
+    ownerType: row.owner_type as "game" | "character",
     name: row.name as string,
     description: row.description as string,
     category: row.category as string | null,

@@ -4,7 +4,7 @@ import { safeJsonParse } from "../utils/json.js";
 import type { StatusEffect } from "../types/index.js";
 
 export function applyStatusEffect(params: {
-  sessionId: string;
+  gameId: string;
   targetId: string;
   name: string;
   description?: string;
@@ -22,8 +22,8 @@ export function applyStatusEffect(params: {
 
   // Check if effect already exists on target
   const existing = db.prepare(`
-    SELECT * FROM status_effects WHERE session_id = ? AND target_id = ? AND name = ?
-  `).get(params.sessionId, params.targetId, params.name) as Record<string, unknown> | undefined;
+    SELECT * FROM status_effects WHERE game_id = ? AND target_id = ? AND name = ?
+  `).get(params.gameId, params.targetId, params.name) as Record<string, unknown> | undefined;
 
   if (existing) {
     // Stack the effect
@@ -47,11 +47,11 @@ export function applyStatusEffect(params: {
   const id = uuidv4();
 
   db.prepare(`
-    INSERT INTO status_effects (id, session_id, target_id, name, description, effect_type, duration, stacks, max_stacks, effects, source_id, source_type, expires_at, created_at)
+    INSERT INTO status_effects (id, game_id, target_id, name, description, effect_type, duration, stacks, max_stacks, effects, source_id, source_type, expires_at, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
-    params.sessionId,
+    params.gameId,
     params.targetId,
     params.name,
     params.description || "",
@@ -68,7 +68,7 @@ export function applyStatusEffect(params: {
 
   return {
     id,
-    sessionId: params.sessionId,
+    gameId: params.gameId,
     targetId: params.targetId,
     name: params.name,
     description: params.description || "",
@@ -92,7 +92,7 @@ export function getStatusEffect(id: string): StatusEffect | null {
 
   return {
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     targetId: row.target_id as string,
     name: row.name as string,
     description: row.description as string,
@@ -134,7 +134,7 @@ export function listStatusEffects(
 
   return rows.map(row => ({
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     targetId: row.target_id as string,
     name: row.name as string,
     description: row.description as string,
@@ -155,13 +155,13 @@ export interface TickResult {
   remaining: StatusEffect[];
 }
 
-export function tickDurations(sessionId: string, amount = 1): TickResult {
+export function tickDurations(gameId: string, amount = 1): TickResult {
   const db = getDatabase();
 
   // Get all effects with duration
   const effects = db.prepare(`
-    SELECT * FROM status_effects WHERE session_id = ? AND duration IS NOT NULL
-  `).all(sessionId) as Record<string, unknown>[];
+    SELECT * FROM status_effects WHERE game_id = ? AND duration IS NOT NULL
+  `).all(gameId) as Record<string, unknown>[];
 
   const expired: StatusEffect[] = [];
   const remaining: StatusEffect[] = [];
@@ -175,7 +175,7 @@ export function tickDurations(sessionId: string, amount = 1): TickResult {
       db.prepare(`DELETE FROM status_effects WHERE id = ?`).run(row.id);
       expired.push({
         id: row.id as string,
-        sessionId: row.session_id as string,
+        gameId: row.game_id as string,
         targetId: row.target_id as string,
         name: row.name as string,
         description: row.description as string,
@@ -194,7 +194,7 @@ export function tickDurations(sessionId: string, amount = 1): TickResult {
       db.prepare(`UPDATE status_effects SET duration = ? WHERE id = ?`).run(newDuration, row.id);
       remaining.push({
         id: row.id as string,
-        sessionId: row.session_id as string,
+        gameId: row.game_id as string,
         targetId: row.target_id as string,
         name: row.name as string,
         description: row.description as string,

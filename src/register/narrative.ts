@@ -10,7 +10,7 @@ export function registerNarrativeTools(server: McpServer) {
     {
       description: "Log a narrative event. CRITICAL: Call this after EVERY significant narrative beat - dialogue exchanges, player actions, combat rounds, discoveries, travel, decisions. This is the primary way to preserve game history. Event types: 'dialogue', 'action', 'discovery', 'combat', 'travel', 'decision', 'scene_transition'.",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         eventType: z.string().max(100).describe("Type of event (e.g., 'dialogue', 'action', 'discovery', 'combat')"),
         content: z.string().max(LIMITS.CONTENT_MAX).describe("Event content/description"),
         metadata: z.record(z.string(), z.unknown()).optional().describe("Additional metadata"),
@@ -30,15 +30,15 @@ export function registerNarrativeTools(server: McpServer) {
     {
       description: "Get narrative history",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         limit: z.number().optional().describe("Maximum events to return"),
         eventType: z.string().max(100).optional().describe("Filter by event type"),
         since: z.string().max(100).optional().describe("Only events after this timestamp"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId, limit, eventType, since }) => {
-      const events = narrativeTools.getHistory(sessionId, { limit, eventType, since });
+    async ({ gameId, limit, eventType, since }) => {
+      const events = narrativeTools.getHistory(gameId, { limit, eventType, since });
       return {
         content: [{ type: "text", text: JSON.stringify(events, null, 2) }],
       };
@@ -50,12 +50,12 @@ export function registerNarrativeTools(server: McpServer) {
     {
       description: "Get a summary of the narrative so far",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId }) => {
-      const summary = narrativeTools.getSummary(sessionId);
+    async ({ gameId }) => {
+      const summary = narrativeTools.getSummary(gameId);
       return {
         content: [{ type: "text", text: JSON.stringify(summary, null, 2) }],
       };
@@ -99,13 +99,13 @@ export function registerNarrativeTools(server: McpServer) {
     {
       description: "Export the game history as structured data for reconstruction into a narrative book. Use get_chapter_for_export to fetch individual chapters for writing.",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         style: z.string().max(100).describe("Narrative style (e.g., 'literary-fiction', 'pulp-adventure', 'epic-fantasy', 'noir', or custom)"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId, style }) => {
-      const exportData = narrativeTools.exportStoryData(sessionId, style);
+    async ({ gameId, style }) => {
+      const exportData = narrativeTools.exportStoryData(gameId, style);
       if (!exportData) {
         return {
           content: [{ type: "text", text: "Session not found" }],
@@ -128,7 +128,7 @@ export function registerNarrativeTools(server: McpServer) {
         content: [{
           type: "text",
           text: JSON.stringify({
-            session: exportData.session,
+            game: exportData.game,
             characters: exportData.characters,
             locations: exportData.locations,
             quests: exportData.quests,
@@ -140,7 +140,7 @@ export function registerNarrativeTools(server: McpServer) {
             meta: {
               exportedAt: new Date().toISOString(),
               workflow: [
-                "1. Review the session, characters, locations, and quests for context",
+                "1. Review the game, characters, locations, and quests for context",
                 "2. For each chapter, use get_chapter_for_export to fetch the full event data",
                 "3. Spawn a subagent for each chapter with the style instruction and chapter data",
                 "4. Each subagent writes its chapter as narrative prose",
@@ -158,14 +158,14 @@ export function registerNarrativeTools(server: McpServer) {
     {
       description: "Get a single chapter's full event data for writing. Use this to fetch chapters one at a time for subagent processing.",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         chapterNumber: z.number().describe("Chapter number (1-indexed)"),
         style: z.string().max(100).describe("Narrative style for the instruction"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId, chapterNumber, style }) => {
-      const exportData = narrativeTools.exportStoryData(sessionId, style);
+    async ({ gameId, chapterNumber, style }) => {
+      const exportData = narrativeTools.exportStoryData(gameId, style);
       if (!exportData) {
         return {
           content: [{ type: "text", text: "Session not found" }],
@@ -192,12 +192,12 @@ export function registerNarrativeTools(server: McpServer) {
             title: chapter.title,
             events: chapter.events,
             context: {
-              sessionName: exportData.session.name,
-              setting: exportData.session.setting,
+              sessionName: exportData.game.name,
+              setting: exportData.game.setting,
               style: exportData.exportStyle,
             },
             instruction: exportData.instruction,
-            subagentPrompt: `You are writing Chapter ${chapterNumber} of "${exportData.session.name}". ${exportData.instruction} Transform the following events into engaging narrative prose. Maintain consistency with the ${exportData.session.setting} setting.`,
+            subagentPrompt: `You are writing Chapter ${chapterNumber} of "${exportData.game.name}". ${exportData.instruction} Transform the following events into engaging narrative prose. Maintain consistency with the ${exportData.game.setting} setting.`,
           }, null, 2),
         }],
       };
@@ -211,7 +211,7 @@ export function registerNarrativeTools(server: McpServer) {
     {
       description: "Present choices to the player with multi-select and free-form input support. Returns structured choice data for the DM agent to display.",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         prompt: z.string().max(LIMITS.DESCRIPTION_MAX).describe("The question or situation description to present"),
         choices: z.array(z.object({
           id: z.string().max(100).describe("Unique identifier for this choice"),
@@ -230,9 +230,9 @@ export function registerNarrativeTools(server: McpServer) {
       },
       annotations: ANNOTATIONS.CREATE,
     },
-    async ({ sessionId, prompt, choices, allowMultiple, allowFreeform, freeformPlaceholder, context }) => {
+    async ({ gameId, prompt, choices, allowMultiple, allowFreeform, freeformPlaceholder, context }) => {
       narrativeTools.logEvent({
-        sessionId,
+        gameId,
         eventType: "choice_presented",
         content: prompt,
         metadata: { choices, allowMultiple, allowFreeform, context },
@@ -261,15 +261,15 @@ export function registerNarrativeTools(server: McpServer) {
     {
       description: "Record the player's choice after they've selected",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         choiceIds: z.array(z.string().max(100)).max(LIMITS.ARRAY_MAX).describe("The ID(s) of the choice(s) the player selected"),
         customResponse: z.string().max(LIMITS.CONTENT_MAX).optional().describe("If player chose 'Other', their custom response"),
       },
       annotations: ANNOTATIONS.CREATE,
     },
-    async ({ sessionId, choiceIds, customResponse }) => {
+    async ({ gameId, choiceIds, customResponse }) => {
       const event = narrativeTools.logEvent({
-        sessionId,
+        gameId,
         eventType: "choice_made",
         content: customResponse || `Player chose: ${choiceIds.join(", ")}`,
         metadata: { choiceIds, customResponse },

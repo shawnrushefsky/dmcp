@@ -10,7 +10,7 @@ import type {
   ResumeContext,
   NarrativeThread,
   ActiveConversation,
-  Session,
+  Game,
   Character,
   Location,
   Quest,
@@ -30,17 +30,17 @@ import type {
  * Prepares for a game pause by returning current state, a comprehensive
  * game state audit, persistence reminders, and a checklist of context
  * that should be saved. This helps agents understand what needs to be
- * captured before ending a session.
+ * captured before ending a game.
  */
-export function preparePause(sessionId: string): PauseChecklist | null {
+export function preparePause(gameId: string): PauseChecklist | null {
   const db = getDatabase();
 
-  // Get session
-  const sessionRow = db
-    .prepare(`SELECT * FROM sessions WHERE id = ?`)
-    .get(sessionId) as Record<string, unknown> | undefined;
+  // Get game
+  const gameRow = db
+    .prepare(`SELECT * FROM games WHERE id = ?`)
+    .get(gameId) as Record<string, unknown> | undefined;
 
-  if (!sessionRow) return null;
+  if (!gameRow) return null;
 
   // ============================================================================
   // COMPREHENSIVE GAME STATE AUDIT
@@ -54,9 +54,9 @@ export function preparePause(sessionId: string): PauseChecklist | null {
         SUM(CASE WHEN is_player = 1 THEN 1 ELSE 0 END) as players,
         SUM(CASE WHEN is_player = 0 THEN 1 ELSE 0 END) as npcs,
         SUM(CASE WHEN notes IS NOT NULL AND notes != '' THEN 1 ELSE 0 END) as with_notes
-      FROM characters WHERE session_id = ?
+      FROM characters WHERE game_id = ?
     `)
-    .get(sessionId) as { total: number; players: number; npcs: number; with_notes: number };
+    .get(gameId) as { total: number; players: number; npcs: number; with_notes: number };
 
   // Characters with conditions
   const charactersWithConditions = db
@@ -64,19 +64,19 @@ export function preparePause(sessionId: string): PauseChecklist | null {
       SELECT COUNT(DISTINCT c.id) as count
       FROM characters c
       JOIN status_effects se ON se.target_id = c.id
-      WHERE c.session_id = ?
+      WHERE c.game_id = ?
     `)
-    .get(sessionId) as { count: number };
+    .get(gameId) as { count: number };
 
   // Locations
   const locationStats = db
-    .prepare(`SELECT COUNT(*) as total FROM locations WHERE session_id = ?`)
-    .get(sessionId) as { total: number };
+    .prepare(`SELECT COUNT(*) as total FROM locations WHERE game_id = ?`)
+    .get(gameId) as { total: number };
 
   // Count locations that have exits (exits are stored in properties JSON)
   const locationRows = db
-    .prepare(`SELECT properties FROM locations WHERE session_id = ?`)
-    .all(sessionId) as { properties: string }[];
+    .prepare(`SELECT properties FROM locations WHERE game_id = ?`)
+    .all(gameId) as { properties: string }[];
 
   let connectedCount = 0;
   for (const row of locationRows) {
@@ -94,9 +94,9 @@ export function preparePause(sessionId: string): PauseChecklist | null {
         SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active,
         SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
         SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed
-      FROM quests WHERE session_id = ?
+      FROM quests WHERE game_id = ?
     `)
-    .get(sessionId) as { active: number; completed: number; failed: number };
+    .get(gameId) as { active: number; completed: number; failed: number };
 
   // Items
   const itemStats = db
@@ -105,24 +105,24 @@ export function preparePause(sessionId: string): PauseChecklist | null {
         COUNT(*) as total,
         SUM(CASE WHEN owner_type = 'character' THEN 1 ELSE 0 END) as in_inventories,
         SUM(CASE WHEN owner_type = 'location' THEN 1 ELSE 0 END) as in_locations
-      FROM items WHERE session_id = ?
+      FROM items WHERE game_id = ?
     `)
-    .get(sessionId) as { total: number; in_inventories: number; in_locations: number };
+    .get(gameId) as { total: number; in_inventories: number; in_locations: number };
 
   // Combat
   const combatRow = db
-    .prepare(`SELECT * FROM combats WHERE session_id = ? AND status = 'active' LIMIT 1`)
-    .get(sessionId) as Record<string, unknown> | undefined;
+    .prepare(`SELECT * FROM combats WHERE game_id = ? AND status = 'active' LIMIT 1`)
+    .get(gameId) as Record<string, unknown> | undefined;
 
   // Resources
   const resourceStats = db
     .prepare(`
       SELECT
-        SUM(CASE WHEN owner_type = 'session' THEN 1 ELSE 0 END) as session_level,
+        SUM(CASE WHEN owner_type = 'game' THEN 1 ELSE 0 END) as game_level,
         SUM(CASE WHEN owner_type = 'character' THEN 1 ELSE 0 END) as character_level
-      FROM resources WHERE session_id = ?
+      FROM resources WHERE game_id = ?
     `)
-    .get(sessionId) as { session_level: number; character_level: number };
+    .get(gameId) as { game_level: number; character_level: number };
 
   // Timers
   const timerStats = db
@@ -130,9 +130,9 @@ export function preparePause(sessionId: string): PauseChecklist | null {
       SELECT
         SUM(CASE WHEN triggered = 0 THEN 1 ELSE 0 END) as active,
         SUM(CASE WHEN triggered = 1 THEN 1 ELSE 0 END) as triggered
-      FROM timers WHERE session_id = ?
+      FROM timers WHERE game_id = ?
     `)
-    .get(sessionId) as { active: number; triggered: number };
+    .get(gameId) as { active: number; triggered: number };
 
   // Scheduled events
   const eventStats = db
@@ -140,14 +140,14 @@ export function preparePause(sessionId: string): PauseChecklist | null {
       SELECT
         SUM(CASE WHEN triggered = 0 THEN 1 ELSE 0 END) as pending,
         SUM(CASE WHEN triggered = 1 THEN 1 ELSE 0 END) as triggered
-      FROM scheduled_events WHERE session_id = ?
+      FROM scheduled_events WHERE game_id = ?
     `)
-    .get(sessionId) as { pending: number; triggered: number };
+    .get(gameId) as { pending: number; triggered: number };
 
   // Relationships
   const relationshipCount = db
-    .prepare(`SELECT COUNT(*) as count FROM relationships WHERE session_id = ?`)
-    .get(sessionId) as { count: number };
+    .prepare(`SELECT COUNT(*) as count FROM relationships WHERE game_id = ?`)
+    .get(gameId) as { count: number };
 
   // Secrets
   const secretStats = db
@@ -155,9 +155,9 @@ export function preparePause(sessionId: string): PauseChecklist | null {
       SELECT
         COUNT(*) as total,
         SUM(CASE WHEN is_public = 1 THEN 1 ELSE 0 END) as revealed
-      FROM secrets WHERE session_id = ?
+      FROM secrets WHERE game_id = ?
     `)
-    .get(sessionId) as { total: number; revealed: number };
+    .get(gameId) as { total: number; revealed: number };
 
   // Factions
   const factionStats = db
@@ -165,9 +165,9 @@ export function preparePause(sessionId: string): PauseChecklist | null {
       SELECT
         SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active,
         SUM(CASE WHEN status = 'disbanded' THEN 1 ELSE 0 END) as disbanded
-      FROM factions WHERE session_id = ?
+      FROM factions WHERE game_id = ?
     `)
-    .get(sessionId) as { active: number; disbanded: number };
+    .get(gameId) as { active: number; disbanded: number };
 
   // Abilities
   const abilityStats = db
@@ -175,9 +175,9 @@ export function preparePause(sessionId: string): PauseChecklist | null {
       SELECT
         SUM(CASE WHEN owner_type = 'template' THEN 1 ELSE 0 END) as templates,
         SUM(CASE WHEN owner_type = 'character' THEN 1 ELSE 0 END) as character_owned
-      FROM abilities WHERE session_id = ?
+      FROM abilities WHERE game_id = ?
     `)
-    .get(sessionId) as { templates: number; character_owned: number };
+    .get(gameId) as { templates: number; character_owned: number };
 
   // Notes
   const noteStats = db
@@ -185,9 +185,9 @@ export function preparePause(sessionId: string): PauseChecklist | null {
       SELECT
         COUNT(*) as total,
         SUM(CASE WHEN pinned = 1 THEN 1 ELSE 0 END) as pinned
-      FROM notes WHERE session_id = ?
+      FROM notes WHERE game_id = ?
     `)
-    .get(sessionId) as { total: number; pinned: number };
+    .get(gameId) as { total: number; pinned: number };
 
   // Status effects
   const statusStats = db
@@ -197,19 +197,19 @@ export function preparePause(sessionId: string): PauseChecklist | null {
         COUNT(DISTINCT target_id) as affected
       FROM status_effects se
       JOIN characters c ON c.id = se.target_id
-      WHERE c.session_id = ?
+      WHERE c.game_id = ?
     `)
-    .get(sessionId) as { count: number; affected: number };
+    .get(gameId) as { count: number; affected: number };
 
   // Tags
   const tagCount = db
-    .prepare(`SELECT COUNT(DISTINCT tag) as count FROM tags WHERE session_id = ?`)
-    .get(sessionId) as { count: number };
+    .prepare(`SELECT COUNT(DISTINCT tag) as count FROM tags WHERE game_id = ?`)
+    .get(gameId) as { count: number };
 
   // Random tables
   const tableCount = db
-    .prepare(`SELECT COUNT(*) as count FROM random_tables WHERE session_id = ?`)
-    .get(sessionId) as { count: number };
+    .prepare(`SELECT COUNT(*) as count FROM random_tables WHERE game_id = ?`)
+    .get(gameId) as { count: number };
 
   // Narrative events
   const narrativeStats = db
@@ -217,26 +217,26 @@ export function preparePause(sessionId: string): PauseChecklist | null {
       SELECT
         COUNT(*) as total,
         SUM(CASE WHEN timestamp > datetime('now', '-1 hour') THEN 1 ELSE 0 END) as recent_hour
-      FROM narrative_events WHERE session_id = ?
+      FROM narrative_events WHERE game_id = ?
     `)
-    .get(sessionId) as { total: number; recent_hour: number };
+    .get(gameId) as { total: number; recent_hour: number };
 
   // Images
   const imageCount = db
-    .prepare(`SELECT COUNT(*) as count FROM stored_images WHERE session_id = ?`)
-    .get(sessionId) as { count: number };
+    .prepare(`SELECT COUNT(*) as count FROM stored_images WHERE game_id = ?`)
+    .get(gameId) as { count: number };
 
   // Calendar/Time
   const calendarRow = db
-    .prepare(`SELECT * FROM game_time WHERE session_id = ?`)
-    .get(sessionId) as Record<string, unknown> | undefined;
+    .prepare(`SELECT * FROM game_time WHERE game_id = ?`)
+    .get(gameId) as Record<string, unknown> | undefined;
 
   // Get current location name
   let playerLocation: string | null = null;
-  if (sessionRow.current_location_id) {
+  if (gameRow.current_location_id) {
     const locRow = db
       .prepare(`SELECT name FROM locations WHERE id = ?`)
-      .get(sessionRow.current_location_id) as { name: string } | undefined;
+      .get(gameRow.current_location_id) as { name: string } | undefined;
     playerLocation = locRow?.name || null;
   }
 
@@ -272,7 +272,7 @@ export function preparePause(sessionId: string): PauseChecklist | null {
         : 0,
     },
     resources: {
-      sessionLevel: resourceStats.session_level || 0,
+      gameLevel: resourceStats.game_level || 0,
       characterLevel: resourceStats.character_level || 0,
     },
     timers: {
@@ -438,13 +438,13 @@ export function preparePause(sessionId: string): PauseChecklist | null {
   }
 
   // SUGGESTED: Resources changed
-  if (gameStateAudit.resources.sessionLevel + gameStateAudit.resources.characterLevel > 0) {
+  if (gameStateAudit.resources.gameLevel + gameStateAudit.resources.characterLevel > 0) {
     persistenceReminders.push({
       category: "suggested",
       entityType: "resources",
       tool: "modify_resource",
       reminder: "Update resources if any changed",
-      reason: "Review gold, reputation, or other tracked resources for changes during the session.",
+      reason: "Review gold, reputation, or other tracked resources for changes during the game.",
     });
   }
 
@@ -459,12 +459,12 @@ export function preparePause(sessionId: string): PauseChecklist | null {
     });
   }
 
-  // SUGGESTED: Create a DM note for the session
+  // SUGGESTED: Create a DM note for the game
   persistenceReminders.push({
     category: "suggested",
     entityType: "notes",
     tool: "create_note",
-    reminder: "Consider creating a session recap note",
+    reminder: "Consider creating a game recap note",
     reason: "A pinned recap note can help with continuity across sessions.",
   });
 
@@ -475,12 +475,12 @@ export function preparePause(sessionId: string): PauseChecklist | null {
       entityType: "time",
       tool: "advance_time OR set_time",
       reminder: "Update the in-game calendar",
-      reason: "Ensure the in-game time reflects how much time passed during this session.",
+      reason: "Ensure the in-game time reflects how much time passed during this game.",
     });
   }
 
   // Check for existing pause state
-  const existingPause = getPauseState(sessionId);
+  const existingPause = getPauseState(gameId);
 
   // Build the ephemeral context checklist
   const checklist: PauseChecklistItem[] = [
@@ -629,7 +629,7 @@ export function preparePause(sessionId: string): PauseChecklist | null {
                            PAUSE PREPARATION CHECKLIST
 ═══════════════════════════════════════════════════════════════════════════════
 
-This checklist helps you persist EVERYTHING before ending the session.
+This checklist helps you persist EVERYTHING before ending the game.
 
 ${criticalCount > 0 ? `⚠️  ${criticalCount} CRITICAL item(s) require immediate attention!` : ""}
 ${importantCount > 0 ? `📋 ${importantCount} IMPORTANT item(s) should be reviewed.` : ""}
@@ -680,8 +680,8 @@ to continue seamlessly.
 `.trim();
 
   return {
-    sessionId,
-    sessionName: sessionRow.name as string,
+    gameId,
+    gameName: gameRow.name as string,
     currentState: {
       playerLocation,
       activeQuests: questStats.active || 0,
@@ -703,7 +703,7 @@ to continue seamlessly.
 // ============================================================================
 
 export interface SavePauseStateParams {
-  sessionId: string;
+  gameId: string;
 
   // Required
   currentScene: string;
@@ -733,13 +733,13 @@ export function savePauseState(params: SavePauseStateParams): PauseState {
   const now = new Date().toISOString();
 
   // Delete existing pause state if any (only one per session)
-  db.prepare(`DELETE FROM pause_states WHERE session_id = ?`).run(
-    params.sessionId
+  db.prepare(`DELETE FROM pause_states WHERE game_id = ?`).run(
+    params.gameId
   );
 
   const stmt = db.prepare(`
     INSERT INTO pause_states (
-      id, session_id,
+      id, game_id,
       current_scene, scene_atmosphere, immediate_situation,
       pending_player_action, awaiting_response_to, presented_choices,
       active_threads,
@@ -753,7 +753,7 @@ export function savePauseState(params: SavePauseStateParams): PauseState {
 
   stmt.run(
     id,
-    params.sessionId,
+    params.gameId,
     params.currentScene,
     params.sceneAtmosphere || null,
     params.immediateSituation,
@@ -776,12 +776,12 @@ export function savePauseState(params: SavePauseStateParams): PauseState {
 
   // Also log a narrative event for the pause
   const eventStmt = db.prepare(`
-    INSERT INTO narrative_events (id, session_id, event_type, content, metadata, timestamp)
+    INSERT INTO narrative_events (id, game_id, event_type, content, metadata, timestamp)
     VALUES (?, ?, ?, ?, ?, ?)
   `);
   eventStmt.run(
     uuidv4(),
-    params.sessionId,
+    params.gameId,
     "game_paused",
     `Game paused: ${params.immediateSituation}`,
     JSON.stringify({
@@ -794,7 +794,7 @@ export function savePauseState(params: SavePauseStateParams): PauseState {
 
   return {
     id,
-    sessionId: params.sessionId,
+    gameId: params.gameId,
     currentScene: params.currentScene,
     sceneAtmosphere: params.sceneAtmosphere || null,
     immediateSituation: params.immediateSituation,
@@ -820,17 +820,17 @@ export function savePauseState(params: SavePauseStateParams): PauseState {
 // GET PAUSE STATE
 // ============================================================================
 
-export function getPauseState(sessionId: string): PauseState | null {
+export function getPauseState(gameId: string): PauseState | null {
   const db = getDatabase();
   const row = db
-    .prepare(`SELECT * FROM pause_states WHERE session_id = ?`)
-    .get(sessionId) as Record<string, unknown> | undefined;
+    .prepare(`SELECT * FROM pause_states WHERE game_id = ?`)
+    .get(gameId) as Record<string, unknown> | undefined;
 
   if (!row) return null;
 
   return {
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     currentScene: row.current_scene as string,
     sceneAtmosphere: row.scene_atmosphere as string | null,
     immediateSituation: row.immediate_situation as string,
@@ -864,46 +864,46 @@ export function getPauseState(sessionId: string): PauseState | null {
  * Returns everything needed to resume a paused game seamlessly.
  * Includes pause state, full game state, and a ready-to-use resume prompt.
  */
-export function getResumeContext(sessionId: string): ResumeContext | null {
+export function getResumeContext(gameId: string): ResumeContext | null {
   const db = getDatabase();
 
   // Get pause state
-  const pauseState = getPauseState(sessionId);
+  const pauseState = getPauseState(gameId);
   if (!pauseState) return null;
 
-  // Get session
-  const sessionRow = db
-    .prepare(`SELECT * FROM sessions WHERE id = ?`)
-    .get(sessionId) as Record<string, unknown> | undefined;
+  // Get game
+  const gameRow = db
+    .prepare(`SELECT * FROM games WHERE id = ?`)
+    .get(gameId) as Record<string, unknown> | undefined;
 
-  if (!sessionRow) return null;
+  if (!gameRow) return null;
 
-  const session: Session = {
-    id: sessionRow.id as string,
-    name: sessionRow.name as string,
-    setting: sessionRow.setting as string,
-    style: sessionRow.style as string,
-    rules: sessionRow.rules ? JSON.parse(sessionRow.rules as string) : null,
-    preferences: sessionRow.preferences
-      ? JSON.parse(sessionRow.preferences as string)
+  const game: Game = {
+    id: gameRow.id as string,
+    name: gameRow.name as string,
+    setting: gameRow.setting as string,
+    style: gameRow.style as string,
+    rules: gameRow.rules ? JSON.parse(gameRow.rules as string) : null,
+    preferences: gameRow.preferences
+      ? JSON.parse(gameRow.preferences as string)
       : null,
-    currentLocationId: sessionRow.current_location_id as string | null,
-    titleImageId: sessionRow.title_image_id as string | null,
-    createdAt: sessionRow.created_at as string,
-    updatedAt: sessionRow.updated_at as string,
+    currentLocationId: gameRow.current_location_id as string | null,
+    titleImageId: gameRow.title_image_id as string | null,
+    createdAt: gameRow.created_at as string,
+    updatedAt: gameRow.updated_at as string,
   };
 
   // Get player character
   const playerRow = db
     .prepare(
-      `SELECT * FROM characters WHERE session_id = ? AND is_player = 1 LIMIT 1`
+      `SELECT * FROM characters WHERE game_id = ? AND is_player = 1 LIMIT 1`
     )
-    .get(sessionId) as Record<string, unknown> | undefined;
+    .get(gameId) as Record<string, unknown> | undefined;
 
   const playerCharacter: Character | null = playerRow
     ? {
         id: playerRow.id as string,
-        sessionId: playerRow.session_id as string,
+        gameId: playerRow.game_id as string,
         name: playerRow.name as string,
         isPlayer: true,
         attributes: JSON.parse((playerRow.attributes as string) || "{}"),
@@ -922,16 +922,16 @@ export function getResumeContext(sessionId: string): ResumeContext | null {
     : null;
 
   // Get current location
-  const locationRow = session.currentLocationId
+  const locationRow = game.currentLocationId
     ? (db
         .prepare(`SELECT * FROM locations WHERE id = ?`)
-        .get(session.currentLocationId) as Record<string, unknown> | undefined)
+        .get(game.currentLocationId) as Record<string, unknown> | undefined)
     : null;
 
   const currentLocation: Location | null = locationRow
     ? {
         id: locationRow.id as string,
-        sessionId: locationRow.session_id as string,
+        gameId: locationRow.game_id as string,
         name: locationRow.name as string,
         description: locationRow.description as string,
         properties: JSON.parse((locationRow.properties as string) || "{}"),
@@ -944,13 +944,13 @@ export function getResumeContext(sessionId: string): ResumeContext | null {
   // Get active quests
   const questRows = db
     .prepare(
-      `SELECT * FROM quests WHERE session_id = ? AND status = 'active'`
+      `SELECT * FROM quests WHERE game_id = ? AND status = 'active'`
     )
-    .all(sessionId) as Record<string, unknown>[];
+    .all(gameId) as Record<string, unknown>[];
 
   const activeQuests: Quest[] = questRows.map((row) => ({
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     name: row.name as string,
     description: row.description as string,
     objectives: JSON.parse((row.objectives as string) || "[]"),
@@ -961,14 +961,14 @@ export function getResumeContext(sessionId: string): ResumeContext | null {
   // Get active combat
   const combatRow = db
     .prepare(
-      `SELECT * FROM combats WHERE session_id = ? AND status = 'active' LIMIT 1`
+      `SELECT * FROM combats WHERE game_id = ? AND status = 'active' LIMIT 1`
     )
-    .get(sessionId) as Record<string, unknown> | undefined;
+    .get(gameId) as Record<string, unknown> | undefined;
 
   const activeCombat: Combat | null = combatRow
     ? {
         id: combatRow.id as string,
-        sessionId: combatRow.session_id as string,
+        gameId: combatRow.game_id as string,
         locationId: combatRow.location_id as string,
         participants: JSON.parse((combatRow.participants as string) || "[]"),
         currentTurn: combatRow.current_turn as number,
@@ -981,13 +981,13 @@ export function getResumeContext(sessionId: string): ResumeContext | null {
   // Get recent events (last 10)
   const eventRows = db
     .prepare(
-      `SELECT * FROM narrative_events WHERE session_id = ? ORDER BY timestamp DESC LIMIT 10`
+      `SELECT * FROM narrative_events WHERE game_id = ? ORDER BY timestamp DESC LIMIT 10`
     )
-    .all(sessionId) as Record<string, unknown>[];
+    .all(gameId) as Record<string, unknown>[];
 
   const recentEvents: NarrativeEvent[] = eventRows.map((row) => ({
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     eventType: row.event_type as string,
     content: row.content as string,
     metadata: JSON.parse((row.metadata as string) || "{}"),
@@ -997,13 +997,13 @@ export function getResumeContext(sessionId: string): ResumeContext | null {
   // Get active timers
   const timerRows = db
     .prepare(
-      `SELECT * FROM timers WHERE session_id = ? AND triggered = 0`
+      `SELECT * FROM timers WHERE game_id = ? AND triggered = 0`
     )
-    .all(sessionId) as Record<string, unknown>[];
+    .all(gameId) as Record<string, unknown>[];
 
   const activeTimers: Timer[] = timerRows.map((row) => ({
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     name: row.name as string,
     description: row.description as string,
     timerType: row.timer_type as Timer["timerType"],
@@ -1020,13 +1020,13 @@ export function getResumeContext(sessionId: string): ResumeContext | null {
   // Get pending scheduled events
   const scheduledRows = db
     .prepare(
-      `SELECT * FROM scheduled_events WHERE session_id = ? AND triggered = 0`
+      `SELECT * FROM scheduled_events WHERE game_id = ? AND triggered = 0`
     )
-    .all(sessionId) as Record<string, unknown>[];
+    .all(gameId) as Record<string, unknown>[];
 
   const pendingScheduledEvents: ScheduledEvent[] = scheduledRows.map((row) => ({
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     name: row.name as string,
     description: row.description as string,
     triggerTime: JSON.parse(row.trigger_time as string),
@@ -1071,8 +1071,8 @@ export function getResumeContext(sessionId: string): ResumeContext | null {
                               GAME RESUME BRIEFING
 ═══════════════════════════════════════════════════════════════════════════════
 
-SESSION: ${session.name}
-SETTING: ${session.setting} (${session.style})
+GAME: ${game.name}
+SETTING: ${game.setting} (${game.style})
 PAUSED: ${pauseState.createdAt}${pauseState.modelUsed ? ` (by ${pauseState.modelUsed})` : ""}
 ${pauseState.pauseReason ? `REASON: ${pauseState.pauseReason}` : ""}
 
@@ -1146,7 +1146,7 @@ Remember: You're continuing mid-scene. Don't start fresh - pick up the thread!
   return {
     pauseState,
     gameState: {
-      session,
+      game,
       playerCharacter,
       currentLocation,
       activeQuests,
@@ -1166,7 +1166,7 @@ Remember: You're continuing mid-scene. Don't start fresh - pick up the thread!
 // ============================================================================
 
 export interface ContextSnapshotParams {
-  sessionId: string;
+  gameId: string;
   situation: string;
   notes?: string;
   npcMood?: Record<string, string>;
@@ -1186,7 +1186,7 @@ export function saveContextSnapshot(params: ContextSnapshotParams): {
   const db = getDatabase();
 
   // Check if pause state exists
-  const existing = getPauseState(params.sessionId);
+  const existing = getPauseState(params.gameId);
 
   if (existing) {
     // Update volatile fields only
@@ -1196,7 +1196,7 @@ export function saveContextSnapshot(params: ContextSnapshotParams): {
         player_apparent_goals = COALESCE(?, player_apparent_goals),
         npc_attitudes = COALESCE(?, npc_attitudes),
         created_at = ?
-      WHERE session_id = ?
+      WHERE game_id = ?
     `);
 
     stmt.run(
@@ -1204,7 +1204,7 @@ export function saveContextSnapshot(params: ContextSnapshotParams): {
       params.playerIntent,
       params.npcMood ? JSON.stringify(params.npcMood) : null,
       new Date().toISOString(),
-      params.sessionId
+      params.gameId
     );
 
     return {
@@ -1218,7 +1218,7 @@ export function saveContextSnapshot(params: ContextSnapshotParams): {
 
     const stmt = db.prepare(`
       INSERT INTO pause_states (
-        id, session_id,
+        id, game_id,
         current_scene, immediate_situation,
         player_apparent_goals, npc_attitudes,
         active_threads, upcoming_reveals, active_conversations, unresolved_hooks,
@@ -1229,7 +1229,7 @@ export function saveContextSnapshot(params: ContextSnapshotParams): {
 
     stmt.run(
       id,
-      params.sessionId,
+      params.gameId,
       params.notes || "Snapshot taken during play",
       params.situation,
       params.playerIntent || null,
@@ -1241,7 +1241,7 @@ export function saveContextSnapshot(params: ContextSnapshotParams): {
       success: true,
       message: "Context snapshot created",
       suggestion:
-        "Consider using prepare_pause and save_pause_state before ending the session for a complete save.",
+        "Consider using prepare_pause and save_pause_state before ending the game for a complete save.",
     };
   }
 }
@@ -1250,11 +1250,11 @@ export function saveContextSnapshot(params: ContextSnapshotParams): {
 // DELETE PAUSE STATE
 // ============================================================================
 
-export function deletePauseState(sessionId: string): boolean {
+export function deletePauseState(gameId: string): boolean {
   const db = getDatabase();
   const result = db
-    .prepare(`DELETE FROM pause_states WHERE session_id = ?`)
-    .run(sessionId);
+    .prepare(`DELETE FROM pause_states WHERE game_id = ?`)
+    .run(gameId);
   return result.changes > 0;
 }
 
@@ -1266,13 +1266,13 @@ export function deletePauseState(sessionId: string): boolean {
  * Returns a reminder if context hasn't been saved recently.
  * Use this to nudge agents to save context during long sessions.
  */
-export function checkContextFreshness(sessionId: string): {
+export function checkContextFreshness(gameId: string): {
   needsSave: boolean;
   lastSaved: string | null;
   minutesSinceLastSave: number | null;
   suggestion: string;
 } {
-  const pauseState = getPauseState(sessionId);
+  const pauseState = getPauseState(gameId);
 
   if (!pauseState) {
     return {
@@ -1280,7 +1280,7 @@ export function checkContextFreshness(sessionId: string): {
       lastSaved: null,
       minutesSinceLastSave: null,
       suggestion:
-        "No context has been saved for this session. Consider calling save_context_snapshot to preserve current state.",
+        "No context has been saved for this game. Consider calling save_context_snapshot to preserve current state.",
     };
   }
 
@@ -1311,7 +1311,7 @@ export function checkContextFreshness(sessionId: string): {
 // ============================================================================
 
 export interface PushUpdateParams {
-  sessionId: string;
+  gameId: string;
   sourceAgent: string;
   sourceDescription?: string;
   updateType: string;
@@ -1335,7 +1335,7 @@ export function pushExternalUpdate(params: PushUpdateParams): ExternalUpdate {
 
   const stmt = db.prepare(`
     INSERT INTO external_updates (
-      id, session_id,
+      id, game_id,
       source_agent, source_description,
       update_type, category, title, content, structured_data,
       target_entity_id, target_entity_type,
@@ -1346,7 +1346,7 @@ export function pushExternalUpdate(params: PushUpdateParams): ExternalUpdate {
 
   stmt.run(
     id,
-    params.sessionId,
+    params.gameId,
     params.sourceAgent,
     params.sourceDescription || null,
     params.updateType,
@@ -1362,7 +1362,7 @@ export function pushExternalUpdate(params: PushUpdateParams): ExternalUpdate {
 
   return {
     id,
-    sessionId: params.sessionId,
+    gameId: params.gameId,
     sourceAgent: params.sourceAgent,
     sourceDescription: params.sourceDescription || null,
     updateType: params.updateType,
@@ -1382,16 +1382,16 @@ export function pushExternalUpdate(params: PushUpdateParams): ExternalUpdate {
 }
 
 /**
- * Get all pending updates for a session.
+ * Get all pending updates for a game.
  * Call this to check for new information from external agents.
  */
-export function getPendingUpdates(sessionId: string): PendingUpdatesResult {
+export function getPendingUpdates(gameId: string): PendingUpdatesResult {
   const db = getDatabase();
 
   const rows = db
     .prepare(
       `SELECT * FROM external_updates
-       WHERE session_id = ? AND status = 'pending'
+       WHERE game_id = ? AND status = 'pending'
        ORDER BY
          CASE priority
            WHEN 'urgent' THEN 1
@@ -1401,11 +1401,11 @@ export function getPendingUpdates(sessionId: string): PendingUpdatesResult {
          END,
          created_at DESC`
     )
-    .all(sessionId) as Record<string, unknown>[];
+    .all(gameId) as Record<string, unknown>[];
 
   const updates: ExternalUpdate[] = rows.map((row) => ({
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     sourceAgent: row.source_agent as string,
     sourceDescription: row.source_description as string | null,
     updateType: row.update_type as string,
@@ -1437,7 +1437,7 @@ export function getPendingUpdates(sessionId: string): PendingUpdatesResult {
   }
 
   return {
-    sessionId,
+    gameId,
     pendingCount: updates.length,
     urgentCount,
     updates,
@@ -1510,7 +1510,7 @@ export function getExternalUpdate(updateId: string): ExternalUpdate | null {
 
   return {
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     sourceAgent: row.source_agent as string,
     sourceDescription: row.source_description as string | null,
     updateType: row.update_type as string,
@@ -1532,16 +1532,16 @@ export function getExternalUpdate(updateId: string): ExternalUpdate | null {
 }
 
 /**
- * List all updates for a session with optional status filter.
+ * List all updates for a game with optional status filter.
  */
 export function listExternalUpdates(
-  sessionId: string,
+  gameId: string,
   status?: ExternalUpdate["status"]
 ): ExternalUpdate[] {
   const db = getDatabase();
 
-  let query = `SELECT * FROM external_updates WHERE session_id = ?`;
-  const params: (string | undefined)[] = [sessionId];
+  let query = `SELECT * FROM external_updates WHERE game_id = ?`;
+  const params: (string | undefined)[] = [gameId];
 
   if (status) {
     query += ` AND status = ?`;
@@ -1554,7 +1554,7 @@ export function listExternalUpdates(
 
   return rows.map((row) => ({
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     sourceAgent: row.source_agent as string,
     sourceDescription: row.source_description as string | null,
     updateType: row.update_type as string,

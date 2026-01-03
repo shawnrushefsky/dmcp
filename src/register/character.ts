@@ -19,7 +19,7 @@ export function registerCharacterTools(server: McpServer) {
     {
       description: "Create a new character (PC or NPC). IMPORTANT: Call this IMMEDIATELY when introducing any named NPC in narrative, BEFORE continuing the scene. Every named character mentioned in dialogue or description should exist in the database.",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         name: z.string().min(1).max(LIMITS.NAME_MAX).describe("Character name"),
         isPlayer: z.boolean().describe("True for player character, false for NPC"),
         attributes: z.record(z.string().max(50), z.number()).optional().describe("Character attributes"),
@@ -118,9 +118,9 @@ export function registerCharacterTools(server: McpServer) {
   server.registerTool(
     "list_characters",
     {
-      description: "List characters in a session",
+      description: "List characters in a game",
       inputSchema: {
-        sessionId: z.string().describe("The session ID"),
+        gameId: z.string().describe("The game ID"),
         isPlayer: z.boolean().optional().describe("Filter by player/NPC"),
         locationId: z.string().optional().describe("Filter by location"),
       },
@@ -135,8 +135,8 @@ export function registerCharacterTools(server: McpServer) {
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId, isPlayer, locationId }) => {
-      const characters = characterTools.listCharacters(sessionId, { isPlayer, locationId });
+    async ({ gameId, isPlayer, locationId }) => {
+      const characters = characterTools.listCharacters(gameId, { isPlayer, locationId });
       const output = { characters };
       return {
         content: [{ type: "text", text: JSON.stringify(characters, null, 2) }],
@@ -285,16 +285,16 @@ export function registerCharacterTools(server: McpServer) {
   server.registerTool(
     "get_character_by_name",
     {
-      description: "Look up a character by name within a session. Supports exact, partial, and fuzzy matching. Returns the best match or an error if no reasonable match found.",
+      description: "Look up a character by name within a game. Supports exact, partial, and fuzzy matching. Returns the best match or an error if no reasonable match found.",
       inputSchema: {
-        sessionId: z.string().describe("The session ID to search within"),
+        gameId: z.string().describe("The game ID to search within"),
         name: z.string().describe("Character name to search for (case-insensitive)"),
       },
       outputSchema: characterOutputSchema,
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId, name }) => {
-      const character = characterTools.getCharacterByName(sessionId, name);
+    async ({ gameId, name }) => {
+      const character = characterTools.getCharacterByName(gameId, name);
       if (!character) {
         return {
           content: [{ type: "text", text: `No character found matching "${name}"` }],
@@ -316,7 +316,7 @@ export function registerCharacterTools(server: McpServer) {
     {
       description: "List characters with quick-identification summaries. Use this to help identify characters by appearance before looking up their full details. More efficient than loading full character data when you just need to identify who's who.",
       inputSchema: {
-        sessionId: z.string().describe("The session ID"),
+        gameId: z.string().describe("The game ID"),
       },
       outputSchema: {
         summaries: z.array(z.object({
@@ -330,10 +330,10 @@ export function registerCharacterTools(server: McpServer) {
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId }) => {
+    async ({ gameId }) => {
       // Dynamic import to avoid circular dependency
       const { listCharacterSummaries } = await import("../tools/image-prompt.js");
-      const summaries = listCharacterSummaries(sessionId);
+      const summaries = listCharacterSummaries(gameId);
       const output = { summaries };
       return {
         content: [{ type: "text", text: JSON.stringify(summaries, null, 2) }],

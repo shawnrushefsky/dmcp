@@ -10,7 +10,7 @@ export function registerQuestTools(server: McpServer) {
     {
       description: "Create a new quest. Call this whenever the player receives a mission, task, or goal - whether from an NPC, discovered through exploration, or self-initiated. Include clear objectives that can be tracked.",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         name: z.string().min(1).max(LIMITS.NAME_MAX).describe("Quest name"),
         description: z.string().max(LIMITS.DESCRIPTION_MAX).describe("Quest description"),
         objectives: z.array(z.object({
@@ -129,15 +129,15 @@ export function registerQuestTools(server: McpServer) {
   server.registerTool(
     "list_quests",
     {
-      description: "List quests in a session",
+      description: "List quests in a game",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         status: z.enum(["active", "completed", "failed", "abandoned"]).optional().describe("Filter by status"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId, status }) => {
-      const quests = questTools.listQuests(sessionId, status ? { status } : undefined);
+    async ({ gameId, status }) => {
+      const quests = questTools.listQuests(gameId, status ? { status } : undefined);
       return {
         content: [{ type: "text", text: JSON.stringify(quests, null, 2) }],
       };

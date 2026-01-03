@@ -11,7 +11,7 @@ export function registerWorldTools(server: McpServer) {
     {
       description: "Create a new location in the game world. IMPORTANT: Call this IMMEDIATELY when describing any new place, BEFORE narrating what happens there. Every location the player visits or hears about should exist in the database.",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         name: z.string().min(1).max(LIMITS.NAME_MAX).describe("Location name"),
         description: z.string().max(LIMITS.DESCRIPTION_MAX).describe("Location description"),
         properties: z.object({
@@ -22,8 +22,8 @@ export function registerWorldTools(server: McpServer) {
       },
       annotations: ANNOTATIONS.CREATE,
     },
-    async ({ sessionId, name, description, properties, imageGen }) => {
-      const location = worldTools.createLocation({ sessionId, name, description, properties, imageGen });
+    async ({ gameId, name, description, properties, imageGen }) => {
+      const location = worldTools.createLocation({ gameId, name, description, properties, imageGen });
       return {
         content: [{ type: "text", text: JSON.stringify(location, null, 2) }],
       };
@@ -83,14 +83,14 @@ export function registerWorldTools(server: McpServer) {
   server.registerTool(
     "list_locations",
     {
-      description: "List all locations in a session",
+      description: "List all locations in a game",
       inputSchema: {
-        sessionId: z.string().describe("The session ID"),
+        gameId: z.string().describe("The game ID"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId }) => {
-      const locations = worldTools.listLocations(sessionId);
+    async ({ gameId }) => {
+      const locations = worldTools.listLocations(gameId);
       return {
         content: [{ type: "text", text: JSON.stringify(locations, null, 2) }],
       };
@@ -135,15 +135,15 @@ export function registerWorldTools(server: McpServer) {
   server.registerTool(
     "get_location_by_name",
     {
-      description: "Look up a location by name within a session. Supports exact, partial, and fuzzy matching. Returns the best match or an error if no reasonable match found.",
+      description: "Look up a location by name within a game. Supports exact, partial, and fuzzy matching. Returns the best match or an error if no reasonable match found.",
       inputSchema: {
-        sessionId: z.string().describe("The session ID to search within"),
+        gameId: z.string().describe("The game ID to search within"),
         name: z.string().describe("Location name to search for (case-insensitive)"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId, name }) => {
-      const location = worldTools.getLocationByName(sessionId, name);
+    async ({ gameId, name }) => {
+      const location = worldTools.getLocationByName(gameId, name);
       if (!location) {
         return {
           content: [{ type: "text", text: `No location found matching "${name}"` }],

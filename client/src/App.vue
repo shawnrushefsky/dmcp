@@ -10,12 +10,12 @@ import { useKeyboardShortcuts } from './composables/useKeyboardShortcuts'
 // Initialize theme at app level
 useTheme()
 
-// Get session ID from route for keyboard shortcuts
+// Get game ID from route for keyboard shortcuts
 const route = useRoute()
-const sessionId = computed(() => route.params.sessionId as string | undefined)
+const gameId = computed(() => route.params.gameId as string | undefined)
 
 // Initialize keyboard shortcuts
-useKeyboardShortcuts(sessionId.value)
+useKeyboardShortcuts(gameId.value)
 </script>
 
 <template>

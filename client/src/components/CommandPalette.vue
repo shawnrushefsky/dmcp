@@ -25,9 +25,9 @@ interface SearchItem {
 const searchResults = ref<SearchItem[]>([])
 const isSearching = ref(false)
 
-// Get session ID from current route
-const sessionId = computed(() => {
-  return route.params.sessionId as string | undefined
+// Get game ID from current route
+const gameId = computed(() => {
+  return route.params.gameId as string | undefined
 })
 
 // Debounced search
@@ -36,14 +36,14 @@ let searchTimeout: ReturnType<typeof setTimeout> | null = null
 watch(query, (newQuery) => {
   if (searchTimeout) clearTimeout(searchTimeout)
 
-  if (!newQuery || newQuery.length < 2 || !sessionId.value) {
+  if (!newQuery || newQuery.length < 2 || !gameId.value) {
     searchResults.value = []
     return
   }
 
   isSearching.value = true
   searchTimeout = setTimeout(async () => {
-    const results = await search(sessionId.value!, newQuery)
+    const results = await search(gameId.value!, newQuery)
     searchResults.value = [
       ...results.characters,
       ...results.locations,
@@ -128,8 +128,8 @@ function getTypeIcon(type: string): string {
             <kbd class="escape-hint">esc</kbd>
           </div>
 
-          <div v-if="!sessionId" class="no-session">
-            <p class="empty-message">Navigate to a game session to search</p>
+          <div v-if="!gameId" class="no-game">
+            <p class="empty-message">Navigate to a game to search</p>
           </div>
 
           <div v-else-if="isSearching" class="searching">
@@ -250,7 +250,7 @@ function getTypeIcon(type: string): string {
   font-family: var(--font-mono, monospace);
 }
 
-.no-session,
+.no-game,
 .searching,
 .no-results,
 .hint {
