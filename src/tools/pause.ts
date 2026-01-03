@@ -1071,7 +1071,7 @@ export function getResumeContext(gameId: string): ResumeContext | null {
                               GAME RESUME BRIEFING
 ═══════════════════════════════════════════════════════════════════════════════
 
-SESSION: ${game.name}
+GAME: ${game.name}
 SETTING: ${game.setting} (${game.style})
 PAUSED: ${pauseState.createdAt}${pauseState.modelUsed ? ` (by ${pauseState.modelUsed})` : ""}
 ${pauseState.pauseReason ? `REASON: ${pauseState.pauseReason}` : ""}

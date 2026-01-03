@@ -206,7 +206,7 @@ export function registerDisplayTools(server: McpServer): void {
   server.registerTool(
     "set_session_theme",
     {
-      description: "Set display configuration for a specific game game. Each session can have its own visual theme.",
+      description: "Set display configuration for a specific game. Each game can have its own visual theme.",
       inputSchema: {
         gameId: z.string().describe("The game ID"),
         bgColor: z.string().optional().describe("Background color"),
@@ -240,7 +240,7 @@ export function registerDisplayTools(server: McpServer): void {
         content: [
           {
             type: "text",
-            text: `Session theme updated for ${gameId}:\n${JSON.stringify(updated, null, 2)}`,
+            text: `Game theme updated for ${gameId}:\n${JSON.stringify(updated, null, 2)}`,
           },
         ],
       };
@@ -251,7 +251,7 @@ export function registerDisplayTools(server: McpServer): void {
   server.registerTool(
     "apply_session_theme_preset",
     {
-      description: "Apply a predefined theme preset to a specific game game. This allows different games to have completely different visual themes.",
+      description: "Apply a predefined theme preset to a specific game. This allows different games to have completely different visual themes.",
       inputSchema: {
         gameId: z.string().describe("The game ID"),
         preset: z.enum(themePresetNames).describe("Theme preset name"),

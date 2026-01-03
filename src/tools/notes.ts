@@ -268,7 +268,7 @@ export function generateRecap(gameId: string, eventLimit = 20): Note {
   }
 
   // Build recap content
-  let content = "# Session Recap\n\n";
+  let content = "# Game Recap\n\n";
   content += `*Generated from last ${events.length} events*\n\n`;
 
   for (const [eventType, contents] of Object.entries(byType)) {
@@ -285,7 +285,7 @@ export function generateRecap(gameId: string, eventLimit = 20): Note {
   // Create the note
   return createNote({
     gameId,
-    title: `Session Recap - ${new Date().toLocaleDateString()}`,
+    title: `Game Recap - ${new Date().toLocaleDateString()}`,
     content,
     category: "recap",
     tags: ["auto-generated", "recap"],

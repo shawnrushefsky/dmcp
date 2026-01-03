@@ -177,7 +177,7 @@ export function registerCoreTools(server: McpServer) {
     async ({ gameId }) => {
       const success = gameTools.deleteGame(gameId);
       return {
-        content: [{ type: "text", text: success ? "Session deleted" : "Session not found" }],
+        content: [{ type: "text", text: success ? "Game deleted" : "Game not found" }],
         isError: !success,
       };
     }
@@ -205,7 +205,7 @@ export function registerCoreTools(server: McpServer) {
       const game = gameTools.updateGame(gameId, { name, setting, style });
       if (!game) {
         return {
-          content: [{ type: "text", text: "Session not found" }],
+          content: [{ type: "text", text: "Game not found" }],
           isError: true,
         };
       }
@@ -239,7 +239,7 @@ export function registerCoreTools(server: McpServer) {
       const game = gameTools.setSessionTitleImage(gameId, imageId);
       if (!game) {
         return {
-          content: [{ type: "text", text: "Session not found" }],
+          content: [{ type: "text", text: "Game not found" }],
           isError: true,
         };
       }
@@ -650,7 +650,7 @@ export function registerCoreTools(server: McpServer) {
       const success = gameTools.updateGamePreferences(gameId, preferences);
       if (!success) {
         return {
-          content: [{ type: "text", text: "Session not found" }],
+          content: [{ type: "text", text: "Game not found" }],
           isError: true,
         };
       }

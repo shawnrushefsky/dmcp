@@ -3,7 +3,53 @@ import { getDatabase } from "./connection.js";
 export function initializeSchema(): void {
   const db = getDatabase();
 
-  // Sessions table
+  // ============================================================================
+  // MIGRATION: Rename 'sessions' to 'games' and 'session_id' to 'game_id'
+  // This handles existing databases that use the old 'session' terminology
+  // ============================================================================
+
+  // Check if the old 'sessions' table exists and migrate to 'games'
+  const sessionsTableExists = db.prepare(
+    "SELECT name FROM sqlite_master WHERE type='table' AND name='sessions'"
+  ).get();
+
+  if (sessionsTableExists) {
+    // Rename the main sessions table to games
+    db.exec(`ALTER TABLE sessions RENAME TO games`);
+
+    // Rename session_id columns to game_id in all tables that have them
+    const tablesWithSessionId = [
+      'characters', 'locations', 'items', 'quests', 'narrative_events',
+      'combats', 'resources', 'game_time', 'scheduled_events', 'timers',
+      'random_tables', 'secrets', 'relationships', 'factions', 'abilities',
+      'status_effects', 'tags', 'notes', 'external_updates', 'pause_states',
+      'stored_images'
+    ];
+
+    for (const table of tablesWithSessionId) {
+      try {
+        db.exec(`ALTER TABLE ${table} RENAME COLUMN session_id TO game_id`);
+      } catch {
+        // Column doesn't exist or already renamed
+      }
+    }
+
+    // Rename session_themes table to game_themes if it exists
+    try {
+      db.exec(`ALTER TABLE session_themes RENAME TO game_themes`);
+    } catch {
+      // Table doesn't exist or already renamed
+    }
+
+    // Update owner_type values in resources table
+    try {
+      db.exec(`UPDATE resources SET owner_type = 'game' WHERE owner_type = 'session'`);
+    } catch {
+      // Table might not exist yet
+    }
+  }
+
+  // Games table (formerly sessions)
   db.exec(`
     CREATE TABLE IF NOT EXISTS games (
       id TEXT PRIMARY KEY,
