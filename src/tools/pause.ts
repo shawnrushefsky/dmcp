@@ -889,6 +889,7 @@ export function getResumeContext(gameId: string): ResumeContext | null {
       : null,
     currentLocationId: gameRow.current_location_id as string | null,
     titleImageId: gameRow.title_image_id as string | null,
+    faviconImageId: gameRow.favicon_image_id as string | null,
     createdAt: gameRow.created_at as string,
     updatedAt: gameRow.updated_at as string,
   };

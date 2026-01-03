@@ -4,6 +4,7 @@ export interface Game {
   setting: string
   style: string
   titleImageId: string | null
+  faviconImageId: string | null
   createdAt: string
   updatedAt: string
 }

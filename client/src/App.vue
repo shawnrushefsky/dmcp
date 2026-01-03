@@ -5,10 +5,14 @@ import AppHeader from './components/AppHeader.vue'
 import AppFooter from './components/AppFooter.vue'
 import CommandPalette from './components/CommandPalette.vue'
 import { useTheme } from './composables/useTheme'
+import { useFavicon } from './composables/useFavicon'
 import { useKeyboardShortcuts } from './composables/useKeyboardShortcuts'
 
 // Initialize theme at app level
 useTheme()
+
+// Initialize favicon at app level
+useFavicon()
 
 // Get game ID from route for keyboard shortcuts
 const route = useRoute()

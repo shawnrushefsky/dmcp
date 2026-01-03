@@ -259,6 +259,41 @@ export function registerCoreTools(server: McpServer) {
     }
   );
 
+  server.registerTool(
+    "set_game_favicon",
+    {
+      description: "Set or remove the favicon image for a game. This image will be displayed as the browser favicon when viewing this game in the web UI. Should be a square image (ideally 32x32 or larger).",
+      inputSchema: {
+        gameId: z.string().describe("The game ID"),
+        imageId: z.string().nullable().describe("The image ID to set as favicon, or null to remove"),
+      },
+      annotations: ANNOTATIONS.SET,
+    },
+    async ({ gameId, imageId }) => {
+      const game = gameTools.setGameFavicon(gameId, imageId);
+      if (!game) {
+        return {
+          content: [{ type: "text", text: "Game not found" }],
+          isError: true,
+        };
+      }
+      const webUiUrl = getGameUrl(game.id);
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            ...game,
+            webUi: {
+              url: webUiUrl,
+              faviconUrl: `${webUiUrl.replace(/\/games\/.*/, '')}/api/games/${game.id}/favicon`,
+              message: `Favicon set. View game at: ${webUiUrl}`,
+            },
+          }, null, 2),
+        }],
+      };
+    }
+  );
+
   // ============================================================================
   // GAME SETUP INTERVIEW TOOLS
   // ============================================================================

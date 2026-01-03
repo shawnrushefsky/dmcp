@@ -37,6 +37,7 @@ export function createGame(params: {
     preferences: params.preferences || null,
     currentLocationId: null,
     titleImageId: null,
+    faviconImageId: null,
     createdAt: now,
     updatedAt: now,
   };
@@ -58,6 +59,7 @@ export function loadGame(id: string): Game | null {
     preferences: row.preferences ? safeJsonParse<GamePreferences>(row.preferences as string, null as unknown as GamePreferences) : null,
     currentLocationId: row.current_location_id as string | null,
     titleImageId: row.title_image_id as string | null,
+    faviconImageId: row.favicon_image_id as string | null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
@@ -77,6 +79,7 @@ export function listGames(): Game[] {
     preferences: row.preferences ? safeJsonParse<GamePreferences>(row.preferences as string, null as unknown as GamePreferences) : null,
     currentLocationId: row.current_location_id as string | null,
     titleImageId: row.title_image_id as string | null,
+    faviconImageId: row.favicon_image_id as string | null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   }));
@@ -85,7 +88,7 @@ export function listGames(): Game[] {
 // Lightweight version that omits rules and preferences for listing
 export function listGameSummaries(): import("../types/index.js").GameSummary[] {
   const db = getDatabase();
-  const stmt = db.prepare(`SELECT id, name, setting, style, title_image_id, created_at, updated_at FROM games ORDER BY updated_at DESC`);
+  const stmt = db.prepare(`SELECT id, name, setting, style, title_image_id, favicon_image_id, created_at, updated_at FROM games ORDER BY updated_at DESC`);
   const rows = stmt.all() as Record<string, unknown>[];
 
   return rows.map((row) => ({
@@ -94,6 +97,7 @@ export function listGameSummaries(): import("../types/index.js").GameSummary[] {
     setting: row.setting as string,
     style: row.style as string,
     titleImageId: row.title_image_id as string | null,
+    faviconImageId: row.favicon_image_id as string | null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   }));
@@ -181,6 +185,27 @@ export function setSessionTitleImage(
   return {
     ...game,
     titleImageId: imageId,
+    updatedAt: now,
+  };
+}
+
+export function setGameFavicon(
+  gameId: string,
+  imageId: string | null
+): Game | null {
+  const db = getDatabase();
+  const game = loadGame(gameId);
+  if (!game) return null;
+
+  const now = new Date().toISOString();
+  const stmt = db.prepare(`
+    UPDATE games SET favicon_image_id = ?, updated_at = ? WHERE id = ?
+  `);
+  stmt.run(imageId, now, gameId);
+
+  return {
+    ...game,
+    faviconImageId: imageId,
     updatedAt: now,
   };
 }

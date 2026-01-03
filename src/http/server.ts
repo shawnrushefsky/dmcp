@@ -402,6 +402,42 @@ export function createHttpServer(port: number = 3456): express.Application {
   // ============================================================================
   // IMAGE FILE ROUTES
   // ============================================================================
+
+  // Game favicon - serves the game's favicon image
+  app.get("/api/games/:gameId/favicon", async (req: Request, res: Response) => {
+    const { gameId } = req.params;
+    const game = loadGame(gameId);
+
+    if (!game || !game.faviconImageId) {
+      res.status(404).send("No favicon set for this game");
+      return;
+    }
+
+    try {
+      // Serve the favicon image resized (32x32 is standard, 64 for retina)
+      const size = req.query.size ? parseInt(req.query.size as string) : 32;
+      const result = await getImageData(game.faviconImageId, {
+        width: size,
+        height: size,
+        format: "png",
+      });
+
+      if (!result) {
+        res.status(404).send("Favicon image not found");
+        return;
+      }
+
+      const base64Data = result.base64.replace(/^data:[^;]+;base64,/, "");
+      const buffer = Buffer.from(base64Data, "base64");
+
+      res.set("Content-Type", "image/png");
+      res.set("Cache-Control", "public, max-age=3600"); // Cache for 1 hour
+      res.send(buffer);
+    } catch {
+      res.status(500).send("Error processing favicon");
+    }
+  });
+
   app.get("/images/:imageId/file", async (req: Request, res: Response) => {
     const { imageId } = req.params;
     const width = req.query.width ? parseInt(req.query.width as string) : undefined;

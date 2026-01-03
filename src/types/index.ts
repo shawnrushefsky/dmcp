@@ -8,6 +8,7 @@ export interface Game {
   preferences: GamePreferences | null;
   currentLocationId: string | null;
   titleImageId: string | null;
+  faviconImageId: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -19,6 +20,7 @@ export interface GameSummary {
   setting: string;
   style: string;
   titleImageId: string | null;
+  faviconImageId: string | null;
   createdAt: string;
   updatedAt: string;
 }
