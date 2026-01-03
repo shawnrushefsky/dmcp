@@ -41,7 +41,7 @@ const server = new McpServer({
 });
 
 // Register all tools by domain
-registerCoreTools(server);           // Session, Interview, Rules
+registerCoreTools(server);           // Game, Interview, Rules
 registerWorldTools(server);          // Locations, Connections, Map
 registerCharacterTools(server);      // Characters (PC/NPC)
 registerCombatTools(server);         // Combat, Dice, Checks
@@ -57,7 +57,7 @@ registerTagTools(server);            // Tags
 registerStatusTools(server);         // Status Effects
 registerFactionTools(server);        // Factions
 registerAbilityTools(server);        // Abilities/Powers
-registerNoteTools(server);           // Session Notes
+registerNoteTools(server);           // Game Notes
 registerPauseTools(server);          // Pause/Resume, Context Snapshots, External Updates
 registerImageTools(server);          // Stored Images
 registerDisplayTools(server);        // Display/Theme Configuration

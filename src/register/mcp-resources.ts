@@ -15,19 +15,19 @@ export function registerMcpResources(server: McpServer) {
   // List all games
   server.registerResource(
     "games",
-    "dmcp://sessions",
+    "dmcp://games",
     {
       description: "List all games",
       mimeType: "application/json",
     },
     async (uri) => {
-      const sessions = gameTools.listGames();
+      const games = gameTools.listGames();
       return {
         contents: [
           {
             uri: uri.href,
             mimeType: "application/json",
-            text: JSON.stringify(sessions, null, 2),
+            text: JSON.stringify(games, null, 2),
           },
         ],
       };
@@ -35,42 +35,42 @@ export function registerMcpResources(server: McpServer) {
   );
 
   // ============================================================================
-  // SESSION-SCOPED RESOURCES (templated)
+  // GAME-SCOPED RESOURCES (templated)
   // ============================================================================
 
-  // Helper to create list callback for session-scoped resources
-  const createGameListCallback = (suffix: string, nameFormatter: (s: { id: string; name: string }) => string) => {
+  // Helper to create list callback for game-scoped resources
+  const createGameListCallback = (suffix: string, nameFormatter: (g: { id: string; name: string }) => string) => {
     return async () => {
-      const sessions = gameTools.listGames();
+      const games = gameTools.listGames();
       return {
-        resources: sessions.map((s) => ({
-          uri: `dmcp://session/${s.id}${suffix}`,
-          name: nameFormatter(s),
+        resources: games.map((g) => ({
+          uri: `dmcp://game/${g.id}${suffix}`,
+          name: nameFormatter(g),
         })),
       };
     };
   };
 
-  // Session details
+  // Game details
   server.registerResource(
-    "session",
-    new ResourceTemplate("dmcp://session/{gameId}", {
-      list: createGameListCallback("", (s) => s.name),
+    "game",
+    new ResourceTemplate("dmcp://game/{gameId}", {
+      list: createGameListCallback("", (g) => g.name),
     }),
     {
-      description: "Session metadata and preferences",
+      description: "Game metadata and preferences",
       mimeType: "application/json",
     },
     async (uri, variables) => {
       const gameId = variables.gameId as string;
-      const session = gameTools.loadGame(gameId);
-      if (!session) {
+      const game = gameTools.loadGame(gameId);
+      if (!game) {
         return {
           contents: [
             {
               uri: uri.href,
               mimeType: "application/json",
-              text: JSON.stringify({ error: "Session not found" }),
+              text: JSON.stringify({ error: "Game not found" }),
             },
           ],
         };
@@ -80,18 +80,18 @@ export function registerMcpResources(server: McpServer) {
           {
             uri: uri.href,
             mimeType: "application/json",
-            text: JSON.stringify(session, null, 2),
+            text: JSON.stringify(game, null, 2),
           },
         ],
       };
     }
   );
 
-  // Session state (overview)
+  // Game state (overview)
   server.registerResource(
-    "session-state",
-    new ResourceTemplate("dmcp://session/{gameId}/state", {
-      list: createGameListCallback("/state", (s) => `${s.name} - State`),
+    "game-state",
+    new ResourceTemplate("dmcp://game/{gameId}/state", {
+      list: createGameListCallback("/state", (g) => `${g.name} - State`),
     }),
     {
       description: "Current game state snapshot with counts",
@@ -106,7 +106,7 @@ export function registerMcpResources(server: McpServer) {
             {
               uri: uri.href,
               mimeType: "application/json",
-              text: JSON.stringify({ error: "Session not found" }),
+              text: JSON.stringify({ error: "Game not found" }),
             },
           ],
         };
@@ -123,11 +123,11 @@ export function registerMcpResources(server: McpServer) {
     }
   );
 
-  // Session characters
+  // Game characters
   server.registerResource(
-    "session-characters",
-    new ResourceTemplate("dmcp://session/{gameId}/characters", {
-      list: createGameListCallback("/characters", (s) => `${s.name} - Characters`),
+    "game-characters",
+    new ResourceTemplate("dmcp://game/{gameId}/characters", {
+      list: createGameListCallback("/characters", (g) => `${g.name} - Characters`),
     }),
     {
       description: "All characters in the game",
@@ -148,11 +148,11 @@ export function registerMcpResources(server: McpServer) {
     }
   );
 
-  // Session locations
+  // Game locations
   server.registerResource(
-    "session-locations",
-    new ResourceTemplate("dmcp://session/{gameId}/locations", {
-      list: createGameListCallback("/locations", (s) => `${s.name} - Locations`),
+    "game-locations",
+    new ResourceTemplate("dmcp://game/{gameId}/locations", {
+      list: createGameListCallback("/locations", (g) => `${g.name} - Locations`),
     }),
     {
       description: "All locations in the game",
@@ -173,11 +173,11 @@ export function registerMcpResources(server: McpServer) {
     }
   );
 
-  // Session map (JSON data)
+  // Game map (JSON data)
   server.registerResource(
-    "session-map",
-    new ResourceTemplate("dmcp://session/{gameId}/map", {
-      list: createGameListCallback("/map", (s) => `${s.name} - Map`),
+    "game-map",
+    new ResourceTemplate("dmcp://game/{gameId}/map", {
+      list: createGameListCallback("/map", (g) => `${g.name} - Map`),
     }),
     {
       description: "World map data with location nodes and connections",
@@ -185,9 +185,9 @@ export function registerMcpResources(server: McpServer) {
     },
     async (uri, variables) => {
       const gameId = variables.gameId as string;
-      const session = gameTools.loadGame(gameId);
+      const game = gameTools.loadGame(gameId);
       const mapResult = worldTools.renderMap(gameId, {
-        playerLocationId: session?.currentLocationId || undefined,
+        playerLocationId: game?.currentLocationId || undefined,
       });
       if (!mapResult) {
         return {
@@ -195,7 +195,7 @@ export function registerMcpResources(server: McpServer) {
             {
               uri: uri.href,
               mimeType: "application/json",
-              text: JSON.stringify({ error: "No locations in this session" }),
+              text: JSON.stringify({ error: "No locations in this game" }),
             },
           ],
         };
@@ -212,11 +212,11 @@ export function registerMcpResources(server: McpServer) {
     }
   );
 
-  // Session quests
+  // Game quests
   server.registerResource(
-    "session-quests",
-    new ResourceTemplate("dmcp://session/{gameId}/quests", {
-      list: createGameListCallback("/quests", (s) => `${s.name} - Quests`),
+    "game-quests",
+    new ResourceTemplate("dmcp://game/{gameId}/quests", {
+      list: createGameListCallback("/quests", (g) => `${g.name} - Quests`),
     }),
     {
       description: "All quests in the game",
@@ -237,11 +237,11 @@ export function registerMcpResources(server: McpServer) {
     }
   );
 
-  // Session history (recent narrative events)
+  // Game history (recent narrative events)
   server.registerResource(
-    "session-history",
-    new ResourceTemplate("dmcp://session/{gameId}/history", {
-      list: createGameListCallback("/history", (s) => `${s.name} - History`),
+    "game-history",
+    new ResourceTemplate("dmcp://game/{gameId}/history", {
+      list: createGameListCallback("/history", (g) => `${g.name} - History`),
     }),
     {
       description: "Recent narrative events (last 50)",
@@ -262,11 +262,11 @@ export function registerMcpResources(server: McpServer) {
     }
   );
 
-  // Session rules
+  // Game rules
   server.registerResource(
-    "session-rules",
-    new ResourceTemplate("dmcp://session/{gameId}/rules", {
-      list: createGameListCallback("/rules", (s) => `${s.name} - Rules`),
+    "game-rules",
+    new ResourceTemplate("dmcp://game/{gameId}/rules", {
+      list: createGameListCallback("/rules", (g) => `${g.name} - Rules`),
     }),
     {
       description: "Rule system for the game",
@@ -281,7 +281,7 @@ export function registerMcpResources(server: McpServer) {
             {
               uri: uri.href,
               mimeType: "application/json",
-              text: JSON.stringify({ error: "No rules configured for this session" }),
+              text: JSON.stringify({ error: "No rules configured for this game" }),
             },
           ],
         };

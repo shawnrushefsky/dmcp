@@ -291,7 +291,7 @@ export function registerImageTools(server: McpServer) {
       inputSchema: {
         entityId: z.string().max(100).describe("The entity ID (character, location, item, or faction)"),
         entityType: z.enum(["character", "location", "item", "faction"]).describe("Type of entity"),
-        gameId: z.string().max(100).optional().describe("Session ID (optional, inferred from entity if not provided)"),
+        gameId: z.string().max(100).optional().describe("Game ID (optional, inferred from entity if not provided)"),
         templateId: z.string().max(100).optional().describe("Specific template ID to use (optional, uses default for entity type if not provided)"),
       },
       outputSchema: {
@@ -304,7 +304,7 @@ export function registerImageTools(server: McpServer) {
         source: z.object({
           fromImageGen: z.boolean().describe("Whether imageGen schema was used"),
           fromNotes: z.boolean().describe("Whether notes/description was used"),
-          fromPreset: z.boolean().describe("Whether session preset was applied"),
+          fromPreset: z.boolean().describe("Whether game preset was applied"),
           fromTemplate: z.boolean().describe("Whether a template was used"),
         }),
         templateUsed: z.string().optional().describe("Name of template used, if any"),

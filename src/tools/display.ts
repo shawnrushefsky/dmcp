@@ -493,12 +493,12 @@ export function setVisualStyle(style: {
 }
 
 // ============================================
-// Per-Session Theme Support
+// Per-Game Theme Support
 // ============================================
 
 /**
- * Get display configuration for a specific session
- * Falls back to global config if no session theme exists
+ * Get display configuration for a specific game
+ * Falls back to global config if no game theme exists
  */
 export function getGameDisplayConfig(gameId: string): DisplayConfig {
   const db = getDatabase();
@@ -515,9 +515,9 @@ export function getGameDisplayConfig(gameId: string): DisplayConfig {
 }
 
 /**
- * Set display configuration for a specific session
+ * Set display configuration for a specific game
  */
-export function setSessionDisplayConfig(
+export function setGameDisplayConfig(
   gameId: string,
   config: Partial<DisplayConfig>
 ): DisplayConfig {
@@ -539,9 +539,9 @@ export function setSessionDisplayConfig(
 }
 
 /**
- * Apply a preset theme to a specific session
+ * Apply a preset theme to a specific game
  */
-export function applySessionThemePreset(
+export function applyGameThemePreset(
   gameId: string,
   presetName: string
 ): DisplayConfig | null {
@@ -549,13 +549,13 @@ export function applySessionThemePreset(
   if (!preset) {
     return null;
   }
-  return setSessionDisplayConfig(gameId, preset);
+  return setGameDisplayConfig(gameId, preset);
 }
 
 /**
- * Reset session theme (removes session-specific config, falls back to global)
+ * Reset game theme (removes game-specific config, falls back to global)
  */
-export function resetSessionTheme(gameId: string): void {
+export function resetGameTheme(gameId: string): void {
   const db = getDatabase();
   db.prepare("DELETE FROM game_themes WHERE game_id = ?").run(gameId);
 }
@@ -563,7 +563,7 @@ export function resetSessionTheme(gameId: string): void {
 /**
  * Check if a game has a custom theme
  */
-export function hasSessionTheme(gameId: string): boolean {
+export function hasGameTheme(gameId: string): boolean {
   const db = getDatabase();
   const row = db
     .prepare("SELECT 1 FROM game_themes WHERE game_id = ?")
@@ -668,7 +668,7 @@ export function inferAndApplyTheme(
   }
 
   if (presetName) {
-    return applySessionThemePreset(gameId, presetName) || getDisplayConfig();
+    return applyGameThemePreset(gameId, presetName) || getDisplayConfig();
   }
 
   // No match - use default

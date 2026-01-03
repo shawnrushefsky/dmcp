@@ -54,7 +54,7 @@ After calling this, use save_pause_state to persist your context.`,
       const checklist = pauseTools.preparePause(gameId);
       if (!checklist) {
         return {
-          content: [{ type: "text", text: `Session ${gameId} not found` }],
+          content: [{ type: "text", text: `Game ${gameId} not found` }],
           isError: true,
         };
       }
@@ -293,7 +293,7 @@ Use this to get up to speed quickly and resume exactly where the game left off.`
           content: [
             {
               type: "text",
-              text: `No pause state found for session ${gameId}. Use load_game and get_history instead.`,
+              text: `No pause state found for game ${gameId}. Use load_game and get_history instead.`,
             },
           ],
           isError: true,
