@@ -16,7 +16,7 @@ const sessionId = computed(() => route.params.sessionId as string)
 
 const breadcrumbs = computed<Breadcrumb[]>(() => [
   { label: 'Games', href: '/' },
-  { label: state.value?.session.name || 'Session', href: `/sessions/${sessionId.value}` },
+  { label: state.value?.session.name || 'Loading...', href: `/sessions/${sessionId.value}` },
   { label: 'Characters' },
 ])
 
@@ -89,5 +89,5 @@ onMounted(async () => {
       </div>
     </div>
   </div>
-  <p v-else class="empty">Session not found.</p>
+  <p v-else class="empty">Game not found.</p>
 </template>

@@ -47,5 +47,5 @@ onMounted(async () => {
     </div>
     <p v-else class="empty">No images stored yet.</p>
   </div>
-  <p v-else class="empty">Session not found.</p>
+  <p v-else class="empty">Game not found.</p>
 </template>

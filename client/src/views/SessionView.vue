@@ -20,7 +20,7 @@ const sessionId = computed(() => route.params.sessionId as string)
 
 const breadcrumbs = computed<Breadcrumb[]>(() => [
   { label: 'Games', href: '/' },
-  { label: state.value?.session.name || 'Session' },
+  { label: state.value?.session.name || 'Loading...' },
 ])
 
 const playerCharacters = computed(() =>
@@ -166,7 +166,7 @@ onMounted(async () => {
   <!-- Not Found State -->
   <div v-else class="empty">
     <div class="empty-icon">❓</div>
-    <div class="empty-title">Session Not Found</div>
+    <div class="empty-title">Game Not Found</div>
     <div class="empty-description">
       This game session doesn't exist or may have been deleted.
     </div>

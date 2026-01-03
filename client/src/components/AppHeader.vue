@@ -19,7 +19,7 @@ const breadcrumbs = computed<Breadcrumb[]>(() => {
   if (name === 'session' || name?.startsWith('session-')) {
     if (params.sessionId) {
       crumbs.push({
-        label: 'Session',
+        label: 'Game',
         href: name === 'session' ? undefined : `/sessions/${params.sessionId}`,
       })
     }

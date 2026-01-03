@@ -22,7 +22,7 @@ const breadcrumbs = computed<Breadcrumb[]>(() => {
   if (!quest.value) return []
   return [
     { label: 'Games', href: '/' },
-    { label: sessionState.value?.session.name || 'Session', href: `/sessions/${quest.value.sessionId}` },
+    { label: sessionState.value?.session.name || 'Loading...', href: `/sessions/${quest.value.sessionId}` },
     { label: quest.value.name },
   ]
 })

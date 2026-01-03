@@ -24,7 +24,7 @@ const breadcrumbs = computed<Breadcrumb[]>(() => {
   if (!sheet.value) return []
   return [
     { label: 'Games', href: '/' },
-    { label: sessionState.value?.session.name || 'Session', href: `/sessions/${sheet.value.character.sessionId}` },
+    { label: sessionState.value?.session.name || 'Loading...', href: `/sessions/${sheet.value.character.sessionId}` },
     { label: sheet.value.character.name },
   ]
 })

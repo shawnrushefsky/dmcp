@@ -25,7 +25,7 @@ const breadcrumbs = computed<Breadcrumb[]>(() => {
   if (!image.value) return []
   return [
     { label: 'Games', href: '/' },
-    { label: sessionState.value?.session.name || 'Session', href: `/sessions/${image.value.sessionId}` },
+    { label: sessionState.value?.session.name || 'Loading...', href: `/sessions/${image.value.sessionId}` },
     { label: image.value.label || 'Image' },
   ]
 })

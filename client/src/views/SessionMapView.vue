@@ -59,5 +59,5 @@ onMounted(async () => {
     </template>
     <p v-else class="empty">No locations found. Create some locations first.</p>
   </div>
-  <p v-else class="empty">Session not found.</p>
+  <p v-else class="empty">Game not found.</p>
 </template>
