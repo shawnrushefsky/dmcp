@@ -1,5 +1,6 @@
 import { ref, watch, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { setGameContext as setFaviconContext } from './useFavicon'
 
 // Border radius mapping
 const BORDER_RADIUS_MAP = {
@@ -286,12 +287,14 @@ function stopPolling(): void {
 }
 
 /**
- * Set the current game for theme loading
+ * Set the current game for theme and favicon loading.
+ * This is the single function entity views should call to set game context.
  */
-function setSession(gameId: string | null): void {
+function setGameContext(gameId: string | null): void {
   if (gameId !== currentSessionId.value) {
     currentSessionId.value = gameId
     loadTheme(gameId)
+    setFaviconContext(gameId)
   }
 }
 
@@ -322,8 +325,8 @@ export function useTheme() {
   })
 
   // Watch for game changes
-  watch(gameId, (newSessionId) => {
-    setSession(newSessionId)
+  watch(gameId, (newGameId) => {
+    setGameContext(newGameId)
   })
 
   // Watch config for external changes
@@ -335,7 +338,7 @@ export function useTheme() {
   return {
     config,
     loadTheme: () => loadTheme(currentSessionId.value),
-    setSession,
+    setGameContext,
     startPolling,
     stopPolling,
     defaultConfig,

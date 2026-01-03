@@ -9,7 +9,7 @@ import SkeletonLoader from '../components/SkeletonLoader.vue'
 
 const route = useRoute()
 const { getImage, getGame, loading } = useApi()
-const { setSession } = useTheme()
+const { setGameContext } = useTheme()
 
 const image = ref<StoredImage | null>(null)
 const gameState = ref<GameState | null>(null)
@@ -33,7 +33,7 @@ const breadcrumbs = computed<Breadcrumb[]>(() => {
 onMounted(async () => {
   image.value = await getImage(imageId.value)
   if (image.value) {
-    setSession(image.value.gameId)
+    setGameContext(image.value.gameId)
     gameState.value = await getGame(image.value.gameId)
   }
 })

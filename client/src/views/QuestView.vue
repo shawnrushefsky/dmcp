@@ -12,7 +12,7 @@ import SkeletonLoader from '../components/SkeletonLoader.vue'
 const route = useRoute()
 const { getQuest, getGame, loading } = useApi()
 const { linkText, setGameState } = useEntityLinker()
-const { setSession } = useTheme()
+const { setGameContext } = useTheme()
 
 const quest = ref<Quest | null>(null)
 const gameState = ref<GameState | null>(null)
@@ -48,9 +48,9 @@ onMounted(async () => {
   const q = await getQuest(questId.value)
   quest.value = q
 
-  // Fetch game state for entity linking and theming
+  // Fetch game state for entity linking, theming, and favicon
   if (q) {
-    setSession(q.gameId)
+    setGameContext(q.gameId)
     gameState.value = await getGame(q.gameId)
   }
 

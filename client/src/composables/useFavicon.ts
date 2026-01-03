@@ -62,6 +62,17 @@ async function loadGameFavicon(gameId: string | null): Promise<void> {
 }
 
 /**
+ * Set the current game context for favicon loading.
+ * Exported for use by useTheme.setSession() to keep theme and favicon in sync.
+ */
+export function setGameContext(gameId: string | null): void {
+  if (gameId !== currentGameId.value) {
+    currentGameId.value = gameId
+    loadGameFavicon(gameId)
+  }
+}
+
+/**
  * Main composable hook
  */
 export function useFavicon() {
@@ -76,11 +87,14 @@ export function useFavicon() {
   })
 
   onMounted(() => {
-    currentGameId.value = gameId.value
-    loadGameFavicon(gameId.value)
+    // Only set from route if we have a gameId param
+    if (gameId.value) {
+      currentGameId.value = gameId.value
+      loadGameFavicon(gameId.value)
+    }
   })
 
-  // Watch for game changes
+  // Watch for game changes from route
   watch(gameId, (newGameId) => {
     if (newGameId !== currentGameId.value) {
       currentGameId.value = newGameId

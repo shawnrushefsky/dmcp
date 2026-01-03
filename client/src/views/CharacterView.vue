@@ -13,7 +13,7 @@ import SkeletonLoader from '../components/SkeletonLoader.vue'
 const route = useRoute()
 const { getCharacterSheet, getGame, getEntityImages, loading } = useApi()
 const { linkText, setGameState, setItems } = useEntityLinker()
-const { config, setSession } = useTheme()
+const { config, setGameContext } = useTheme()
 
 const sheet = ref<CharacterSheet | null>(null)
 const gameState = ref<GameState | null>(null)
@@ -63,9 +63,9 @@ onMounted(async () => {
   sheet.value = sheetResult
   images.value = imagesResult
 
-  // Fetch game state for entity linking and theming
+  // Fetch game state for entity linking, theming, and favicon
   if (sheetResult) {
-    setSession(sheetResult.character.gameId)
+    setGameContext(sheetResult.character.gameId)
     gameState.value = await getGame(sheetResult.character.gameId)
   }
 

@@ -12,7 +12,7 @@ import SkeletonLoader from '../components/SkeletonLoader.vue'
 const route = useRoute()
 const { getFaction, getGame, getEntityImages, getCharacter, getLocation, loading } = useApi()
 const { linkText, setGameState } = useEntityLinker()
-const { setSession } = useTheme()
+const { setGameContext } = useTheme()
 
 const faction = ref<Faction | null>(null)
 const gameState = ref<GameState | null>(null)
@@ -57,7 +57,7 @@ onMounted(async () => {
   faction.value = f
 
   if (f) {
-    setSession(f.gameId)
+    setGameContext(f.gameId)
     const [state, imgs] = await Promise.all([
       getGame(f.gameId),
       getEntityImages(factionId.value, 'faction'),

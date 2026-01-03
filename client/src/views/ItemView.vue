@@ -12,7 +12,7 @@ import SkeletonLoader from '../components/SkeletonLoader.vue'
 const route = useRoute()
 const { getItem, getGame, getEntityImages, getCharacter, getLocation, loading } = useApi()
 const { linkText, setGameState } = useEntityLinker()
-const { setSession } = useTheme()
+const { setGameContext } = useTheme()
 
 const item = ref<Item | null>(null)
 const gameState = ref<GameState | null>(null)
@@ -76,7 +76,7 @@ onMounted(async () => {
   item.value = i
 
   if (i) {
-    setSession(i.gameId)
+    setGameContext(i.gameId)
     const [state, imgs] = await Promise.all([
       getGame(i.gameId),
       getEntityImages(itemId.value, 'item'),
