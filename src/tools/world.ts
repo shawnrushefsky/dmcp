@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
 import { safeJsonParse } from "../utils/json.js";
+import { gameEvents } from "../events/emitter.js";
 import type { Location, LocationProperties, Exit, ImageGeneration } from "../types/index.js";
 
 export function createLocation(params: {
@@ -94,13 +95,25 @@ export function updateLocation(
     id
   );
 
-  return {
+  const updated: Location = {
     ...current,
     name: newName,
     description: newDescription,
     properties: newProperties,
     imageGen: newImageGen,
   };
+
+  // Emit realtime event
+  gameEvents.emit({
+    type: "location:updated",
+    gameId: current.gameId,
+    entityId: id,
+    entityType: "location",
+    timestamp: new Date().toISOString(),
+    data: { name: newName },
+  });
+
+  return updated;
 }
 
 export function listLocations(gameId: string): Location[] {

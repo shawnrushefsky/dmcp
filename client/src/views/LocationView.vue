@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
 import { useEntityLinker } from '../composables/useEntityLinker'
 import { useTheme } from '../composables/useTheme'
+import { useGameEvents, type GameEvent } from '../composables/useGameEvents'
 import type { Location, Character, Item, EntityImages, Breadcrumb, GameState } from '../types'
 import Breadcrumbs from '../components/Breadcrumbs.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
@@ -20,6 +21,10 @@ const items = ref<Item[]>([])
 const images = ref<EntityImages>({ images: [], primaryImage: null })
 
 const locationId = computed(() => route.params.locationId as string)
+const currentGameId = computed(() => location.value?.gameId || '')
+
+// Subscribe to realtime updates (will connect when gameId becomes available)
+const { on } = useGameEvents(currentGameId)
 
 const breadcrumbs = computed<Breadcrumb[]>(() => {
   if (!location.value) return []
@@ -33,6 +38,29 @@ const breadcrumbs = computed<Breadcrumb[]>(() => {
 // Update entity linker when game state changes
 watch(gameState, (newState) => setGameState(newState))
 watch(items, (newItems) => setItems(newItems))
+
+async function refreshLocationData() {
+  if (!location.value) return
+  const [chars, inv] = await Promise.all([
+    getCharactersAtLocation(location.value.gameId, locationId.value),
+    getInventory(locationId.value, 'location'),
+  ])
+  characters.value = chars
+  items.value = inv
+}
+
+function handleRelevantEvent(event: GameEvent) {
+  // Refresh when characters move or inventory changes
+  if (event.type === 'character:updated' || event.type === 'inventory:updated') {
+    refreshLocationData()
+  }
+  // Refresh location details if this location was updated
+  if (event.type === 'location:updated' && event.entityId === locationId.value) {
+    getLocation(locationId.value).then(loc => {
+      if (loc) location.value = loc
+    })
+  }
+}
 
 onMounted(async () => {
   const loc = await getLocation(locationId.value)
@@ -50,6 +78,11 @@ onMounted(async () => {
     items.value = inv
     images.value = imgs
   }
+
+  // Listen for relevant updates
+  on('character:updated', handleRelevantEvent)
+  on('inventory:updated', handleRelevantEvent)
+  on('location:updated', handleRelevantEvent)
 })
 </script>
 

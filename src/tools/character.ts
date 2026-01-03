@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
 import { safeJsonParse } from "../utils/json.js";
+import { gameEvents } from "../events/emitter.js";
 import type { Character, CharacterStatus, VoiceDescription, ImageGeneration } from "../types/index.js";
 
 export function createCharacter(params: {
@@ -48,7 +49,7 @@ export function createCharacter(params: {
     now
   );
 
-  return {
+  const character: Character = {
     id,
     gameId: params.gameId,
     name: params.name,
@@ -62,6 +63,18 @@ export function createCharacter(params: {
     imageGen: params.imageGen || null,
     createdAt: now,
   };
+
+  // Emit realtime event
+  gameEvents.emit({
+    type: "character:created",
+    gameId: params.gameId,
+    entityId: id,
+    entityType: "character",
+    timestamp: now,
+    data: { name: params.name, isPlayer: params.isPlayer },
+  });
+
+  return character;
 }
 
 export function getCharacter(id: string): Character | null {
@@ -140,7 +153,7 @@ export function updateCharacter(
     id
   );
 
-  return {
+  const updated: Character = {
     ...current,
     name: newName,
     attributes: newAttributes,
@@ -151,6 +164,18 @@ export function updateCharacter(
     voice: newVoice,
     imageGen: newImageGen,
   };
+
+  // Emit realtime event
+  gameEvents.emit({
+    type: "character:updated",
+    gameId: current.gameId,
+    entityId: id,
+    entityType: "character",
+    timestamp: new Date().toISOString(),
+    data: { name: newName },
+  });
+
+  return updated;
 }
 
 export function deleteCharacter(id: string): boolean {

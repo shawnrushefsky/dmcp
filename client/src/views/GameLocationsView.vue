@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
+import { useGameEvents } from '../composables/useGameEvents'
 import type { GameState, Breadcrumb } from '../types'
 import GameTabs from '../components/GameTabs.vue'
 import LocationCard from '../components/LocationCard.vue'
@@ -13,6 +14,7 @@ const { getGame, loading } = useApi()
 const state = ref<GameState | null>(null)
 
 const gameId = computed(() => route.params.gameId as string)
+const { on } = useGameEvents(gameId)
 
 const breadcrumbs = computed<Breadcrumb[]>(() => [
   { label: 'Games', href: '/' },
@@ -20,8 +22,13 @@ const breadcrumbs = computed<Breadcrumb[]>(() => [
   { label: 'Locations' },
 ])
 
+async function refresh() {
+  state.value = await getGame(gameId.value)
+}
+
 onMounted(async () => {
   state.value = await getGame(gameId.value)
+  on('location:updated', refresh)
 })
 </script>
 

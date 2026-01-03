@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
+import { useGameEvents } from '../composables/useGameEvents'
 import type { GameState, Character, Breadcrumb } from '../types'
 import GameTabs from '../components/GameTabs.vue'
 import CharacterCard from '../components/CharacterCard.vue'
@@ -13,6 +14,7 @@ const { getGame, loading } = useApi()
 const state = ref<GameState | null>(null)
 
 const gameId = computed(() => route.params.gameId as string)
+const { on } = useGameEvents(gameId)
 
 const breadcrumbs = computed<Breadcrumb[]>(() => [
   { label: 'Games', href: '/' },
@@ -28,8 +30,14 @@ const npcs = computed(() =>
   state.value?.characters.filter((c: Character) => !c.isPlayer) || []
 )
 
+async function refresh() {
+  state.value = await getGame(gameId.value)
+}
+
 onMounted(async () => {
   state.value = await getGame(gameId.value)
+  on('character:created', refresh)
+  on('character:updated', refresh)
 })
 </script>
 

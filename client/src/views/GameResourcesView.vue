@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
+import { useGameEvents } from '../composables/useGameEvents'
 import type { GameState, Resource, Breadcrumb } from '../types'
 import GameTabs from '../components/GameTabs.vue'
 import Breadcrumbs from '../components/Breadcrumbs.vue'
@@ -12,6 +13,7 @@ const { getGame, loading } = useApi()
 const state = ref<GameState | null>(null)
 
 const gameId = computed(() => route.params.gameId as string)
+const { on } = useGameEvents(gameId)
 
 const breadcrumbs = computed<Breadcrumb[]>(() => [
   { label: 'Games', href: '/' },
@@ -43,8 +45,13 @@ function getProgressColor(resource: Resource): string {
   return 'var(--success)'
 }
 
+async function refresh() {
+  state.value = await getGame(gameId.value)
+}
+
 onMounted(async () => {
   state.value = await getGame(gameId.value)
+  on('*', refresh)
 })
 </script>
 

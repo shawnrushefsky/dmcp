@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
 import { safeJsonParse } from "../utils/json.js";
+import { gameEvents } from "../events/emitter.js";
 import type { Quest, QuestObjective } from "../types/index.js";
 
 export function createQuest(params: {
@@ -87,13 +88,25 @@ export function updateQuest(
 
   stmt.run(newName, newDescription, newStatus, newRewards || null, id);
 
-  return {
+  const updated: Quest = {
     ...current,
     name: newName,
     description: newDescription,
     status: newStatus,
     rewards: newRewards,
   };
+
+  // Emit realtime event
+  gameEvents.emit({
+    type: "quest:updated",
+    gameId: current.gameId,
+    entityId: id,
+    entityType: "quest",
+    timestamp: new Date().toISOString(),
+    data: { name: newName, status: newStatus },
+  });
+
+  return updated;
 }
 
 /**

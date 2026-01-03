@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
 import { useEntityLinker } from '../composables/useEntityLinker'
 import { useTheme } from '../composables/useTheme'
+import { useGameEvents } from '../composables/useGameEvents'
 import type { Item, Breadcrumb, GameState, EntityImages, Character, Location } from '../types'
 import Breadcrumbs from '../components/Breadcrumbs.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
@@ -19,6 +20,8 @@ const images = ref<EntityImages>({ images: [], primaryImage: null })
 const owner = ref<Character | Location | null>(null)
 
 const itemId = computed(() => route.params.itemId as string)
+const currentGameId = computed(() => item.value?.gameId || '')
+const { on } = useGameEvents(currentGameId)
 
 const breadcrumbs = computed<Breadcrumb[]>(() => {
   if (!item.value) return []
@@ -55,6 +58,19 @@ const displayProperties = computed(() => {
 // Update entity linker when game state changes
 watch(gameState, (newState) => setGameState(newState))
 
+async function refreshItem() {
+  const i = await getItem(itemId.value)
+  if (i) {
+    item.value = i
+    // Refresh owner in case it changed
+    if (i.ownerType === 'character') {
+      owner.value = await getCharacter(i.ownerId)
+    } else {
+      owner.value = await getLocation(i.ownerId)
+    }
+  }
+}
+
 onMounted(async () => {
   const i = await getItem(itemId.value)
   item.value = i
@@ -75,6 +91,9 @@ onMounted(async () => {
       owner.value = await getLocation(i.ownerId)
     }
   }
+
+  // Listen for inventory updates
+  on('inventory:updated', refreshItem)
 })
 </script>
 

@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
 import { safeJsonParse } from "../utils/json.js";
+import { gameEvents } from "../events/emitter.js";
 import type { Item, ItemProperties, ImageGeneration } from "../types/index.js";
 
 export function createItem(params: {
@@ -123,6 +124,16 @@ export function transferItem(
   `);
 
   stmt.run(newOwnerId, newOwnerType, itemId);
+
+  // Emit realtime event
+  gameEvents.emit({
+    type: "inventory:updated",
+    gameId: item.gameId,
+    entityId: itemId,
+    entityType: "item",
+    timestamp: new Date().toISOString(),
+    data: { name: item.name, newOwnerId, newOwnerType },
+  });
 
   return {
     ...item,

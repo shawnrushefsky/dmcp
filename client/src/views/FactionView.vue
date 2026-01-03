@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
 import { useEntityLinker } from '../composables/useEntityLinker'
 import { useTheme } from '../composables/useTheme'
+import { useGameEvents } from '../composables/useGameEvents'
 import type { Faction, Breadcrumb, GameState, EntityImages, Character, Location } from '../types'
 import Breadcrumbs from '../components/Breadcrumbs.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
@@ -20,6 +21,8 @@ const leader = ref<Character | null>(null)
 const headquarters = ref<Location | null>(null)
 
 const factionId = computed(() => route.params.factionId as string)
+const currentGameId = computed(() => faction.value?.gameId || '')
+const { on } = useGameEvents(currentGameId)
 
 const breadcrumbs = computed<Breadcrumb[]>(() => {
   if (!faction.value) return []
@@ -44,6 +47,11 @@ const statusClass = computed(() => {
 // Update entity linker when game state changes
 watch(gameState, (newState) => setGameState(newState))
 
+async function refreshFaction() {
+  const f = await getFaction(factionId.value)
+  if (f) faction.value = f
+}
+
 onMounted(async () => {
   const f = await getFaction(factionId.value)
   faction.value = f
@@ -65,6 +73,9 @@ onMounted(async () => {
       headquarters.value = await getLocation(f.headquartersId)
     }
   }
+
+  // Listen for faction updates
+  on('*', refreshFaction)
 })
 </script>
 

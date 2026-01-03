@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
 import { useEntityLinker } from '../composables/useEntityLinker'
 import { useTheme } from '../composables/useTheme'
+import { useGameEvents, type GameEvent } from '../composables/useGameEvents'
 import type { CharacterSheet, EntityImages, Breadcrumb, GameState } from '../types'
 import HealthBar from '../components/HealthBar.vue'
 import Breadcrumbs from '../components/Breadcrumbs.vue'
@@ -19,6 +20,10 @@ const gameState = ref<GameState | null>(null)
 const images = ref<EntityImages>({ images: [], primaryImage: null })
 
 const characterId = computed(() => route.params.characterId as string)
+const currentGameId = computed(() => sheet.value?.character.gameId || '')
+
+// Subscribe to realtime updates (will connect when gameId becomes available)
+const { on } = useGameEvents(currentGameId)
 
 const breadcrumbs = computed<Breadcrumb[]>(() => {
   if (!sheet.value) return []
@@ -34,6 +39,22 @@ watch(gameState, (newState) => setGameState(newState))
 // Also include inventory items as linkable
 watch(() => sheet.value?.inventory, (inv) => setItems(inv || []))
 
+async function refreshCharacter() {
+  const [sheetResult, imagesResult] = await Promise.all([
+    getCharacterSheet(characterId.value),
+    getEntityImages(characterId.value, 'character'),
+  ])
+  sheet.value = sheetResult
+  images.value = imagesResult
+}
+
+function handleCharacterEvent(event: GameEvent) {
+  // Only refresh if this event is for our character
+  if (event.entityId === characterId.value) {
+    refreshCharacter()
+  }
+}
+
 onMounted(async () => {
   const [sheetResult, imagesResult] = await Promise.all([
     getCharacterSheet(characterId.value),
@@ -47,6 +68,9 @@ onMounted(async () => {
     setSession(sheetResult.character.gameId)
     gameState.value = await getGame(sheetResult.character.gameId)
   }
+
+  // Listen for character updates
+  on('character:updated', handleCharacterEvent)
 })
 </script>
 

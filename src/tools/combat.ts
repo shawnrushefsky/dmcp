@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
 import { safeJsonParse } from "../utils/json.js";
+import { gameEvents } from "../events/emitter.js";
 import type { Combat, CombatParticipant } from "../types/index.js";
 import { getCharacter } from "./character.js";
 import { roll } from "./dice.js";
@@ -52,7 +53,7 @@ export function startCombat(params: {
 
   stmt.run(id, params.gameId, params.locationId, JSON.stringify(participants));
 
-  return {
+  const combat: Combat = {
     id,
     gameId: params.gameId,
     locationId: params.locationId,
@@ -62,6 +63,18 @@ export function startCombat(params: {
     status: "active",
     log: [],
   };
+
+  // Emit realtime event
+  gameEvents.emit({
+    type: "combat:started",
+    gameId: params.gameId,
+    entityId: id,
+    entityType: "combat",
+    timestamp: new Date().toISOString(),
+    data: { participantCount: participants.length },
+  });
+
+  return combat;
 }
 
 export function getCombat(id: string): Combat | null {
@@ -194,6 +207,15 @@ export function endCombat(combatId: string): Combat | null {
   const db = getDatabase();
   const stmt = db.prepare(`UPDATE combats SET status = 'resolved' WHERE id = ?`);
   stmt.run(combatId);
+
+  // Emit realtime event
+  gameEvents.emit({
+    type: "combat:ended",
+    gameId: combat.gameId,
+    entityId: combatId,
+    entityType: "combat",
+    timestamp: new Date().toISOString(),
+  });
 
   return {
     ...combat,

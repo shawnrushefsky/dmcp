@@ -35,6 +35,7 @@ import { listTimers, getTimer } from "../tools/timers.js";
 import { listSecrets } from "../tools/secrets.js";
 import { getTime, listScheduledEvents } from "../tools/time.js";
 import { getActiveCombat } from "../tools/combat.js";
+import { gameEvents } from "../events/emitter.js";
 import type { Character, Location, Faction } from "../types/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -513,6 +514,36 @@ export function createHttpServer(port: number = 3456): express.Application {
       factions: matchingFactions,
       notes: matchingNotes,
       events: matchingEvents,
+    });
+  });
+
+  // ============================================================================
+  // SERVER-SENT EVENTS (SSE) - Realtime Updates
+  // ============================================================================
+
+  app.get("/api/games/:gameId/subscribe", (req: Request, res: Response) => {
+    const { gameId } = req.params;
+
+    // Verify game exists
+    const game = loadGame(gameId);
+    if (!game) {
+      res.status(404).json({ error: "Game not found" });
+      return;
+    }
+
+    // Set SSE headers
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no"); // Disable nginx buffering
+    res.flushHeaders();
+
+    // Subscribe this client to game events
+    gameEvents.subscribe(gameId, res);
+
+    // Handle client disconnect
+    req.on("close", () => {
+      gameEvents.unsubscribe(gameId, res);
     });
   });
 

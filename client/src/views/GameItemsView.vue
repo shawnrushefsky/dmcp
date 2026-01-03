@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
 import { useTheme } from '../composables/useTheme'
+import { useGameEvents } from '../composables/useGameEvents'
 import type { GameState, Item, Character, Location, Breadcrumb } from '../types'
 import GameTabs from '../components/GameTabs.vue'
 import Breadcrumbs from '../components/Breadcrumbs.vue'
@@ -14,6 +15,7 @@ const { config } = useTheme()
 const state = ref<GameState | null>(null)
 
 const gameId = computed(() => route.params.gameId as string)
+const { on } = useGameEvents(gameId)
 
 const breadcrumbs = computed<Breadcrumb[]>(() => [
   { label: 'Games', href: '/' },
@@ -59,8 +61,13 @@ const itemsByLocation = computed(() => {
   return Object.values(groups)
 })
 
+async function refresh() {
+  state.value = await getGame(gameId.value)
+}
+
 onMounted(async () => {
   state.value = await getGame(gameId.value)
+  on('inventory:updated', refresh)
 })
 </script>
 

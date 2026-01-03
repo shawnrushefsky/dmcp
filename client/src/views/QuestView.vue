@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
 import { useEntityLinker } from '../composables/useEntityLinker'
 import { useTheme } from '../composables/useTheme'
+import { useGameEvents, type GameEvent } from '../composables/useGameEvents'
 import type { Quest, Breadcrumb, GameState } from '../types'
 import Breadcrumbs from '../components/Breadcrumbs.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
@@ -17,6 +18,10 @@ const quest = ref<Quest | null>(null)
 const gameState = ref<GameState | null>(null)
 
 const questId = computed(() => route.params.questId as string)
+const currentGameId = computed(() => quest.value?.gameId || '')
+
+// Subscribe to realtime updates (will connect when gameId becomes available)
+const { on } = useGameEvents(currentGameId)
 
 const breadcrumbs = computed<Breadcrumb[]>(() => {
   if (!quest.value) return []
@@ -30,6 +35,15 @@ const breadcrumbs = computed<Breadcrumb[]>(() => {
 // Update entity linker when game state changes
 watch(gameState, (newState) => setGameState(newState))
 
+function handleQuestEvent(event: GameEvent) {
+  // Only refresh if this event is for our quest
+  if (event.entityId === questId.value) {
+    getQuest(questId.value).then(q => {
+      if (q) quest.value = q
+    })
+  }
+}
+
 onMounted(async () => {
   const q = await getQuest(questId.value)
   quest.value = q
@@ -39,6 +53,9 @@ onMounted(async () => {
     setSession(q.gameId)
     gameState.value = await getGame(q.gameId)
   }
+
+  // Listen for quest updates
+  on('quest:updated', handleQuestEvent)
 })
 </script>
 

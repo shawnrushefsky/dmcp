@@ -3,6 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
 import { useEntityLinker } from '../composables/useEntityLinker'
+import { useGameEvents } from '../composables/useGameEvents'
 import type { GameState, Note, Breadcrumb } from '../types'
 import GameTabs from '../components/GameTabs.vue'
 import Breadcrumbs from '../components/Breadcrumbs.vue'
@@ -14,6 +15,7 @@ const { linkText, setGameState } = useEntityLinker()
 const state = ref<GameState | null>(null)
 
 const gameId = computed(() => route.params.gameId as string)
+const { on } = useGameEvents(gameId)
 
 const breadcrumbs = computed<Breadcrumb[]>(() => [
   { label: 'Games', href: '/' },
@@ -46,11 +48,16 @@ function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString()
 }
 
+async function refresh() {
+  state.value = await getGame(gameId.value)
+}
+
 // Update entity linker when game state changes
 watch(state, (newState) => setGameState(newState))
 
 onMounted(async () => {
   state.value = await getGame(gameId.value)
+  on('*', refresh)
 })
 </script>
 

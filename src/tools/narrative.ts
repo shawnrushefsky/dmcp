@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
 import { safeJsonParse } from "../utils/json.js";
+import { gameEvents } from "../events/emitter.js";
 import type { NarrativeEvent, QuestObjective } from "../types/index.js";
 
 export function logEvent(params: {
@@ -27,7 +28,7 @@ export function logEvent(params: {
     timestamp
   );
 
-  return {
+  const event: NarrativeEvent = {
     id,
     gameId: params.gameId,
     eventType: params.eventType,
@@ -35,6 +36,18 @@ export function logEvent(params: {
     metadata: params.metadata || {},
     timestamp,
   };
+
+  // Emit realtime event
+  gameEvents.emit({
+    type: "narrative:created",
+    gameId: params.gameId,
+    entityId: id,
+    entityType: "narrative",
+    timestamp,
+    data: event,
+  });
+
+  return event;
 }
 
 export function getEvent(id: string): NarrativeEvent | null {

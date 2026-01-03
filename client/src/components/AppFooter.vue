@@ -1,5 +1,5 @@
 <template>
-  <footer>DMCP - Dungeon Master Control Protocol</footer>
+  <footer>DMCP - Dungeon Master Context Protocol</footer>
 </template>
 
 <style scoped>

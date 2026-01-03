@@ -3,6 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
 import { useEntityLinker } from '../composables/useEntityLinker'
+import { useGameEvents } from '../composables/useGameEvents'
 import type { GameState, Character, Breadcrumb } from '../types'
 import GameTabs from '../components/GameTabs.vue'
 import CharacterCard from '../components/CharacterCard.vue'
@@ -17,6 +18,9 @@ const { linkText, setGameState } = useEntityLinker()
 const state = ref<GameState | null>(null)
 
 const gameId = computed(() => route.params.gameId as string)
+
+// Subscribe to realtime updates
+const { on } = useGameEvents(gameId)
 
 const breadcrumbs = computed<Breadcrumb[]>(() => [
   { label: 'Games', href: '/' },
@@ -38,8 +42,15 @@ const quests = computed(() => state.value?.quests.slice(0, 5) || [])
 // Update entity linker when game state changes
 watch(state, (newState) => setGameState(newState))
 
+async function refreshGameState() {
+  state.value = await getGame(gameId.value)
+}
+
 onMounted(async () => {
   state.value = await getGame(gameId.value)
+
+  // Refresh on any game event
+  on('*', refreshGameState)
 })
 </script>
 

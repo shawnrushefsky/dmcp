@@ -3,6 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
 import { useEntityLinker } from '../composables/useEntityLinker'
+import { useGameEvents, type GameEvent } from '../composables/useGameEvents'
 import type { NarrativeEvent, GameState } from '../types'
 import GameTabs from '../components/GameTabs.vue'
 import EventCard from '../components/EventCard.vue'
@@ -16,8 +17,19 @@ const events = ref<NarrativeEvent[]>([])
 
 const gameId = computed(() => route.params.gameId as string)
 
+// Subscribe to realtime updates
+const { on } = useGameEvents(gameId)
+
 // Update entity linker when game state changes
 watch(state, (newState) => setGameState(newState))
+
+function handleNarrativeEvent(event: GameEvent) {
+  if (event.data && typeof event.data === 'object') {
+    const narrativeEvent = event.data as NarrativeEvent
+    // Add to beginning of list (newest first)
+    events.value = [narrativeEvent, ...events.value]
+  }
+}
 
 onMounted(async () => {
   const [gameResult, historyResult] = await Promise.all([
@@ -26,6 +38,9 @@ onMounted(async () => {
   ])
   state.value = gameResult
   events.value = historyResult
+
+  // Listen for new narrative events
+  on('narrative:created', handleNarrativeEvent)
 })
 </script>
 

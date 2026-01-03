@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useApi } from '../composables/useApi'
 import type { Game } from '../types'
 import GameCard from '../components/GameCard.vue'
@@ -7,9 +7,23 @@ import SkeletonLoader from '../components/SkeletonLoader.vue'
 
 const { getGames, loading } = useApi()
 const games = ref<Game[]>([])
+let pollInterval: ReturnType<typeof setInterval> | null = null
+
+async function refresh() {
+  games.value = await getGames()
+}
 
 onMounted(async () => {
-  games.value = await getGames()
+  await refresh()
+  // Poll every 5 seconds for new games
+  pollInterval = setInterval(refresh, 5000)
+})
+
+onUnmounted(() => {
+  if (pollInterval) {
+    clearInterval(pollInterval)
+    pollInterval = null
+  }
 })
 </script>
 
