@@ -24,7 +24,7 @@ useKeyboardShortcuts(gameId.value)
 
 <template>
   <div id="app">
-    <AppHeader />
+    <AppHeader v-if="!gameId" />
     <main class="container">
       <router-view v-slot="{ Component, route }">
         <Transition :name="route.meta.transition || 'page-fade'" mode="out-in">

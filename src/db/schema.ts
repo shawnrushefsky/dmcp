@@ -42,13 +42,28 @@ export function initializeSchema(): void {
     } catch {
       // Table doesn't exist or already renamed
     }
+  }
 
-    // Update owner_type values in resources table
-    try {
-      db.exec(`UPDATE resources SET owner_type = 'game' WHERE owner_type = 'session'`);
-    } catch {
-      // Table might not exist yet
-    }
+  // Fix for edge case where game_themes table exists but has session_id column
+  // This can happen if the above RENAME COLUMN failed but RENAME TO succeeded
+  const gameThemesHasSessionId = db.prepare(
+    "SELECT name FROM pragma_table_info('game_themes') WHERE name = 'session_id'"
+  ).get();
+
+  if (gameThemesHasSessionId) {
+    // Recreate the table with correct column name
+    db.exec(`
+      CREATE TABLE game_themes_fixed (
+        game_id TEXT PRIMARY KEY,
+        config TEXT NOT NULL DEFAULT '{}',
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE
+      );
+      INSERT INTO game_themes_fixed (game_id, config, updated_at)
+        SELECT session_id, config, updated_at FROM game_themes;
+      DROP TABLE game_themes;
+      ALTER TABLE game_themes_fixed RENAME TO game_themes;
+    `);
   }
 
   // Games table (formerly sessions)

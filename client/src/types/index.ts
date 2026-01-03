@@ -1,3 +1,28 @@
+export interface GameTheme {
+  bgColor: string
+  bgSecondary: string
+  bgElevated: string
+  textColor: string
+  textMuted: string
+  accentColor: string
+  accentHover: string
+  borderColor: string
+  successColor: string
+  warningColor: string
+  dangerColor: string
+  codeBackground: string
+  codeText: string
+  borderRadius: 'sharp' | 'rounded' | 'soft'
+  cardStyle: 'clean' | 'grungy' | 'tech' | 'parchment' | 'metallic' | 'wooden'
+  fontDisplay: string
+  fontBody: string
+  fontMono: string
+  showHealthBars: boolean
+  showConditionTags: boolean
+  showImages: boolean
+  appTitle: string
+}
+
 export interface Game {
   id: string
   name: string
@@ -5,6 +30,7 @@ export interface Game {
   style: string
   titleImageId: string | null
   faviconImageId: string | null
+  theme?: GameTheme | null
   createdAt: string
   updatedAt: string
 }

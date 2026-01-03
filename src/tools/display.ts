@@ -46,31 +46,31 @@ export interface DisplayConfig {
 }
 
 const defaultConfig: DisplayConfig = {
-  // Colors - modern dark theme
-  bgColor: "#0f0f1a",
-  bgSecondary: "#1a1a2e",
-  bgElevated: "#252545",
-  textColor: "#f0f0f5",
-  textMuted: "#9090a0",
-  accentColor: "#7c3aed",
-  accentHover: "#8b5cf6",
-  borderColor: "#3a3a5c",
-  successColor: "#22c55e",
-  warningColor: "#f59e0b",
-  dangerColor: "#ef4444",
+  // Colors - neutral paper theme
+  bgColor: "#f5f3ef",
+  bgSecondary: "#ebe8e2",
+  bgElevated: "#ffffff",
+  textColor: "#2a2a2a",
+  textMuted: "#6b6b6b",
+  accentColor: "#4a5568",
+  accentHover: "#2d3748",
+  borderColor: "#d4d0c8",
+  successColor: "#2f855a",
+  warningColor: "#b7791f",
+  dangerColor: "#c53030",
 
   // Code block colors
-  codeBackground: "#0a0a15",
-  codeText: "#a0a0b0",
+  codeBackground: "#e8e5df",
+  codeText: "#4a4a4a",
 
   // Visual style
   borderRadius: "rounded",
   cardStyle: "clean",
 
   // Fonts
-  fontDisplay: "Inter",
-  fontBody: "Inter",
-  fontMono: "JetBrains Mono",
+  fontDisplay: "Libre Baskerville",
+  fontBody: "Source Sans Pro",
+  fontMono: "IBM Plex Mono",
 
   // Display options
   showHealthBars: true,

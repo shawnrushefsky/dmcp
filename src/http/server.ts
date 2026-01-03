@@ -24,6 +24,7 @@ import { getHistory } from "../tools/narrative.js";
 import {
   getDisplayConfig,
   getGameDisplayConfig,
+  hasGameTheme,
 } from "../tools/display.js";
 import { listFactions, getFaction } from "../tools/faction.js";
 import { listResources, getResource } from "../tools/resource.js";
@@ -80,9 +81,14 @@ export function createHttpServer(port: number = 3456): express.Application {
     res.json(preset);
   });
 
-  // Games
+  // Games - include theme data for each game
   app.get("/api/games", (_req: Request, res: Response) => {
-    res.json(listGames());
+    const games = listGames();
+    const gamesWithThemes = games.map(game => ({
+      ...game,
+      theme: hasGameTheme(game.id) ? getGameDisplayConfig(game.id) : null,
+    }));
+    res.json(gamesWithThemes);
   });
 
   app.get("/api/games/:gameId", (req: Request, res: Response) => {
