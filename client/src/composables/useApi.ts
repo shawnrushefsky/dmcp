@@ -15,6 +15,7 @@ import type {
   ImagePresetsResponse,
   ImageGenerationPreset,
   SearchResults,
+  Relationship,
 } from '../types'
 
 const API_BASE = '/api'
@@ -289,6 +290,21 @@ export function useApi() {
     }
   }
 
+  async function getRelationships(gameId: string): Promise<Relationship[]> {
+    loading.value = true
+    error.value = null
+    try {
+      return await fetchJson<Relationship[]>(
+        `${API_BASE}/games/${gameId}/relationships`
+      )
+    } catch (e) {
+      error.value = (e as Error).message
+      return []
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     loading,
     error,
@@ -310,5 +326,6 @@ export function useApi() {
     search,
     getImageGenerationPresets,
     getImageGenerationPreset,
+    getRelationships,
   }
 }

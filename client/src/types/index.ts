@@ -235,6 +235,25 @@ export interface GameCounts {
   events: number
 }
 
+export interface Relationship {
+  id: string
+  gameId: string
+  sourceId: string
+  sourceType: string
+  targetId: string
+  targetType: string
+  relationshipType: string
+  value: number
+  label: string | null
+  notes: string
+  sourceName: string
+  targetName: string
+  sourceImageId: string | null
+  targetImageId: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 export interface GameState {
   game: Game
   characters: Character[]

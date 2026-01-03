@@ -294,6 +294,38 @@ export function createHttpServer(port: number = 3456): express.Application {
     res.json(timer);
   });
 
+  // Relationships (for graph visualization)
+  app.get("/api/games/:gameId/relationships", (req: Request, res: Response) => {
+    const { gameId } = req.params;
+    const relationships = listRelationships(gameId);
+    const characters = listCharacters(gameId);
+    const factions = listFactions(gameId);
+
+    // Build lookup maps for entity names and images
+    const entityInfo: Record<string, { name: string; type: string; imageId: string | null }> = {};
+    characters.forEach((c: Character) => {
+      const result = listEntityImages(c.id, "character");
+      const primary = result.primaryImage || result.images[0];
+      entityInfo[c.id] = { name: c.name, type: "character", imageId: primary?.id || null };
+    });
+    factions.forEach((f: Faction) => {
+      const result = listEntityImages(f.id, "faction");
+      const primary = result.primaryImage || result.images[0];
+      entityInfo[f.id] = { name: f.name, type: "faction", imageId: primary?.id || null };
+    });
+
+    // Enrich relationships with entity names and images
+    const enrichedRelationships = relationships.map((r) => ({
+      ...r,
+      sourceName: entityInfo[r.sourceId]?.name || r.sourceId,
+      targetName: entityInfo[r.targetId]?.name || r.targetId,
+      sourceImageId: entityInfo[r.sourceId]?.imageId || null,
+      targetImageId: entityInfo[r.targetId]?.imageId || null,
+    }));
+
+    res.json(enrichedRelationships);
+  });
+
   // Images
   app.get("/api/images/:imageId", (req: Request, res: Response) => {
     const image = getImage(req.params.imageId);

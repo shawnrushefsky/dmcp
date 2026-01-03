@@ -5,7 +5,7 @@ import type { GameCounts } from '../types'
 const props = withDefaults(
   defineProps<{
     gameId: string
-    active: 'overview' | 'characters' | 'locations' | 'quests' | 'map' | 'images' | 'history' | 'factions' | 'resources' | 'notes' | 'items' | 'settings'
+    active: 'overview' | 'characters' | 'locations' | 'quests' | 'map' | 'images' | 'history' | 'factions' | 'resources' | 'notes' | 'items' | 'settings' | 'relationships'
     counts?: Partial<GameCounts>
   }>(),
   {
@@ -85,6 +85,16 @@ const conditionalTabs = computed(() => {
       to: `/games/${props.gameId}/items`,
       count: props.counts?.items,
       icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',
+    })
+  }
+
+  if ((props.counts?.relationships ?? 0) > 0) {
+    tabs.push({
+      id: 'relationships',
+      label: 'Relationships',
+      to: `/games/${props.gameId}/relationships`,
+      count: props.counts?.relationships,
+      icon: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1',
     })
   }
 
