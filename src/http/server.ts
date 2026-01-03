@@ -18,7 +18,7 @@ import {
   listEntityImages,
   listSessionImages,
 } from "../tools/images.js";
-import { getInventory, listSessionItems } from "../tools/inventory.js";
+import { getInventory, getItem, listSessionItems } from "../tools/inventory.js";
 import { listQuests, getQuest } from "../tools/quest.js";
 import { getHistory } from "../tools/narrative.js";
 import {
@@ -300,6 +300,16 @@ export function createHttpServer(port: number = 3456): express.Application {
       res.json(images);
     }
   );
+
+  // Items
+  app.get("/api/items/:itemId", (req: Request, res: Response) => {
+    const item = getItem(req.params.itemId);
+    if (!item) {
+      res.status(404).json({ error: "Item not found" });
+      return;
+    }
+    res.json(item);
+  });
 
   // Inventory
   app.get(

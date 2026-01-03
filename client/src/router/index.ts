@@ -95,6 +95,18 @@ const router = createRouter({
       component: () => import('../views/ImageView.vue'),
       meta: { transition: 'page-slide' },
     },
+    {
+      path: '/factions/:factionId',
+      name: 'faction',
+      component: () => import('../views/FactionView.vue'),
+      meta: { transition: 'page-slide' },
+    },
+    {
+      path: '/items/:itemId',
+      name: 'item',
+      component: () => import('../views/ItemView.vue'),
+      meta: { transition: 'page-slide' },
+    },
   ],
 })
 

@@ -11,6 +11,7 @@ import type {
   StoredImage,
   EntityImages,
   Item,
+  Faction,
   ImagePresetsResponse,
   ImageGenerationPreset,
 } from '../types'
@@ -112,6 +113,32 @@ export function useApi() {
     error.value = null
     try {
       return await fetchJson<Quest>(`${API_BASE}/quests/${questId}`)
+    } catch (e) {
+      error.value = (e as Error).message
+      return null
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function getFaction(factionId: string): Promise<Faction | null> {
+    loading.value = true
+    error.value = null
+    try {
+      return await fetchJson<Faction>(`${API_BASE}/factions/${factionId}`)
+    } catch (e) {
+      error.value = (e as Error).message
+      return null
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function getItem(itemId: string): Promise<Item | null> {
+    loading.value = true
+    error.value = null
+    try {
+      return await fetchJson<Item>(`${API_BASE}/items/${itemId}`)
     } catch (e) {
       error.value = (e as Error).message
       return null
@@ -293,6 +320,8 @@ export function useApi() {
     getCharacterSheet,
     getLocation,
     getQuest,
+    getFaction,
+    getItem,
     getHistory,
     getSessionImages,
     getImage,
