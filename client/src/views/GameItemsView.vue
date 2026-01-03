@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
+import { useTheme } from '../composables/useTheme'
 import type { GameState, Item, Character, Location, Breadcrumb } from '../types'
 import GameTabs from '../components/GameTabs.vue'
 import Breadcrumbs from '../components/Breadcrumbs.vue'
@@ -9,6 +10,7 @@ import SkeletonLoader from '../components/SkeletonLoader.vue'
 
 const route = useRoute()
 const { getGame, loading } = useApi()
+const { config } = useTheme()
 const state = ref<GameState | null>(null)
 
 const gameId = computed(() => route.params.gameId as string)
@@ -100,7 +102,20 @@ onMounted(async () => {
             :to="`/items/${item.id}`"
             class="item-row"
           >
-            <span class="item-name">{{ item.name }}</span>
+            <div class="item-info">
+              <img
+                v-if="item.primaryImageId && config.showImages"
+                :src="`/images/${item.primaryImageId}/file?width=80&height=80`"
+                :alt="item.name"
+                class="item-thumb"
+              />
+              <div v-else-if="config.showImages" class="item-placeholder">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+              </div>
+              <span class="item-name">{{ item.name }}</span>
+            </div>
             <span v-if="item.type" class="item-type">{{ item.type }}</span>
           </router-link>
         </div>
@@ -126,7 +141,20 @@ onMounted(async () => {
               :to="`/items/${item.id}`"
               class="item-row"
             >
-              <span class="item-name">{{ item.name }}</span>
+              <div class="item-info">
+                <img
+                  v-if="item.primaryImageId && config.showImages"
+                  :src="`/images/${item.primaryImageId}/file?width=80&height=80`"
+                  :alt="item.name"
+                  class="item-thumb"
+                />
+                <div v-else-if="config.showImages" class="item-placeholder">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  </svg>
+                </div>
+                <span class="item-name">{{ item.name }}</span>
+              </div>
               <span v-if="item.type" class="item-type">{{ item.type }}</span>
             </router-link>
           </div>
@@ -192,6 +220,38 @@ onMounted(async () => {
 
 .item-row:hover {
   background: var(--bg-secondary);
+}
+
+.item-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.item-thumb {
+  width: 36px;
+  height: 36px;
+  object-fit: cover;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.item-placeholder {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.item-placeholder svg {
+  width: 18px;
+  height: 18px;
+  color: var(--text-muted);
 }
 
 .item-name {

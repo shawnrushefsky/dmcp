@@ -117,6 +117,7 @@ export interface Item {
   ownerId: string
   ownerType: 'character' | 'location'
   properties?: Record<string, unknown>
+  primaryImageId?: string | null
 }
 
 export interface Faction {
