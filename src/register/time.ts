@@ -82,7 +82,7 @@ export function registerTimeTools(server: McpServer) {
       const gameTime = timeTools.setTime(gameId, time);
       if (!gameTime) {
         return {
-          content: [{ type: "text", text: "No calendar set for this session" }],
+          content: [{ type: "text", text: "No calendar set for this game" }],
           isError: true,
         };
       }
@@ -109,7 +109,7 @@ export function registerTimeTools(server: McpServer) {
       const result = timeTools.advanceTime(gameId, { days, hours, minutes });
       if (!result) {
         return {
-          content: [{ type: "text", text: "No calendar set for this session" }],
+          content: [{ type: "text", text: "No calendar set for this game" }],
           isError: true,
         };
       }

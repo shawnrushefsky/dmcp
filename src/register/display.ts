@@ -7,9 +7,9 @@ import {
   applyThemePreset,
   listThemePresets,
   getGameDisplayConfig,
-  setSessionDisplayConfig,
-  applySessionThemePreset,
-  resetSessionTheme,
+  setGameDisplayConfig,
+  applyGameThemePreset,
+  resetGameTheme,
   inferAndApplyTheme,
 } from "../tools/display.js";
 import { ANNOTATIONS } from "../utils/tool-annotations.js";
@@ -176,14 +176,14 @@ export function registerDisplayTools(server: McpServer): void {
   );
 
   // ============================================
-  // Per-Session Theme Tools
+  // Per-Game Theme Tools
   // ============================================
 
-  // Get session theme
+  // Get game theme
   server.registerTool(
     "get_game_theme",
     {
-      description: "Get the display configuration for a specific game session",
+      description: "Get the display configuration for a specific game",
       inputSchema: {
         gameId: z.string().describe("The game ID"),
       },
@@ -202,9 +202,9 @@ export function registerDisplayTools(server: McpServer): void {
     }
   );
 
-  // Set session theme
+  // Set game theme
   server.registerTool(
-    "set_session_theme",
+    "set_game_theme",
     {
       description: "Set display configuration for a specific game. Each game can have its own visual theme.",
       inputSchema: {
@@ -235,7 +235,7 @@ export function registerDisplayTools(server: McpServer): void {
       annotations: ANNOTATIONS.SET,
     },
     async ({ gameId, ...config }) => {
-      const updated = setSessionDisplayConfig(gameId, config);
+      const updated = setGameDisplayConfig(gameId, config);
       return {
         content: [
           {
@@ -247,9 +247,9 @@ export function registerDisplayTools(server: McpServer): void {
     }
   );
 
-  // Apply preset to session
+  // Apply preset to game
   server.registerTool(
-    "apply_session_theme_preset",
+    "apply_game_theme_preset",
     {
       description: "Apply a predefined theme preset to a specific game. This allows different games to have completely different visual themes.",
       inputSchema: {
@@ -259,7 +259,7 @@ export function registerDisplayTools(server: McpServer): void {
       annotations: ANNOTATIONS.SET,
     },
     async ({ gameId, preset }) => {
-      const config = applySessionThemePreset(gameId, preset);
+      const config = applyGameThemePreset(gameId, preset);
       if (!config) {
         return {
           content: [{ type: "text", text: `Unknown preset: ${preset}` }],
@@ -270,16 +270,16 @@ export function registerDisplayTools(server: McpServer): void {
         content: [
           {
             type: "text",
-            text: `Applied '${preset}' theme to session ${gameId}:\n${JSON.stringify(config, null, 2)}`,
+            text: `Applied '${preset}' theme to game ${gameId}:\n${JSON.stringify(config, null, 2)}`,
           },
         ],
       };
     }
   );
 
-  // Reset session theme
+  // Reset game theme
   server.registerTool(
-    "reset_session_theme",
+    "reset_game_theme",
     {
       description: "Remove a game's custom theme, reverting to the global theme",
       inputSchema: {
@@ -288,12 +288,12 @@ export function registerDisplayTools(server: McpServer): void {
       annotations: ANNOTATIONS.SET,
     },
     async ({ gameId }) => {
-      resetSessionTheme(gameId);
+      resetGameTheme(gameId);
       return {
         content: [
           {
             type: "text",
-            text: `Session theme reset. Session ${gameId} will now use the global theme.`,
+            text: `Game theme reset. Game ${gameId} will now use the global theme.`,
           },
         ],
       };
@@ -302,7 +302,7 @@ export function registerDisplayTools(server: McpServer): void {
 
   // Auto-apply theme based on genre
   server.registerTool(
-    "auto_theme_session",
+    "auto_theme_game",
     {
       description: "Automatically apply an appropriate theme to a game based on its genre and setting. Call this when creating a new game to set up the visual style.",
       inputSchema: {
@@ -318,7 +318,7 @@ export function registerDisplayTools(server: McpServer): void {
         content: [
           {
             type: "text",
-            text: `Auto-themed session ${gameId} based on genre "${genre}":\n${JSON.stringify(config, null, 2)}`,
+            text: `Auto-themed game ${gameId} based on genre "${genre}":\n${JSON.stringify(config, null, 2)}`,
           },
         ],
       };

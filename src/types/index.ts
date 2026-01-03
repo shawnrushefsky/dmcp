@@ -238,7 +238,7 @@ export interface ImageGenerationPreferences {
   consistency?: {
     maintainColorPalette?: boolean;
     characterSeedImages?: Record<string, string>; // characterId -> seed image
-    styleReferenceImage?: string; // Session-wide style reference
+    styleReferenceImage?: string; // Game-wide style reference
     useCharacterRefs?: boolean;  // Use existing character images as reference
   };
 

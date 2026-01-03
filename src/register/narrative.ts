@@ -108,7 +108,7 @@ export function registerNarrativeTools(server: McpServer) {
       const exportData = narrativeTools.exportStoryData(gameId, style);
       if (!exportData) {
         return {
-          content: [{ type: "text", text: "Session not found" }],
+          content: [{ type: "text", text: "Game not found" }],
           isError: true,
         };
       }
@@ -168,7 +168,7 @@ export function registerNarrativeTools(server: McpServer) {
       const exportData = narrativeTools.exportStoryData(gameId, style);
       if (!exportData) {
         return {
-          content: [{ type: "text", text: "Session not found" }],
+          content: [{ type: "text", text: "Game not found" }],
           isError: true,
         };
       }
@@ -192,7 +192,7 @@ export function registerNarrativeTools(server: McpServer) {
             title: chapter.title,
             events: chapter.events,
             context: {
-              sessionName: exportData.game.name,
+              gameName: exportData.game.name,
               setting: exportData.game.setting,
               style: exportData.exportStyle,
             },

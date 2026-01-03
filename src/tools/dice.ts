@@ -32,7 +32,7 @@ export function roll(expression: string): DiceRoll {
   };
 }
 
-// Perform a skill/ability check using session rules
+// Perform a skill/ability check using game rules
 export function check(params: {
   gameId: string;
   characterId: string;
@@ -43,7 +43,7 @@ export function check(params: {
 }): CheckResult {
   const rules = getRules(params.gameId);
   if (!rules) {
-    throw new Error(`No rules set for session ${params.gameId}`);
+    throw new Error(`No rules set for game ${params.gameId}`);
   }
 
   const character = getCharacter(params.characterId);
@@ -105,7 +105,7 @@ export function contest(params: {
 } {
   const rules = getRules(params.gameId);
   if (!rules) {
-    throw new Error(`No rules set for session ${params.gameId}`);
+    throw new Error(`No rules set for game ${params.gameId}`);
   }
 
   // Both roll against difficulty 0, we compare totals

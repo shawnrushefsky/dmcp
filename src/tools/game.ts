@@ -168,7 +168,7 @@ export function updateGame(
   };
 }
 
-export function setSessionTitleImage(
+export function setGameTitleImage(
   gameId: string,
   imageId: string | null
 ): Game | null {

@@ -36,6 +36,8 @@ export function initializeSchema(): void {
 
     // Rename session_themes table to game_themes if it exists
     try {
+      // First rename the column, then rename the table
+      db.exec(`ALTER TABLE session_themes RENAME COLUMN session_id TO game_id`);
       db.exec(`ALTER TABLE session_themes RENAME TO game_themes`);
     } catch {
       // Table doesn't exist or already renamed

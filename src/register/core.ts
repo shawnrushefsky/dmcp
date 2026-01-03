@@ -8,7 +8,7 @@ import { ANNOTATIONS } from "../utils/tool-annotations.js";
 
 export function registerCoreTools(server: McpServer) {
   // ============================================================================
-  // SESSION TOOLS
+  // GAME TOOLS
   // ============================================================================
 
   server.registerTool(
@@ -42,9 +42,9 @@ export function registerCoreTools(server: McpServer) {
   server.registerTool(
     "create_game",
     {
-      description: "Create a new game session with a setting and style",
+      description: "Create a new game with a setting and style",
       inputSchema: {
-        name: z.string().min(1).max(LIMITS.NAME_MAX).describe("Name for this game session"),
+        name: z.string().min(1).max(LIMITS.NAME_MAX).describe("Name for this game"),
         setting: z.string().min(1).max(LIMITS.DESCRIPTION_MAX).describe("The game setting (e.g., 'dark fantasy', 'cyberpunk', 'cosmic horror')"),
         style: z.string().min(1).max(LIMITS.NAME_MAX).describe("The narrative style (e.g., 'gritty', 'heroic', 'survival')"),
       },
@@ -71,7 +71,7 @@ export function registerCoreTools(server: McpServer) {
   server.registerTool(
     "load_game",
     {
-      description: "Load an existing game session by ID",
+      description: "Load an existing game by ID",
       inputSchema: {
         gameId: z.string().max(100).describe("The game ID to load"),
       },
@@ -81,7 +81,7 @@ export function registerCoreTools(server: McpServer) {
       const game = gameTools.loadGame(gameId);
       if (!game) {
         return {
-          content: [{ type: "text", text: `Session ${gameId} not found` }],
+          content: [{ type: "text", text: `Game ${gameId} not found` }],
           isError: true,
         };
       }
@@ -110,16 +110,16 @@ export function registerCoreTools(server: McpServer) {
     },
     async () => {
       // Use lightweight summaries (no rules/preferences) for listing
-      const sessions = gameTools.listGameSummaries();
-      const sessionsWithUrls = sessions.map((s) => ({
-        ...s,
-        webUiUrl: getGameUrl(s.id),
+      const games = gameTools.listGameSummaries();
+      const gamesWithUrls = games.map((g) => ({
+        ...g,
+        webUiUrl: getGameUrl(g.id),
       }));
       return {
         content: [{
           type: "text",
           text: JSON.stringify({
-            sessions: sessionsWithUrls,
+            games: gamesWithUrls,
             webUi: {
               baseUrl: getWebUiBaseUrl(),
             },
@@ -142,7 +142,7 @@ export function registerCoreTools(server: McpServer) {
       const state = gameTools.getGameState(gameId);
       if (!state) {
         return {
-          content: [{ type: "text", text: `Session ${gameId} not found` }],
+          content: [{ type: "text", text: `Game ${gameId} not found` }],
           isError: true,
         };
       }
@@ -168,7 +168,7 @@ export function registerCoreTools(server: McpServer) {
   server.registerTool(
     "delete_game",
     {
-      description: "Delete a game session and all its data. This is IRREVERSIBLE and removes all characters, locations, quests, and history.",
+      description: "Delete a game and all its data. This is IRREVERSIBLE and removes all characters, locations, quests, and history.",
       inputSchema: {
         gameId: z.string().describe("The game ID to delete"),
       },
@@ -186,7 +186,7 @@ export function registerCoreTools(server: McpServer) {
   server.registerTool(
     "update_game",
     {
-      description: "Update a game session's name, setting, or style",
+      description: "Update a game's name, setting, or style",
       inputSchema: {
         gameId: z.string().describe("The game ID to update"),
         name: z.string().min(1).max(LIMITS.NAME_MAX).optional().describe("New name for the game"),
@@ -226,9 +226,9 @@ export function registerCoreTools(server: McpServer) {
   );
 
   server.registerTool(
-    "set_session_title_image",
+    "set_game_title_image",
     {
-      description: "Set or remove the title image for a game session",
+      description: "Set or remove the title image for a game",
       inputSchema: {
         gameId: z.string().describe("The game ID"),
         imageId: z.string().nullable().describe("The image ID to set as title image, or null to remove"),
@@ -236,7 +236,7 @@ export function registerCoreTools(server: McpServer) {
       annotations: ANNOTATIONS.SET,
     },
     async ({ gameId, imageId }) => {
-      const game = gameTools.setSessionTitleImage(gameId, imageId);
+      const game = gameTools.setGameTitleImage(gameId, imageId);
       if (!game) {
         return {
           content: [{ type: "text", text: "Game not found" }],
@@ -728,7 +728,7 @@ export function registerCoreTools(server: McpServer) {
       const preferences = gameTools.getGamePreferences(gameId);
       if (!preferences) {
         return {
-          content: [{ type: "text", text: "No preferences found for this session" }],
+          content: [{ type: "text", text: "No preferences found for this game" }],
         };
       }
       return {
@@ -827,7 +827,7 @@ export function registerCoreTools(server: McpServer) {
     consistency: z.object({
       maintainColorPalette: z.boolean().optional(),
       characterSeedImages: z.record(z.string(), z.string()).optional().describe("characterId -> seed image"),
-      styleReferenceImage: z.string().optional().describe("Session-wide style reference"),
+      styleReferenceImage: z.string().optional().describe("Game-wide style reference"),
       useCharacterRefs: z.boolean().optional().describe("Use existing character images as reference"),
     }).optional().describe("Consistency settings"),
     notes: z.string().optional().describe("Custom notes for the DM about image generation"),
@@ -905,7 +905,7 @@ export function registerCoreTools(server: McpServer) {
           content: [{
             type: "text",
             text: JSON.stringify({
-              message: "No image generation presets configured for this session",
+              message: "No image generation presets configured for this game",
               hint: "Use create_image_generation_preset to add presets for different use cases",
             }, null, 2),
           }],
@@ -1126,7 +1126,7 @@ export function registerCoreTools(server: McpServer) {
       const rules = rulesTools.getRules(gameId);
       if (!rules) {
         return {
-          content: [{ type: "text", text: "No rules set for this session" }],
+          content: [{ type: "text", text: "No rules set for this game" }],
         };
       }
       return {

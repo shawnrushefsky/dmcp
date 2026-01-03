@@ -207,7 +207,7 @@ export function buildPromptFromTemplate(
 /**
  * Build an image generation prompt from an entity's structured data.
  * If a template exists for the entity type, uses that. Otherwise uses default logic.
- * Combines imageGen schema, notes, and session preset to create a ready-to-use prompt.
+ * Combines imageGen schema, notes, and game preset to create a ready-to-use prompt.
  */
 export function buildImagePrompt(
   entityId: string,
@@ -262,18 +262,18 @@ export function buildImagePrompt(
 
   if (!entity) return null;
 
-  // Get session ID for template/preset lookup
-  const effectiveSessionId = gameId || (entity as { gameId?: string }).gameId;
+  // Get game ID for template/preset lookup
+  const effectiveGameId = gameId || (entity as { gameId?: string }).gameId;
 
   // Check for a template to use
   let template: ImagePromptTemplate | null = null;
-  if (effectiveSessionId) {
+  if (effectiveGameId) {
     if (templateId) {
       // Use specific template if provided
-      template = getImagePromptTemplate(effectiveSessionId, templateId);
+      template = getImagePromptTemplate(effectiveGameId, templateId);
     } else {
       // Try to find default template for this entity type
-      template = getDefaultImagePromptTemplate(effectiveSessionId, entityType);
+      template = getDefaultImagePromptTemplate(effectiveGameId, entityType);
     }
   }
 
@@ -319,10 +319,10 @@ export function buildImagePrompt(
   }
 
   // No template - use default logic
-  // Get session preset for style defaults
+  // Get game preset for style defaults
   let preset: { config: ImageGenerationPreferences } | null = null;
-  if (effectiveSessionId) {
-    preset = getDefaultImagePreset(effectiveSessionId);
+  if (effectiveGameId) {
+    preset = getDefaultImagePreset(effectiveGameId);
   }
 
   // Build the prompt
