@@ -216,6 +216,7 @@ export interface GameState {
   factions: Faction[]
   resources: Resource[]
   notes: Note[]
+  items: Item[]
   counts: GameCounts
   activeCombat: Combat | null
   gameTime: GameTime | null

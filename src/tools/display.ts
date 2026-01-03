@@ -503,7 +503,7 @@ export function setVisualStyle(style: {
 export function getGameDisplayConfig(gameId: string): DisplayConfig {
   const db = getDatabase();
   const row = db
-    .prepare("SELECT config FROM session_themes WHERE game_id = ?")
+    .prepare("SELECT config FROM game_themes WHERE game_id = ?")
     .get(gameId) as { config: string } | undefined;
 
   if (row) {
@@ -527,7 +527,7 @@ export function setSessionDisplayConfig(
 
   db.prepare(
     `
-    INSERT INTO session_themes (game_id, config, updated_at)
+    INSERT INTO game_themes (game_id, config, updated_at)
     VALUES (?, ?, datetime('now'))
     ON CONFLICT(game_id) DO UPDATE SET
       config = excluded.config,
@@ -557,7 +557,7 @@ export function applySessionThemePreset(
  */
 export function resetSessionTheme(gameId: string): void {
   const db = getDatabase();
-  db.prepare("DELETE FROM session_themes WHERE game_id = ?").run(gameId);
+  db.prepare("DELETE FROM game_themes WHERE game_id = ?").run(gameId);
 }
 
 /**
@@ -566,7 +566,7 @@ export function resetSessionTheme(gameId: string): void {
 export function hasSessionTheme(gameId: string): boolean {
   const db = getDatabase();
   const row = db
-    .prepare("SELECT 1 FROM session_themes WHERE game_id = ?")
+    .prepare("SELECT 1 FROM game_themes WHERE game_id = ?")
     .get(gameId);
   return !!row;
 }

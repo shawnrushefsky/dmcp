@@ -139,6 +139,7 @@ export function createHttpServer(port: number = 3456): express.Application {
       factions: factionsWithImages,
       resources,
       notes,
+      items,
       // Include counts for UI tab visibility
       counts: {
         characters: characters.length,

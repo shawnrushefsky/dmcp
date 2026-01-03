@@ -67,6 +67,11 @@ const router = createRouter({
       component: () => import('../views/GameNotesView.vue'),
     },
     {
+      path: '/games/:gameId/items',
+      name: 'game-items',
+      component: () => import('../views/GameItemsView.vue'),
+    },
+    {
       path: '/games/:gameId/settings',
       name: 'game-settings',
       component: () => import('../views/GameSettingsView.vue'),
