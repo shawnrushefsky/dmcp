@@ -20,7 +20,7 @@ An MCP (Model Context Protocol) server that enables AI agents to act as dynamic 
     - [HTTP Web UI](#http-web-ui)
     - [AI Self-Configuration Prompt](#ai-self-configuration-prompt)
   - [Available Tools (170 total)](#available-tools-170-total)
-    - [Session Management](#session-management-8-tools)
+    - [Game Management](#game-management-8-tools)
     - [Game Setup Interview](#game-setup-interview-3-tools)
     - [Rules System](#rules-system-3-tools)
     - [World Management](#world-management-6-tools)
@@ -41,7 +41,7 @@ An MCP (Model Context Protocol) server that enables AI agents to act as dynamic 
     - [Status Effects](#status-effects-8-tools)
     - [Factions](#factions-8-tools)
     - [Abilities \& Powers](#abilities--powers-9-tools)
-    - [Session Notes](#session-notes-9-tools)
+    - [Game Notes](#game-notes-9-tools)
     - [Pause \& Resume](#pause--resume-7-tools)
     - [Multi-Agent Collaboration](#multi-agent-collaboration-8-tools)
     - [Image Storage](#image-storage-7-tools)
@@ -62,7 +62,7 @@ An MCP (Model Context Protocol) server that enables AI agents to act as dynamic 
 ## Features
 
 - **Dynamic Rule Systems** - Agent designs rules appropriate to the setting (fantasy, sci-fi, horror, etc.)
-- **Full Game State Management** - Sessions, characters, locations, items, quests, combat
+- **Full Game State Management** - Games, characters, locations, items, quests, combat
 - **HTTP Web UI** - Built-in web interface for viewing character sheets, maps, images, and game state
 - **Voice Descriptions** - NPC voice characteristics for TTS/voice mode integration
 - **Image Storage & Generation** - Store images with metadata, serve via HTTP, structured visual descriptions for any image generator
@@ -79,8 +79,8 @@ An MCP (Model Context Protocol) server that enables AI agents to act as dynamic 
 - **Secrets System** - Hidden knowledge that can be revealed to characters
 - **Entity Relationships** - Track attitudes, bonds, rivalries between any entities
 - **Tagging System** - Universal tags for organizing any game entity
-- **Session Notes** - Searchable DM notes with auto-generated recaps
-- **Pause & Resume** - Save agent context for seamless game continuation across sessions
+- **Game Notes** - Searchable DM notes with auto-generated recaps
+- **Pause & Resume** - Save agent context for seamless game continuation
 - **Multi-Agent Collaboration** - External agents can push updates for DM incorporation
 - **MCP Prompts** - Reusable prompt templates for game setup, resume, and save verification
 
@@ -338,11 +338,11 @@ npm run dev:client
 The Vue dev server proxies API requests to the backend automatically.
 
 **Available Pages:**
-- `/` - Home page with all game sessions
-- `/sessions/:id` - Session overview with characters, locations, quests
-- `/sessions/:id/map` - ASCII world map
-- `/sessions/:id/images` - Image gallery
-- `/sessions/:id/history` - Narrative event history
+- `/` - Home page with all games
+- `/games/:id` - Game overview with characters, locations, quests
+- `/games/:id/map` - ASCII world map
+- `/games/:id/images` - Image gallery
+- `/games/:id/history` - Narrative event history
 - `/characters/:id` - Character sheet with stats, inventory, images
 - `/locations/:id` - Location details with exits and NPCs
 - `/quests/:id` - Quest objectives and progress
@@ -350,13 +350,13 @@ The Vue dev server proxies API requests to the backend automatically.
 - `/images/:id/file` - Raw image file (supports `?width=200&height=200` resize)
 
 **JSON API:**
-- `GET /api/sessions` - List all sessions
-- `GET /api/sessions/:id` - Full session state
-- `GET /api/sessions/:id/map` - Map data structure
+- `GET /api/games` - List all games
+- `GET /api/games/:id` - Full game state
+- `GET /api/games/:id/map` - Map data structure
 - `GET /api/characters/:id` - Character data
 - `GET /api/characters/:id/sheet` - Character sheet with ASCII art
 - `GET /api/locations/:id` - Location data
-- `GET /api/theme` - Current theme configuration (polled by Vue app)
+- `GET /api/games/:id/theme` - Game theme configuration
 
 **Dynamic Theming:**
 
@@ -365,14 +365,14 @@ The DM agent can customize the UI theme in real-time using display tools:
 // Apply a preset theme globally
 apply_theme_preset({ preset: "cyberpunk" })
 
-// Or apply to a specific session
-apply_session_theme_preset({ sessionId: "...", preset: "noir" })
+// Or apply to a specific game
+apply_game_theme_preset({ gameId: "...", preset: "noir" })
 
 // Customize individual elements
 set_display_config({ bgColor: "#1a1a2e", accentColor: "#00ff88", appTitle: "Neon Shadows" })
 
 // Auto-apply theme based on game genre
-auto_theme_session({ sessionId: "...", genre: "sci-fi" })
+auto_theme_game({ gameId: "...", genre: "sci-fi" })
 ```
 
 Available presets: `dark-fantasy`, `cyberpunk`, `cosmic-horror`, `high-fantasy`, `noir`, `steampunk`, `post-apocalyptic`, `pirate`, `western`, `modern`, `superhero`, `sci-fi`
@@ -414,24 +414,24 @@ Configuration file locations:
 - Cursor: Settings → MCP Servers
 - Windsurf: ~/.windsurf/config.json
 
-Once DMCP is configured, you'll have access to tools for managing game sessions, characters, locations, items, quests, combat, dice rolls, and narrative events. You can run any style of RPG - fantasy, sci-fi, horror, or anything the player wants.
+Once DMCP is configured, you'll have access to tools for managing games, characters, locations, items, quests, combat, dice rolls, and narrative events. You can run any style of RPG - fantasy, sci-fi, horror, or anything the player wants.
 ```
 
 </details>
 
 ## Available Tools (170 total)
 
-### Session Management (8 tools)
+### Game Management (8 tools)
 | Tool | Description |
 |------|-------------|
 | `get_game_menu` | **Call first** - returns existing games or starts new |
-| `create_session` | Start a new game with setting/style |
-| `load_session` | Resume an existing game |
-| `list_sessions` | Show all saved games |
-| `get_session_state` | Full game state overview |
-| `update_session` | Rename or update session name/setting/style |
-| `set_session_title_image` | Set title image for session (displayed in web UI) |
-| `delete_session` | Remove a saved game |
+| `create_game` | Start a new game with setting/style |
+| `load_game` | Resume an existing game |
+| `list_games` | Show all saved games |
+| `get_game_state` | Full game state overview |
+| `update_game` | Rename or update game name/setting/style |
+| `set_game_title_image` | Set title image for game (displayed in web UI) |
+| `delete_game` | Remove a saved game |
 
 ### Game Setup Interview (3 tools)
 | Tool | Description |
@@ -454,7 +454,7 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `get_location` | Get location details |
 | `get_location_by_name` | Look up location by name (fuzzy matching) |
 | `update_location` | Modify a location |
-| `list_locations` | All locations in session |
+| `list_locations` | All locations in game |
 | `connect_locations` | Create paths between locations |
 
 ### Character Management (7 tools)
@@ -480,7 +480,7 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 |------|-------------|
 | `start_combat` | Initialize encounter |
 | `get_combat` | Combat state |
-| `get_active_combat` | Current combat in session |
+| `get_active_combat` | Current combat in game |
 | `next_turn` | Advance turn |
 | `add_combat_log` | Log combat action |
 | `remove_combatant` | Remove from combat |
@@ -560,7 +560,7 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `get_random_table` | Get table by ID |
 | `update_random_table` | Update table |
 | `delete_random_table` | Remove table |
-| `list_random_tables` | List tables in session |
+| `list_random_tables` | List tables in game |
 | `roll_on_table` | Roll and get result |
 | `modify_table_entries` | Add and/or remove entries in one call |
 
@@ -634,10 +634,10 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `tick_ability_cooldowns` | Reduce cooldowns (end of round) |
 | `check_ability_requirements` | Check if character meets requirements |
 
-### Session Notes (9 tools)
+### Game Notes (9 tools)
 | Tool | Description |
 |------|-------------|
-| `create_note` | Create session note |
+| `create_note` | Create game note |
 | `get_note` | Get note by ID |
 | `update_note` | Update note content |
 | `delete_note` | Remove note |
@@ -645,7 +645,7 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `search_notes` | Full-text search |
 | `pin_note` | Toggle pinned status |
 | `modify_note_tags` | Add and/or remove tags in one call |
-| `generate_recap` | Auto-generate session recap |
+| `generate_recap` | Auto-generate game recap |
 
 ### Pause & Resume (7 tools)
 | Tool | Description |
@@ -689,11 +689,11 @@ Once DMCP is configured, you'll have access to tools for managing game sessions,
 | `reset_display_config` | Reset to default theme |
 | `apply_theme_preset` | Apply a preset theme (dark-fantasy, cyberpunk, cosmic-horror, etc.) |
 | `list_theme_presets` | List available theme presets |
-| `get_session_theme` | Get session-specific theme config |
-| `set_session_theme` | Set session-specific theme |
-| `apply_session_theme_preset` | Apply preset to specific session |
-| `reset_session_theme` | Revert session to global theme |
-| `auto_theme_session` | Auto-apply theme based on genre |
+| `get_game_theme` | Get game-specific theme config |
+| `set_game_theme` | Set game-specific theme |
+| `apply_game_theme_preset` | Apply preset to specific game |
+| `reset_game_theme` | Revert game to global theme |
+| `auto_theme_game` | Auto-apply theme based on genre |
 
 ## MCP Prompts (6 total)
 
@@ -702,7 +702,7 @@ Reusable prompt templates accessible via MCP `prompts/get`:
 | Prompt | Description |
 |--------|-------------|
 | `dm-persona` | Initialize DM with full game context and player preferences |
-| `session-recap` | Generate narrative summary of game so far |
+| `game-recap` | Generate narrative summary of game so far |
 | `new-game-setup` | Interview template for creating a new game |
 | `continue-game` | Resume paused game with full context restoration |
 | `character-voice` | Get NPC voice characteristics for roleplay |
@@ -716,7 +716,7 @@ Reusable prompt templates accessible via MCP `prompts/get`:
 User: Let's play a cyberpunk noir detective game
 
 DM Agent:
-1. create_session({name: "Neon Shadows", setting: "cyberpunk noir", style: "gritty"})
+1. create_game({name: "Neon Shadows", setting: "cyberpunk noir", style: "gritty"})
 2. set_rules({...cyberpunk-appropriate rules...})
 3. create_location({name: "Your Office", description: "Rain streaks down the window..."})
 4. create_character({name: "Detective", isPlayer: true, attributes: {...}})
@@ -806,11 +806,11 @@ get_export_styles()
 // Returns: literary-fiction, pulp-adventure, epic-fantasy, noir, horror, etc.
 
 // 2. Player chooses style, get the export overview
-export_story({ sessionId: "...", style: "epic-fantasy" })
-// Returns: session info, characters, locations, chapter summaries, workflow instructions
+export_story({ gameId: "...", style: "epic-fantasy" })
+// Returns: game info, characters, locations, chapter summaries, workflow instructions
 
 // 3. For each chapter, fetch full data and spawn a subagent
-get_chapter_for_export({ sessionId: "...", chapterNumber: 1, style: "epic-fantasy" })
+get_chapter_for_export({ gameId: "...", chapterNumber: 1, style: "epic-fantasy" })
 // Returns: events, context, and a ready-to-use subagentPrompt
 
 // 4. Each subagent writes its chapter as narrative prose
@@ -819,15 +819,15 @@ get_chapter_for_export({ sessionId: "...", chapterNumber: 1, style: "epic-fantas
 
 ### Pause & Resume
 
-Save context before ending a session for seamless continuation:
+Save context before ending a game for seamless continuation:
 
 ```javascript
 // Before pausing - get checklist of what to save
-prepare_pause({ sessionId: "..." })
+prepare_pause({ gameId: "..." })
 
 // Save your DM context
 save_pause_state({
-  sessionId: "...",
+  gameId: "...",
   currentScene: "The party is in the merchant's basement after discovering the hidden door",
   immediateSituation: "Kira has her hand on the trapdoor, asking if they should descend",
   sceneAtmosphere: "Tense, dusty, dim light from above",
@@ -845,7 +845,7 @@ save_pause_state({
 })
 
 // On resume - get everything needed to continue
-get_resume_context({ sessionId: "..." })
+get_resume_context({ gameId: "..." })
 // Returns formatted briefing + full game state
 ```
 
@@ -856,7 +856,7 @@ External agents can push updates for the DM to incorporate:
 ```javascript
 // Research agent pushes lore discovery
 push_external_update({
-  sessionId: "...",
+  gameId: "...",
   sourceAgent: "lore-researcher",
   sourceDescription: "Deep worldbuilding research agent",
   updateType: "lore",
@@ -868,7 +868,7 @@ push_external_update({
 })
 
 // DM checks for pending updates periodically
-get_pending_updates({ sessionId: "..." })
+get_pending_updates({ gameId: "..." })
 // Returns prioritized list of pending updates
 
 // DM incorporates the update into narrative
@@ -880,7 +880,7 @@ apply_update({
 
 ## Data Storage
 
-Game data is stored in SQLite at `data/games.db` (created automatically). Each session is isolated with its own rules and state.
+Game data is stored in SQLite at `data/games.db` (created automatically). Each game is isolated with its own rules and state.
 
 ## License
 
