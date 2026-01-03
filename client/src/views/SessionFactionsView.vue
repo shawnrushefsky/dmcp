@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
-import { useEntityLinker } from '../composables/useEntityLinker'
 import type { SessionState, Faction, Breadcrumb } from '../types'
 import SessionTabs from '../components/SessionTabs.vue'
 import Breadcrumbs from '../components/Breadcrumbs.vue'
@@ -10,7 +9,6 @@ import SkeletonLoader from '../components/SkeletonLoader.vue'
 
 const route = useRoute()
 const { getSession, loading } = useApi()
-const { linkText, setSessionState } = useEntityLinker()
 const state = ref<SessionState | null>(null)
 
 const sessionId = computed(() => route.params.sessionId as string)
@@ -32,9 +30,6 @@ const hiddenFactions = computed(() =>
 const disbandedFactions = computed(() =>
   state.value?.factions.filter((f: Faction) => f.status === 'disbanded') || []
 )
-
-// Update entity linker when session state changes
-watch(state, (newState) => setSessionState(newState))
 
 onMounted(async () => {
   state.value = await getSession(sessionId.value)
@@ -64,49 +59,68 @@ onMounted(async () => {
 
     <h3>Active Factions ({{ activeFactions.length }})</h3>
     <div v-if="activeFactions.length" class="faction-grid">
-      <div v-for="faction in activeFactions" :key="faction.id" class="card faction-card">
+      <router-link
+        v-for="faction in activeFactions"
+        :key="faction.id"
+        :to="`/factions/${faction.id}`"
+        class="card faction-card"
+      >
+        <img
+          v-if="faction.primaryImageId"
+          :src="`/images/${faction.primaryImageId}/file?width=300`"
+          :alt="faction.name"
+          class="faction-thumb"
+        />
         <h4>{{ faction.name }}</h4>
-        <p v-if="faction.description" class="faction-description linked-content" v-html="linkText(faction.description)"></p>
+        <p v-if="faction.description" class="faction-description">{{ faction.description }}</p>
 
         <div v-if="faction.traits.length" class="faction-traits">
           <span v-for="trait in faction.traits" :key="trait" class="tag">{{ trait }}</span>
         </div>
-
-        <div v-if="Object.keys(faction.resources).length" class="faction-resources">
-          <div v-for="(value, key) in faction.resources" :key="key" class="stat">
-            <span class="stat-label">{{ key }}</span>
-            <span>{{ value }}</span>
-          </div>
-        </div>
-
-        <div v-if="faction.goals.length" class="faction-goals">
-          <div class="stat-label">Goals</div>
-          <ul>
-            <li v-for="(goal, idx) in faction.goals" :key="idx" class="linked-content" v-html="linkText(goal)"></li>
-          </ul>
-        </div>
-      </div>
+      </router-link>
     </div>
     <p v-else class="empty">No active factions.</p>
 
     <template v-if="hiddenFactions.length">
       <h3 class="mt-30">Hidden Factions ({{ hiddenFactions.length }})</h3>
       <div class="faction-grid">
-        <div v-for="faction in hiddenFactions" :key="faction.id" class="card faction-card muted">
+        <router-link
+          v-for="faction in hiddenFactions"
+          :key="faction.id"
+          :to="`/factions/${faction.id}`"
+          class="card faction-card muted"
+        >
+          <img
+            v-if="faction.primaryImageId"
+            :src="`/images/${faction.primaryImageId}/file?width=300`"
+            :alt="faction.name"
+            class="faction-thumb"
+          />
           <h4>{{ faction.name }}</h4>
-          <p v-if="faction.description" class="faction-description linked-content" v-html="linkText(faction.description)"></p>
+          <p v-if="faction.description" class="faction-description">{{ faction.description }}</p>
           <span class="tag tag-muted">Hidden</span>
-        </div>
+        </router-link>
       </div>
     </template>
 
     <template v-if="disbandedFactions.length">
       <h3 class="mt-30">Disbanded ({{ disbandedFactions.length }})</h3>
       <div class="faction-grid">
-        <div v-for="faction in disbandedFactions" :key="faction.id" class="card faction-card muted">
+        <router-link
+          v-for="faction in disbandedFactions"
+          :key="faction.id"
+          :to="`/factions/${faction.id}`"
+          class="card faction-card muted"
+        >
+          <img
+            v-if="faction.primaryImageId"
+            :src="`/images/${faction.primaryImageId}/file?width=300`"
+            :alt="faction.name"
+            class="faction-thumb"
+          />
           <h4>{{ faction.name }}</h4>
           <span class="tag tag-danger">Disbanded</span>
-        </div>
+        </router-link>
       </div>
     </template>
   </div>
@@ -120,6 +134,18 @@ onMounted(async () => {
   gap: var(--space-4);
 }
 
+.faction-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.faction-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
 .faction-card h4 {
   margin: 0 0 var(--space-2);
   color: var(--text);
@@ -129,31 +155,28 @@ onMounted(async () => {
   opacity: 0.7;
 }
 
+.faction-thumb {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 4px;
+  margin-bottom: var(--space-3);
+}
+
 .faction-description {
   color: var(--text-muted);
   font-size: var(--text-sm);
   margin-bottom: var(--space-3);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .faction-traits {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
-  margin-bottom: var(--space-3);
-}
-
-.faction-resources {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-4);
-  margin-bottom: var(--space-3);
-}
-
-.faction-goals ul {
-  margin: var(--space-2) 0 0;
-  padding-left: var(--space-5);
-  font-size: var(--text-sm);
-  color: var(--text-muted);
 }
 
 .tag {

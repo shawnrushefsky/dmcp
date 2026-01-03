@@ -12,6 +12,17 @@ export interface Session {
   updatedAt: string;
 }
 
+// Lightweight session summary for listing (no rules/preferences)
+export interface SessionSummary {
+  id: string;
+  name: string;
+  setting: string;
+  style: string;
+  titleImageId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface GamePreferences {
   // Core game identity
   genre: PreferenceValue<string>;

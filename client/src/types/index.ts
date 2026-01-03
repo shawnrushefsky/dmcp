@@ -103,6 +103,7 @@ export interface Faction {
   resources: Record<string, number>
   goals: string[]
   traits: string[]
+  primaryImageId?: string | null
   createdAt: string
   updatedAt: string
 }

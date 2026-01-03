@@ -109,7 +109,8 @@ export function registerCoreTools(server: McpServer) {
       annotations: ANNOTATIONS.READ_ONLY,
     },
     async () => {
-      const sessions = sessionTools.listSessions();
+      // Use lightweight summaries (no rules/preferences) for listing
+      const sessions = sessionTools.listSessionSummaries();
       const sessionsWithUrls = sessions.map((s) => ({
         ...s,
         webUiUrl: getSessionUrl(s.id),

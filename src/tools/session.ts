@@ -82,6 +82,23 @@ export function listSessions(): Session[] {
   }));
 }
 
+// Lightweight version that omits rules and preferences for listing
+export function listSessionSummaries(): import("../types/index.js").SessionSummary[] {
+  const db = getDatabase();
+  const stmt = db.prepare(`SELECT id, name, setting, style, title_image_id, created_at, updated_at FROM sessions ORDER BY updated_at DESC`);
+  const rows = stmt.all() as Record<string, unknown>[];
+
+  return rows.map((row) => ({
+    id: row.id as string,
+    name: row.name as string,
+    setting: row.setting as string,
+    style: row.style as string,
+    titleImageId: row.title_image_id as string | null,
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
+  }));
+}
+
 export function updateSessionPreferences(
   sessionId: string,
   preferences: GamePreferences

@@ -150,7 +150,7 @@ onMounted(async () => {
           <h3>Inventory</h3>
           <ul>
             <li v-for="item in sheet.inventory" :key="item.id">
-              {{ item.name }}
+              <router-link :to="`/items/${item.id}`">{{ item.name }}</router-link>
               <span v-if="item.type">({{ item.type }})</span>
             </li>
           </ul>

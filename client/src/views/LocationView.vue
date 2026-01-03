@@ -110,7 +110,9 @@ onMounted(async () => {
     <div v-if="items.length" class="card">
       <h3>Items Here</h3>
       <ul>
-        <li v-for="item in items" :key="item.id">{{ item.name }}</li>
+        <li v-for="item in items" :key="item.id">
+          <router-link :to="`/items/${item.id}`">{{ item.name }}</router-link>
+        </li>
       </ul>
     </div>
   </div>

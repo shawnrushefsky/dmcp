@@ -34,7 +34,7 @@ import { listTimers, getTimer } from "../tools/timers.js";
 import { listSecrets } from "../tools/secrets.js";
 import { getTime, listScheduledEvents } from "../tools/time.js";
 import { getActiveCombat } from "../tools/combat.js";
-import type { Character, Location } from "../types/index.js";
+import type { Character, Location, Faction } from "../types/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -111,6 +111,13 @@ export function createHttpServer(port: number = 3456): express.Application {
 
     // Get counts for all entity types (for conditional UI display)
     const factions = listFactions(sessionId);
+
+    // Add primary image IDs to factions
+    const factionsWithImages = factions.map((f: Faction) => {
+      const result = listEntityImages(f.id, "faction");
+      const primary = result.primaryImage || result.images[0];
+      return { ...f, primaryImageId: primary?.id || null };
+    });
     const resources = listResources(sessionId);
     const notes = listNotes(sessionId);
     const relationships = listRelationships(sessionId);
@@ -129,7 +136,7 @@ export function createHttpServer(port: number = 3456): express.Application {
       locations: locationsWithImages,
       quests,
       // Include full data for populated entity types
-      factions,
+      factions: factionsWithImages,
       resources,
       notes,
       // Include counts for UI tab visibility
