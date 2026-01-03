@@ -5,7 +5,7 @@ import type { Ability } from "../types/index.js";
 import { getCharacter } from "./character.js";
 
 export function createAbility(params: {
-  sessionId: string;
+  gameId: string;
   ownerType: "template" | "character";
   ownerId?: string;
   name: string;
@@ -24,11 +24,11 @@ export function createAbility(params: {
   const ownerId = params.ownerType === "template" ? null : (params.ownerId || null);
 
   db.prepare(`
-    INSERT INTO abilities (id, session_id, owner_id, owner_type, name, description, category, cost, cooldown, effects, requirements, tags, created_at)
+    INSERT INTO abilities (id, game_id, owner_id, owner_type, name, description, category, cost, cooldown, effects, requirements, tags, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
-    params.sessionId,
+    params.gameId,
     ownerId,
     params.ownerType,
     params.name,
@@ -44,7 +44,7 @@ export function createAbility(params: {
 
   return {
     id,
-    sessionId: params.sessionId,
+    gameId: params.gameId,
     ownerId,
     ownerType: params.ownerType,
     name: params.name,
@@ -68,7 +68,7 @@ export function getAbility(id: string): Ability | null {
 
   return {
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     ownerId: row.owner_id as string | null,
     ownerType: row.owner_type as "template" | "character",
     name: row.name as string,
@@ -146,7 +146,7 @@ export function deleteAbility(id: string): boolean {
 }
 
 export function listAbilities(
-  sessionId: string,
+  gameId: string,
   filter?: {
     ownerType?: "template" | "character";
     ownerId?: string;
@@ -155,8 +155,8 @@ export function listAbilities(
 ): Ability[] {
   const db = getDatabase();
 
-  let query = `SELECT * FROM abilities WHERE session_id = ?`;
-  const params: string[] = [sessionId];
+  let query = `SELECT * FROM abilities WHERE game_id = ?`;
+  const params: string[] = [gameId];
 
   if (filter?.ownerType) {
     query += ` AND owner_type = ?`;
@@ -179,7 +179,7 @@ export function listAbilities(
 
   return rows.map(row => ({
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     ownerId: row.owner_id as string | null,
     ownerType: row.owner_type as "template" | "character",
     name: row.name as string,
@@ -204,11 +204,11 @@ export function learnAbility(templateId: string, characterId: string): Ability |
   const now = new Date().toISOString();
 
   db.prepare(`
-    INSERT INTO abilities (id, session_id, owner_id, owner_type, name, description, category, cost, cooldown, effects, requirements, tags, created_at)
+    INSERT INTO abilities (id, game_id, owner_id, owner_type, name, description, category, cost, cooldown, effects, requirements, tags, created_at)
     VALUES (?, ?, ?, 'character', ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
-    template.sessionId,
+    template.gameId,
     characterId,
     template.name,
     template.description,
@@ -223,7 +223,7 @@ export function learnAbility(templateId: string, characterId: string): Ability |
 
   return {
     id,
-    sessionId: template.sessionId,
+    gameId: template.gameId,
     ownerId: characterId,
     ownerType: "character",
     name: template.name,
@@ -279,13 +279,13 @@ export function useAbility(abilityId: string, characterId: string): UseAbilityRe
   };
 }
 
-export function tickCooldowns(sessionId: string, amount = 1): Ability[] {
+export function tickCooldowns(gameId: string, amount = 1): Ability[] {
   const db = getDatabase();
 
   // Get all abilities on cooldown
   const rows = db.prepare(`
-    SELECT * FROM abilities WHERE session_id = ? AND current_cooldown > 0
-  `).all(sessionId) as Record<string, unknown>[];
+    SELECT * FROM abilities WHERE game_id = ? AND current_cooldown > 0
+  `).all(gameId) as Record<string, unknown>[];
 
   const updated: Ability[] = [];
 
@@ -298,7 +298,7 @@ export function tickCooldowns(sessionId: string, amount = 1): Ability[] {
 
     updated.push({
       id: row.id as string,
-      sessionId: row.session_id as string,
+      gameId: row.game_id as string,
       ownerId: row.owner_id as string | null,
       ownerType: row.owner_type as "template" | "character",
       name: row.name as string,

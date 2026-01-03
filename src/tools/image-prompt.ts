@@ -2,7 +2,7 @@ import { getCharacter, listCharacters } from "./character.js";
 import { getLocation } from "./world.js";
 import { getItem } from "./inventory.js";
 import { getFaction } from "./faction.js";
-import { getDefaultImagePreset, getDefaultImagePromptTemplate, getImagePromptTemplate } from "./session.js";
+import { getDefaultImagePreset, getDefaultImagePromptTemplate, getImagePromptTemplate } from "./game.js";
 import { listEntityImages } from "./images.js";
 import type { ImageGeneration, ImageGenerationPreferences, ImagePromptTemplate, Character, Location, Item, Faction } from "../types/index.js";
 
@@ -212,7 +212,7 @@ export function buildPromptFromTemplate(
 export function buildImagePrompt(
   entityId: string,
   entityType: "character" | "location" | "item" | "faction",
-  sessionId?: string,
+  gameId?: string,
   templateId?: string
 ): PromptBuilderResult | null {
   // Get the entity
@@ -263,7 +263,7 @@ export function buildImagePrompt(
   if (!entity) return null;
 
   // Get session ID for template/preset lookup
-  const effectiveSessionId = sessionId || (entity as { sessionId?: string }).sessionId;
+  const effectiveSessionId = gameId || (entity as { gameId?: string }).gameId;
 
   // Check for a template to use
   let template: ImagePromptTemplate | null = null;
@@ -525,8 +525,8 @@ export interface CharacterSummary {
   hasImages: boolean;
 }
 
-export function listCharacterSummaries(sessionId: string): CharacterSummary[] {
-  const characters = listCharacters(sessionId);
+export function listCharacterSummaries(gameId: string): CharacterSummary[] {
+  const characters = listCharacters(gameId);
 
   return characters.map(char => {
     // Build summary from imageGen or notes

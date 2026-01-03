@@ -1,5 +1,5 @@
 import { ref, computed, type ComputedRef } from 'vue'
-import type { SessionState, Item } from '../types'
+import type { GameState, Item } from '../types'
 
 export interface LinkableEntity {
   id: string
@@ -11,7 +11,7 @@ export interface LinkableEntity {
 export interface EntityLinkerResult {
   entities: ComputedRef<LinkableEntity[]>
   linkText: (text: string) => string
-  setSessionState: (state: SessionState | null) => void
+  setGameState: (state: GameState | null) => void
   setItems: (items: Item[]) => void
 }
 
@@ -20,23 +20,23 @@ export interface EntityLinkerResult {
  *
  * Usage:
  * ```ts
- * const { linkText, setSessionState } = useEntityLinker()
- * setSessionState(sessionState)
+ * const { linkText, setGameState } = useEntityLinker()
+ * setGameState(gameState)
  * const linkedHtml = linkText(someDescription)
  * ```
  */
 export function useEntityLinker(): EntityLinkerResult {
-  const sessionState = ref<SessionState | null>(null)
+  const gameState = ref<GameState | null>(null)
   const items = ref<Item[]>([])
 
   // Build a sorted list of linkable entities (longest names first to avoid partial matches)
   const entities = computed<LinkableEntity[]>(() => {
-    if (!sessionState.value) return []
+    if (!gameState.value) return []
 
     const result: LinkableEntity[] = []
 
     // Characters
-    for (const char of sessionState.value.characters) {
+    for (const char of gameState.value.characters) {
       result.push({
         id: char.id,
         name: char.name,
@@ -46,7 +46,7 @@ export function useEntityLinker(): EntityLinkerResult {
     }
 
     // Locations
-    for (const loc of sessionState.value.locations) {
+    for (const loc of gameState.value.locations) {
       result.push({
         id: loc.id,
         name: loc.name,
@@ -56,7 +56,7 @@ export function useEntityLinker(): EntityLinkerResult {
     }
 
     // Quests
-    for (const quest of sessionState.value.quests) {
+    for (const quest of gameState.value.quests) {
       result.push({
         id: quest.id,
         name: quest.name,
@@ -66,7 +66,7 @@ export function useEntityLinker(): EntityLinkerResult {
     }
 
     // Factions
-    for (const faction of sessionState.value.factions) {
+    for (const faction of gameState.value.factions) {
       result.push({
         id: faction.id,
         name: faction.name,
@@ -155,8 +155,8 @@ export function useEntityLinker(): EntityLinkerResult {
     return html
   }
 
-  function setSessionState(state: SessionState | null) {
-    sessionState.value = state
+  function setGameState(state: GameState | null) {
+    gameState.value = state
   }
 
   function setItems(newItems: Item[]) {
@@ -166,7 +166,7 @@ export function useEntityLinker(): EntityLinkerResult {
   return {
     entities,
     linkText,
-    setSessionState,
+    setGameState,
     setItems,
   }
 }

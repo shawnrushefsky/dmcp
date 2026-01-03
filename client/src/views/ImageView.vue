@@ -3,16 +3,16 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
 import { useTheme } from '../composables/useTheme'
-import type { StoredImage, SessionState, Breadcrumb } from '../types'
+import type { StoredImage, GameState, Breadcrumb } from '../types'
 import Breadcrumbs from '../components/Breadcrumbs.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
 
 const route = useRoute()
-const { getImage, getSession, loading } = useApi()
+const { getImage, getGame, loading } = useApi()
 const { setSession } = useTheme()
 
 const image = ref<StoredImage | null>(null)
-const sessionState = ref<SessionState | null>(null)
+const gameState = ref<GameState | null>(null)
 
 const imageId = computed(() => route.params.imageId as string)
 
@@ -25,7 +25,7 @@ const breadcrumbs = computed<Breadcrumb[]>(() => {
   if (!image.value) return []
   return [
     { label: 'Games', href: '/' },
-    { label: sessionState.value?.session.name || 'Loading...', href: `/sessions/${image.value.sessionId}` },
+    { label: gameState.value?.game.name || 'Loading...', href: `/games/${image.value.gameId}` },
     { label: image.value.label || 'Image' },
   ]
 })
@@ -33,8 +33,8 @@ const breadcrumbs = computed<Breadcrumb[]>(() => {
 onMounted(async () => {
   image.value = await getImage(imageId.value)
   if (image.value) {
-    setSession(image.value.sessionId)
-    sessionState.value = await getSession(image.value.sessionId)
+    setSession(image.value.gameId)
+    gameState.value = await getGame(image.value.gameId)
   }
 })
 </script>

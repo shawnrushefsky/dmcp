@@ -15,7 +15,7 @@ export const isKeyboardHelpOpen = ref(false)
 let keySequence = ''
 let keySequenceTimeout: ReturnType<typeof setTimeout> | null = null
 
-export function useKeyboardShortcuts(sessionId?: string) {
+export function useKeyboardShortcuts(gameId?: string) {
   const router = useRouter()
 
   const shortcuts: ShortcutHandler[] = [
@@ -42,12 +42,12 @@ export function useKeyboardShortcuts(sessionId?: string) {
   // Vim-style "g + key" navigation shortcuts
   const gShortcuts: Record<string, { path: string; description: string }> = {
     h: { path: '/', description: 'Go home' },
-    o: { path: sessionId ? `/sessions/${sessionId}` : '/', description: 'Go to overview' },
-    c: { path: sessionId ? `/sessions/${sessionId}/characters` : '/', description: 'Go to characters' },
-    l: { path: sessionId ? `/sessions/${sessionId}/locations` : '/', description: 'Go to locations' },
-    q: { path: sessionId ? `/sessions/${sessionId}/quests` : '/', description: 'Go to quests' },
-    m: { path: sessionId ? `/sessions/${sessionId}/map` : '/', description: 'Go to map' },
-    i: { path: sessionId ? `/sessions/${sessionId}/images` : '/', description: 'Go to images' },
+    o: { path: gameId ? `/games/${gameId}` : '/', description: 'Go to overview' },
+    c: { path: gameId ? `/games/${gameId}/characters` : '/', description: 'Go to characters' },
+    l: { path: gameId ? `/games/${gameId}/locations` : '/', description: 'Go to locations' },
+    q: { path: gameId ? `/games/${gameId}/quests` : '/', description: 'Go to quests' },
+    m: { path: gameId ? `/games/${gameId}/map` : '/', description: 'Go to map' },
+    i: { path: gameId ? `/games/${gameId}/images` : '/', description: 'Go to images' },
   }
 
   function handleKeyDown(event: KeyboardEvent) {

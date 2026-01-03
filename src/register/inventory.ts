@@ -11,7 +11,7 @@ export function registerInventoryTools(server: McpServer) {
     {
       description: "Create a new item. IMPORTANT: Call this IMMEDIATELY when introducing any item in narrative - whether found, given, purchased, or mentioned. Items must exist in the database before being referenced in dialogue or description.",
       inputSchema: {
-      sessionId: z.string().max(100).describe("The session ID"),
+      gameId: z.string().max(100).describe("The game ID"),
       ownerId: z.string().max(100).describe("Character or location ID that owns the item"),
       ownerType: z.enum(["character", "location"]).describe("Owner type"),
       name: z.string().min(1).max(LIMITS.NAME_MAX).describe("Item name"),

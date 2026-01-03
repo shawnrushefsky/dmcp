@@ -4,18 +4,18 @@ import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
 import { useEntityLinker } from '../composables/useEntityLinker'
 import { useTheme } from '../composables/useTheme'
-import type { CharacterSheet, EntityImages, Breadcrumb, SessionState } from '../types'
+import type { CharacterSheet, EntityImages, Breadcrumb, GameState } from '../types'
 import HealthBar from '../components/HealthBar.vue'
 import Breadcrumbs from '../components/Breadcrumbs.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
 
 const route = useRoute()
-const { getCharacterSheet, getSession, getEntityImages, loading } = useApi()
-const { linkText, setSessionState, setItems } = useEntityLinker()
+const { getCharacterSheet, getGame, getEntityImages, loading } = useApi()
+const { linkText, setGameState, setItems } = useEntityLinker()
 const { config, setSession } = useTheme()
 
 const sheet = ref<CharacterSheet | null>(null)
-const sessionState = ref<SessionState | null>(null)
+const gameState = ref<GameState | null>(null)
 const images = ref<EntityImages>({ images: [], primaryImage: null })
 
 const characterId = computed(() => route.params.characterId as string)
@@ -24,13 +24,13 @@ const breadcrumbs = computed<Breadcrumb[]>(() => {
   if (!sheet.value) return []
   return [
     { label: 'Games', href: '/' },
-    { label: sessionState.value?.session.name || 'Loading...', href: `/sessions/${sheet.value.character.sessionId}` },
+    { label: gameState.value?.game.name || 'Loading...', href: `/games/${sheet.value.character.gameId}` },
     { label: sheet.value.character.name },
   ]
 })
 
-// Update entity linker when session state changes
-watch(sessionState, (newState) => setSessionState(newState))
+// Update entity linker when game state changes
+watch(gameState, (newState) => setGameState(newState))
 // Also include inventory items as linkable
 watch(() => sheet.value?.inventory, (inv) => setItems(inv || []))
 
@@ -42,10 +42,10 @@ onMounted(async () => {
   sheet.value = sheetResult
   images.value = imagesResult
 
-  // Fetch session state for entity linking and theming
+  // Fetch game state for entity linking and theming
   if (sheetResult) {
-    setSession(sheetResult.character.sessionId)
-    sessionState.value = await getSession(sheetResult.character.sessionId)
+    setSession(sheetResult.character.gameId)
+    gameState.value = await getGame(sheetResult.character.gameId)
   }
 })
 </script>

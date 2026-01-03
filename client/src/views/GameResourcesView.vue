@@ -2,25 +2,25 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
-import type { SessionState, Resource, Breadcrumb } from '../types'
-import SessionTabs from '../components/SessionTabs.vue'
+import type { GameState, Resource, Breadcrumb } from '../types'
+import GameTabs from '../components/GameTabs.vue'
 import Breadcrumbs from '../components/Breadcrumbs.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
 
 const route = useRoute()
-const { getSession, loading } = useApi()
-const state = ref<SessionState | null>(null)
+const { getGame, loading } = useApi()
+const state = ref<GameState | null>(null)
 
-const sessionId = computed(() => route.params.sessionId as string)
+const gameId = computed(() => route.params.gameId as string)
 
 const breadcrumbs = computed<Breadcrumb[]>(() => [
   { label: 'Games', href: '/' },
-  { label: state.value?.session.name || 'Loading...', href: `/sessions/${sessionId.value}` },
+  { label: state.value?.game.name || 'Loading...', href: `/games/${gameId.value}` },
   { label: 'Resources' },
 ])
 
-const sessionResources = computed(() =>
-  state.value?.resources.filter((r: Resource) => r.ownerType === 'session') || []
+const gameResources = computed(() =>
+  state.value?.resources.filter((r: Resource) => r.ownerType === 'game') || []
 )
 
 const characterResources = computed(() =>
@@ -44,13 +44,13 @@ function getProgressColor(resource: Resource): string {
 }
 
 onMounted(async () => {
-  state.value = await getSession(sessionId.value)
+  state.value = await getGame(gameId.value)
 })
 </script>
 
 <template>
   <!-- Loading State -->
-  <div v-if="loading" class="session-loading">
+  <div v-if="loading" class="game-loading">
     <SkeletonLoader variant="text" width="200px" />
     <SkeletonLoader variant="title" width="300px" />
     <SkeletonLoader variant="text" width="80%" />
@@ -64,15 +64,15 @@ onMounted(async () => {
   <!-- Content -->
   <div v-else-if="state" class="animate-fade-in">
     <Breadcrumbs :items="breadcrumbs" />
-    <h2>{{ state.session.name }}</h2>
-    <p class="mb-20">{{ state.session.setting }}</p>
+    <h2>{{ state.game.name }}</h2>
+    <p class="mb-20">{{ state.game.setting }}</p>
 
-    <SessionTabs :session-id="sessionId" active="resources" :counts="state.counts" />
+    <GameTabs :game-id="gameId" active="resources" :counts="state.counts" />
 
     <!-- Party/Session Resources -->
-    <h3>Party Resources ({{ sessionResources.length }})</h3>
-    <div v-if="sessionResources.length" class="resource-grid">
-      <div v-for="resource in sessionResources" :key="resource.id" class="card resource-card">
+    <h3>Party Resources ({{ gameResources.length }})</h3>
+    <div v-if="gameResources.length" class="resource-grid">
+      <div v-for="resource in gameResources" :key="resource.id" class="card resource-card">
         <div class="resource-header">
           <h4>{{ resource.name }}</h4>
           <span v-if="resource.category" class="resource-category">{{ resource.category }}</span>
@@ -203,7 +203,7 @@ onMounted(async () => {
   transition: width 0.3s ease;
 }
 
-.session-loading {
+.game-loading {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);

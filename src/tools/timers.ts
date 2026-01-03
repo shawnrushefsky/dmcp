@@ -3,7 +3,7 @@ import { getDatabase } from "../db/connection.js";
 import type { Timer } from "../types/index.js";
 
 export function createTimer(params: {
-  sessionId: string;
+  gameId: string;
   name: string;
   description?: string;
   timerType: "countdown" | "stopwatch" | "clock";
@@ -25,11 +25,11 @@ export function createTimer(params: {
   const triggerAt = params.triggerAt ?? (direction === "down" ? 0 : maxValue);
 
   db.prepare(`
-    INSERT INTO timers (id, session_id, name, description, timer_type, current_value, max_value, direction, trigger_at, unit, visible_to_players, created_at)
+    INSERT INTO timers (id, game_id, name, description, timer_type, current_value, max_value, direction, trigger_at, unit, visible_to_players, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
-    params.sessionId,
+    params.gameId,
     params.name,
     params.description || "",
     timerType,
@@ -44,7 +44,7 @@ export function createTimer(params: {
 
   return {
     id,
-    sessionId: params.sessionId,
+    gameId: params.gameId,
     name: params.name,
     description: params.description || "",
     timerType,
@@ -67,7 +67,7 @@ export function getTimer(id: string): Timer | null {
 
   return {
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     name: row.name as string,
     description: row.description as string || "",
     timerType: row.timer_type as "countdown" | "stopwatch" | "clock",
@@ -127,20 +127,20 @@ export function deleteTimer(id: string): boolean {
   return result.changes > 0;
 }
 
-export function listTimers(sessionId: string, includeTriggered = false): Timer[] {
+export function listTimers(gameId: string, includeTriggered = false): Timer[] {
   const db = getDatabase();
 
-  let query = `SELECT * FROM timers WHERE session_id = ?`;
+  let query = `SELECT * FROM timers WHERE game_id = ?`;
   if (!includeTriggered) {
     query += ` AND triggered = 0`;
   }
   query += ` ORDER BY name`;
 
-  const rows = db.prepare(query).all(sessionId) as Record<string, unknown>[];
+  const rows = db.prepare(query).all(gameId) as Record<string, unknown>[];
 
   return rows.map(row => ({
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     name: row.name as string,
     description: row.description as string || "",
     timerType: row.timer_type as "countdown" | "stopwatch" | "clock",

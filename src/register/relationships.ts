@@ -10,7 +10,7 @@ export function registerRelationshipTools(server: McpServer) {
     {
       description: "Create a relationship between two entities (characters, factions, etc.). Call this when establishing NPC attitudes toward the player, alliances, enmities, or any significant social connection mentioned in narrative.",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         sourceId: z.string().max(100).describe("Source entity ID"),
         sourceType: z.string().max(100).describe("Source entity type (e.g., 'character', 'faction')"),
         targetId: z.string().max(100).describe("Target entity ID"),
@@ -58,15 +58,15 @@ export function registerRelationshipTools(server: McpServer) {
     {
       description: "Get the relationship between two specific entities",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         sourceId: z.string().max(100).describe("Source entity ID"),
         targetId: z.string().max(100).describe("Target entity ID"),
         relationshipType: z.string().max(100).optional().describe("Filter by relationship type"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId, sourceId, targetId, relationshipType }) => {
-      const relationship = relationshipTools.getRelationshipBetween(sessionId, sourceId, targetId, relationshipType);
+    async ({ gameId, sourceId, targetId, relationshipType }) => {
+      const relationship = relationshipTools.getRelationshipBetween(gameId, sourceId, targetId, relationshipType);
       if (!relationship) {
         return {
           content: [{ type: "text", text: "No relationship found between these entities" }],
@@ -146,7 +146,7 @@ export function registerRelationshipTools(server: McpServer) {
     {
       description: "List relationships with optional filters",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         entityId: z.string().max(100).optional().describe("Filter by entity (either source or target)"),
         sourceId: z.string().max(100).optional().describe("Filter by source entity"),
         targetId: z.string().max(100).optional().describe("Filter by target entity"),
@@ -155,8 +155,8 @@ export function registerRelationshipTools(server: McpServer) {
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId, ...filter }) => {
-      const relationships = relationshipTools.listRelationships(sessionId, filter);
+    async ({ gameId, ...filter }) => {
+      const relationships = relationshipTools.listRelationships(gameId, filter);
       return {
         content: [{ type: "text", text: JSON.stringify(relationships, null, 2) }],
       };

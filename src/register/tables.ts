@@ -19,7 +19,7 @@ export function registerTableTools(server: McpServer) {
     {
       description: "Create a new random table for encounters, loot, weather, etc.",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         name: z.string().min(1).max(LIMITS.NAME_MAX).describe("Table name"),
         description: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("Table description"),
         category: z.string().max(100).optional().describe("Category (e.g., 'encounter', 'loot', 'weather', 'name')"),
@@ -108,15 +108,15 @@ export function registerTableTools(server: McpServer) {
   server.registerTool(
     "list_random_tables",
     {
-      description: "List random tables in a session",
+      description: "List random tables in a game",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         category: z.string().max(100).optional().describe("Filter by category"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId, category }) => {
-      const tables = tableTools.listTables(sessionId, category);
+    async ({ gameId, category }) => {
+      const tables = tableTools.listTables(gameId, category);
       return {
         content: [{ type: "text", text: JSON.stringify(tables, null, 2) }],
       };

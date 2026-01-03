@@ -3,7 +3,7 @@ import { getDatabase } from "../db/connection.js";
 import type { Relationship, RelationshipChange } from "../types/index.js";
 
 export function createRelationship(params: {
-  sessionId: string;
+  gameId: string;
   sourceId: string;
   sourceType: string;
   targetId: string;
@@ -18,11 +18,11 @@ export function createRelationship(params: {
   const now = new Date().toISOString();
 
   db.prepare(`
-    INSERT INTO relationships (id, session_id, source_id, source_type, target_id, target_type, relationship_type, value, label, notes, created_at, updated_at)
+    INSERT INTO relationships (id, game_id, source_id, source_type, target_id, target_type, relationship_type, value, label, notes, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
-    params.sessionId,
+    params.gameId,
     params.sourceId,
     params.sourceType,
     params.targetId,
@@ -37,7 +37,7 @@ export function createRelationship(params: {
 
   return {
     id,
-    sessionId: params.sessionId,
+    gameId: params.gameId,
     sourceId: params.sourceId,
     sourceType: params.sourceType,
     targetId: params.targetId,
@@ -59,7 +59,7 @@ export function getRelationship(id: string): Relationship | null {
 
   return {
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     sourceId: row.source_id as string,
     sourceType: row.source_type as string,
     targetId: row.target_id as string,
@@ -74,15 +74,15 @@ export function getRelationship(id: string): Relationship | null {
 }
 
 export function getRelationshipBetween(
-  sessionId: string,
+  gameId: string,
   sourceId: string,
   targetId: string,
   relationshipType?: string
 ): Relationship | null {
   const db = getDatabase();
 
-  let query = `SELECT * FROM relationships WHERE session_id = ? AND source_id = ? AND target_id = ?`;
-  const params: string[] = [sessionId, sourceId, targetId];
+  let query = `SELECT * FROM relationships WHERE game_id = ? AND source_id = ? AND target_id = ?`;
+  const params: string[] = [gameId, sourceId, targetId];
 
   if (relationshipType) {
     query += ` AND relationship_type = ?`;
@@ -97,7 +97,7 @@ export function getRelationshipBetween(
 
   return {
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     sourceId: row.source_id as string,
     sourceType: row.source_type as string,
     targetId: row.target_id as string,
@@ -218,7 +218,7 @@ export function deleteRelationship(id: string): boolean {
 }
 
 export function listRelationships(
-  sessionId: string,
+  gameId: string,
   filter?: {
     entityId?: string;  // Either source or target
     sourceId?: string;
@@ -229,8 +229,8 @@ export function listRelationships(
 ): Relationship[] {
   const db = getDatabase();
 
-  let query = `SELECT * FROM relationships WHERE session_id = ?`;
-  const params: string[] = [sessionId];
+  let query = `SELECT * FROM relationships WHERE game_id = ?`;
+  const params: string[] = [gameId];
 
   if (filter?.entityId) {
     query += ` AND (source_id = ? OR target_id = ?)`;
@@ -263,7 +263,7 @@ export function listRelationships(
 
   return rows.map(row => ({
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     sourceId: row.source_id as string,
     sourceType: row.source_type as string,
     targetId: row.target_id as string,
@@ -388,7 +388,7 @@ export function getRelationshipLabel(value: number): string {
 
 // Create a bidirectional relationship (both directions with same initial value)
 export function createBidirectionalRelationship(params: {
-  sessionId: string;
+  gameId: string;
   entityA: { id: string; type: string };
   entityB: { id: string; type: string };
   relationshipType: string;
@@ -397,7 +397,7 @@ export function createBidirectionalRelationship(params: {
   notes?: string;
 }): [Relationship, Relationship] {
   const relA = createRelationship({
-    sessionId: params.sessionId,
+    gameId: params.gameId,
     sourceId: params.entityA.id,
     sourceType: params.entityA.type,
     targetId: params.entityB.id,
@@ -409,7 +409,7 @@ export function createBidirectionalRelationship(params: {
   });
 
   const relB = createRelationship({
-    sessionId: params.sessionId,
+    gameId: params.gameId,
     sourceId: params.entityB.id,
     sourceType: params.entityB.type,
     targetId: params.entityA.id,

@@ -2,21 +2,21 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
-import type { SessionState, Quest, Breadcrumb } from '../types'
-import SessionTabs from '../components/SessionTabs.vue'
+import type { GameState, Quest, Breadcrumb } from '../types'
+import GameTabs from '../components/GameTabs.vue'
 import QuestTable from '../components/QuestTable.vue'
 import Breadcrumbs from '../components/Breadcrumbs.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
 
 const route = useRoute()
-const { getSession, loading } = useApi()
-const state = ref<SessionState | null>(null)
+const { getGame, loading } = useApi()
+const state = ref<GameState | null>(null)
 
-const sessionId = computed(() => route.params.sessionId as string)
+const gameId = computed(() => route.params.gameId as string)
 
 const breadcrumbs = computed<Breadcrumb[]>(() => [
   { label: 'Games', href: '/' },
-  { label: state.value?.session.name || 'Loading...', href: `/sessions/${sessionId.value}` },
+  { label: state.value?.game.name || 'Loading...', href: `/games/${gameId.value}` },
   { label: 'Quests' },
 ])
 
@@ -33,13 +33,13 @@ const failedQuests = computed(() =>
 )
 
 onMounted(async () => {
-  state.value = await getSession(sessionId.value)
+  state.value = await getGame(gameId.value)
 })
 </script>
 
 <template>
   <!-- Loading State -->
-  <div v-if="loading" class="session-loading">
+  <div v-if="loading" class="game-loading">
     <SkeletonLoader variant="text" width="200px" />
     <SkeletonLoader variant="title" width="300px" />
     <SkeletonLoader variant="text" width="80%" />
@@ -55,10 +55,10 @@ onMounted(async () => {
   <!-- Content -->
   <div v-else-if="state" class="animate-fade-in">
     <Breadcrumbs :items="breadcrumbs" />
-    <h2>{{ state.session.name }}</h2>
-    <p class="mb-20">{{ state.session.setting }}</p>
+    <h2>{{ state.game.name }}</h2>
+    <p class="mb-20">{{ state.game.setting }}</p>
 
-    <SessionTabs :session-id="sessionId" active="quests" :counts="state.counts" />
+    <GameTabs :game-id="gameId" active="quests" :counts="state.counts" />
 
     <h3>Active Quests ({{ activeQuests.length }})</h3>
     <QuestTable v-if="activeQuests.length" :quests="activeQuests" />

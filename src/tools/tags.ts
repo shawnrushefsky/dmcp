@@ -3,7 +3,7 @@ import { getDatabase } from "../db/connection.js";
 import type { Tag } from "../types/index.js";
 
 export function addTag(params: {
-  sessionId: string;
+  gameId: string;
   entityId: string;
   entityType: string;
   tag: string;
@@ -17,8 +17,8 @@ export function addTag(params: {
   // Check if tag already exists (unique constraint)
   const existing = db.prepare(`
     SELECT id FROM tags
-    WHERE session_id = ? AND entity_id = ? AND entity_type = ? AND tag = ?
-  `).get(params.sessionId, params.entityId, params.entityType, params.tag);
+    WHERE game_id = ? AND entity_id = ? AND entity_type = ? AND tag = ?
+  `).get(params.gameId, params.entityId, params.entityType, params.tag);
 
   if (existing) {
     // Update existing tag
@@ -30,11 +30,11 @@ export function addTag(params: {
   }
 
   db.prepare(`
-    INSERT INTO tags (id, session_id, entity_id, entity_type, tag, color, notes, created_at)
+    INSERT INTO tags (id, game_id, entity_id, entity_type, tag, color, notes, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
-    params.sessionId,
+    params.gameId,
     params.entityId,
     params.entityType,
     params.tag,
@@ -45,7 +45,7 @@ export function addTag(params: {
 
   return {
     id,
-    sessionId: params.sessionId,
+    gameId: params.gameId,
     entityId: params.entityId,
     entityType: params.entityType,
     tag: params.tag,
@@ -63,7 +63,7 @@ export function getTag(id: string): Tag | null {
 
   return {
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     entityId: row.entity_id as string,
     entityType: row.entity_type as string,
     tag: row.tag as string,
@@ -74,7 +74,7 @@ export function getTag(id: string): Tag | null {
 }
 
 export function removeTag(params: {
-  sessionId: string;
+  gameId: string;
   entityId: string;
   entityType: string;
   tag: string;
@@ -82,8 +82,8 @@ export function removeTag(params: {
   const db = getDatabase();
   const result = db.prepare(`
     DELETE FROM tags
-    WHERE session_id = ? AND entity_id = ? AND entity_type = ? AND tag = ?
-  `).run(params.sessionId, params.entityId, params.entityType, params.tag);
+    WHERE game_id = ? AND entity_id = ? AND entity_type = ? AND tag = ?
+  `).run(params.gameId, params.entityId, params.entityType, params.tag);
 
   return result.changes > 0;
 }
@@ -94,15 +94,15 @@ export interface TagCount {
   color: string | null;
 }
 
-export function listTags(sessionId: string): TagCount[] {
+export function listTags(gameId: string): TagCount[] {
   const db = getDatabase();
   const rows = db.prepare(`
     SELECT tag, color, COUNT(*) as count
     FROM tags
-    WHERE session_id = ?
+    WHERE game_id = ?
     GROUP BY tag
     ORDER BY count DESC, tag ASC
-  `).all(sessionId) as Array<{ tag: string; color: string | null; count: number }>;
+  `).all(gameId) as Array<{ tag: string; color: string | null; count: number }>;
 
   return rows.map(row => ({
     tag: row.tag,
@@ -120,7 +120,7 @@ export function getEntityTags(entityId: string, entityType: string): Tag[] {
 
   return rows.map(row => ({
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     entityId: row.entity_id as string,
     entityType: row.entity_type as string,
     tag: row.tag as string,
@@ -136,11 +136,11 @@ export interface TaggedEntity {
   tag: Tag;
 }
 
-export function findByTag(sessionId: string, tag: string, entityType?: string): TaggedEntity[] {
+export function findByTag(gameId: string, tag: string, entityType?: string): TaggedEntity[] {
   const db = getDatabase();
 
-  let query = `SELECT * FROM tags WHERE session_id = ? AND tag = ?`;
-  const params: string[] = [sessionId, tag];
+  let query = `SELECT * FROM tags WHERE game_id = ? AND tag = ?`;
+  const params: string[] = [gameId, tag];
 
   if (entityType) {
     query += ` AND entity_type = ?`;
@@ -156,7 +156,7 @@ export function findByTag(sessionId: string, tag: string, entityType?: string): 
     entityType: row.entity_type as string,
     tag: {
       id: row.id as string,
-      sessionId: row.session_id as string,
+      gameId: row.game_id as string,
       entityId: row.entity_id as string,
       entityType: row.entity_type as string,
       tag: row.tag as string,
@@ -167,11 +167,11 @@ export function findByTag(sessionId: string, tag: string, entityType?: string): 
   }));
 }
 
-export function renameTag(sessionId: string, oldTag: string, newTag: string): number {
+export function renameTag(gameId: string, oldTag: string, newTag: string): number {
   const db = getDatabase();
   const result = db.prepare(`
-    UPDATE tags SET tag = ? WHERE session_id = ? AND tag = ?
-  `).run(newTag, sessionId, oldTag);
+    UPDATE tags SET tag = ? WHERE game_id = ? AND tag = ?
+  `).run(newTag, gameId, oldTag);
 
   return result.changes;
 }
@@ -187,7 +187,7 @@ export function deleteTagById(id: string): boolean {
  * This consolidated function reduces the number of tool calls needed.
  */
 export function modifyTags(params: {
-  sessionId: string;
+  gameId: string;
   entityId: string;
   entityType: string;
   add?: Array<{ tag: string; color?: string; notes?: string }>;
@@ -200,7 +200,7 @@ export function modifyTags(params: {
   if (params.remove) {
     for (const tag of params.remove) {
       const success = removeTag({
-        sessionId: params.sessionId,
+        gameId: params.gameId,
         entityId: params.entityId,
         entityType: params.entityType,
         tag,
@@ -215,7 +215,7 @@ export function modifyTags(params: {
   if (params.add) {
     for (const tagData of params.add) {
       addTag({
-        sessionId: params.sessionId,
+        gameId: params.gameId,
         entityId: params.entityId,
         entityType: params.entityType,
         tag: tagData.tag,

@@ -4,7 +4,7 @@ import { safeJsonParse } from "../utils/json.js";
 import type { Faction } from "../types/index.js";
 
 export function createFaction(params: {
-  sessionId: string;
+  gameId: string;
   name: string;
   description?: string;
   leaderId?: string;
@@ -19,11 +19,11 @@ export function createFaction(params: {
   const now = new Date().toISOString();
 
   db.prepare(`
-    INSERT INTO factions (id, session_id, name, description, leader_id, headquarters_id, resources, goals, traits, status, created_at)
+    INSERT INTO factions (id, game_id, name, description, leader_id, headquarters_id, resources, goals, traits, status, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
-    params.sessionId,
+    params.gameId,
     params.name,
     params.description || "",
     params.leaderId || null,
@@ -37,7 +37,7 @@ export function createFaction(params: {
 
   return {
     id,
-    sessionId: params.sessionId,
+    gameId: params.gameId,
     name: params.name,
     description: params.description || "",
     leaderId: params.leaderId || null,
@@ -58,7 +58,7 @@ export function getFaction(id: string): Faction | null {
 
   return {
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     name: row.name as string,
     description: row.description as string,
     leaderId: row.leader_id as string | null,
@@ -117,13 +117,13 @@ export function deleteFaction(id: string): boolean {
 }
 
 export function listFactions(
-  sessionId: string,
+  gameId: string,
   filter?: { status?: "active" | "disbanded" | "hidden" }
 ): Faction[] {
   const db = getDatabase();
 
-  let query = `SELECT * FROM factions WHERE session_id = ?`;
-  const params: string[] = [sessionId];
+  let query = `SELECT * FROM factions WHERE game_id = ?`;
+  const params: string[] = [gameId];
 
   if (filter?.status) {
     query += ` AND status = ?`;
@@ -136,7 +136,7 @@ export function listFactions(
 
   return rows.map(row => ({
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     name: row.name as string,
     description: row.description as string,
     leaderId: row.leader_id as string | null,

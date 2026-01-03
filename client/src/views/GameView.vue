@@ -3,8 +3,8 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
 import { useEntityLinker } from '../composables/useEntityLinker'
-import type { SessionState, Character, Breadcrumb } from '../types'
-import SessionTabs from '../components/SessionTabs.vue'
+import type { GameState, Character, Breadcrumb } from '../types'
+import GameTabs from '../components/GameTabs.vue'
 import CharacterCard from '../components/CharacterCard.vue'
 import LocationCard from '../components/LocationCard.vue'
 import QuestTable from '../components/QuestTable.vue'
@@ -12,15 +12,15 @@ import Breadcrumbs from '../components/Breadcrumbs.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
 
 const route = useRoute()
-const { getSession, loading } = useApi()
-const { linkText, setSessionState } = useEntityLinker()
-const state = ref<SessionState | null>(null)
+const { getGame, loading } = useApi()
+const { linkText, setGameState } = useEntityLinker()
+const state = ref<GameState | null>(null)
 
-const sessionId = computed(() => route.params.sessionId as string)
+const gameId = computed(() => route.params.gameId as string)
 
 const breadcrumbs = computed<Breadcrumb[]>(() => [
   { label: 'Games', href: '/' },
-  { label: state.value?.session.name || 'Loading...' },
+  { label: state.value?.game.name || 'Loading...' },
 ])
 
 const playerCharacters = computed(() =>
@@ -35,17 +35,17 @@ const locations = computed(() => state.value?.locations.slice(0, 6) || [])
 
 const quests = computed(() => state.value?.quests.slice(0, 5) || [])
 
-// Update entity linker when session state changes
-watch(state, (newState) => setSessionState(newState))
+// Update entity linker when game state changes
+watch(state, (newState) => setGameState(newState))
 
 onMounted(async () => {
-  state.value = await getSession(sessionId.value)
+  state.value = await getGame(gameId.value)
 })
 </script>
 
 <template>
   <!-- Loading State -->
-  <div v-if="loading" class="session-loading">
+  <div v-if="loading" class="game-loading">
     <div class="breadcrumb-skeleton">
       <SkeletonLoader variant="text" width="200px" />
     </div>
@@ -73,27 +73,27 @@ onMounted(async () => {
   <!-- Content -->
   <div v-else-if="state" class="animate-fade-in">
     <!-- Hero Image -->
-    <div v-if="state.session.titleImageId" class="hero-image-container">
+    <div v-if="state.game.titleImageId" class="hero-image-container">
       <img
-        :src="`/images/${state.session.titleImageId}/file?width=1200`"
-        :alt="state.session.name"
+        :src="`/images/${state.game.titleImageId}/file?width=1200`"
+        :alt="state.game.name"
         class="hero-image"
       />
       <div class="hero-overlay">
         <Breadcrumbs :items="breadcrumbs" class="hero-breadcrumbs" />
-        <h2 class="hero-title">{{ state.session.name }}</h2>
-        <p class="hero-setting linked-content" v-html="linkText(state.session.setting)"></p>
+        <h2 class="hero-title">{{ state.game.name }}</h2>
+        <p class="hero-setting linked-content" v-html="linkText(state.game.setting)"></p>
       </div>
     </div>
 
     <!-- No Hero Image - Standard Header -->
     <template v-else>
       <Breadcrumbs :items="breadcrumbs" />
-      <h2>{{ state.session.name }}</h2>
-      <p class="setting-description linked-content" v-html="linkText(state.session.setting)"></p>
+      <h2>{{ state.game.name }}</h2>
+      <p class="setting-description linked-content" v-html="linkText(state.game.setting)"></p>
     </template>
 
-    <SessionTabs :session-id="sessionId" active="overview" :counts="state.counts" />
+    <GameTabs :game-id="gameId" active="overview" :counts="state.counts" />
 
     <div class="two-col">
       <div>
@@ -125,7 +125,7 @@ onMounted(async () => {
         </div>
         <router-link
           v-if="state.characters.filter(c => !c.isPlayer).length > 6"
-          :to="`/sessions/${sessionId}/characters`"
+          :to="`/games/${gameId}/characters`"
           class="btn btn-secondary mt-4"
         >
           View all NPCs
@@ -147,7 +147,7 @@ onMounted(async () => {
         </div>
         <router-link
           v-if="state.locations.length > 6"
-          :to="`/sessions/${sessionId}/locations`"
+          :to="`/games/${gameId}/locations`"
           class="btn btn-secondary mt-4"
         >
           View all locations
@@ -168,14 +168,14 @@ onMounted(async () => {
     <div class="empty-icon">❓</div>
     <div class="empty-title">Game Not Found</div>
     <div class="empty-description">
-      This game session doesn't exist or may have been deleted.
+      This game doesn't exist or may have been deleted.
     </div>
     <router-link to="/" class="btn mt-4">Back to Games</router-link>
   </div>
 </template>
 
 <style scoped>
-.session-loading {
+.game-loading {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);

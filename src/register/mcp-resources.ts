@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
-import * as sessionTools from "../tools/session.js";
+import * as gameTools from "../tools/game.js";
 import * as characterTools from "../tools/character.js";
 import * as worldTools from "../tools/world.js";
 import * as questTools from "../tools/quest.js";
@@ -12,16 +12,16 @@ export function registerMcpResources(server: McpServer) {
   // STATIC RESOURCES
   // ============================================================================
 
-  // List all sessions
+  // List all games
   server.registerResource(
-    "sessions",
+    "games",
     "dmcp://sessions",
     {
-      description: "List all game sessions",
+      description: "List all games",
       mimeType: "application/json",
     },
     async (uri) => {
-      const sessions = sessionTools.listSessions();
+      const sessions = gameTools.listGames();
       return {
         contents: [
           {
@@ -39,9 +39,9 @@ export function registerMcpResources(server: McpServer) {
   // ============================================================================
 
   // Helper to create list callback for session-scoped resources
-  const createSessionListCallback = (suffix: string, nameFormatter: (s: { id: string; name: string }) => string) => {
+  const createGameListCallback = (suffix: string, nameFormatter: (s: { id: string; name: string }) => string) => {
     return async () => {
-      const sessions = sessionTools.listSessions();
+      const sessions = gameTools.listGames();
       return {
         resources: sessions.map((s) => ({
           uri: `dmcp://session/${s.id}${suffix}`,
@@ -54,16 +54,16 @@ export function registerMcpResources(server: McpServer) {
   // Session details
   server.registerResource(
     "session",
-    new ResourceTemplate("dmcp://session/{sessionId}", {
-      list: createSessionListCallback("", (s) => s.name),
+    new ResourceTemplate("dmcp://session/{gameId}", {
+      list: createGameListCallback("", (s) => s.name),
     }),
     {
       description: "Session metadata and preferences",
       mimeType: "application/json",
     },
     async (uri, variables) => {
-      const sessionId = variables.sessionId as string;
-      const session = sessionTools.loadSession(sessionId);
+      const gameId = variables.gameId as string;
+      const session = gameTools.loadGame(gameId);
       if (!session) {
         return {
           contents: [
@@ -90,16 +90,16 @@ export function registerMcpResources(server: McpServer) {
   // Session state (overview)
   server.registerResource(
     "session-state",
-    new ResourceTemplate("dmcp://session/{sessionId}/state", {
-      list: createSessionListCallback("/state", (s) => `${s.name} - State`),
+    new ResourceTemplate("dmcp://session/{gameId}/state", {
+      list: createGameListCallback("/state", (s) => `${s.name} - State`),
     }),
     {
       description: "Current game state snapshot with counts",
       mimeType: "application/json",
     },
     async (uri, variables) => {
-      const sessionId = variables.sessionId as string;
-      const state = sessionTools.getSessionState(sessionId);
+      const gameId = variables.gameId as string;
+      const state = gameTools.getGameState(gameId);
       if (!state) {
         return {
           contents: [
@@ -126,16 +126,16 @@ export function registerMcpResources(server: McpServer) {
   // Session characters
   server.registerResource(
     "session-characters",
-    new ResourceTemplate("dmcp://session/{sessionId}/characters", {
-      list: createSessionListCallback("/characters", (s) => `${s.name} - Characters`),
+    new ResourceTemplate("dmcp://session/{gameId}/characters", {
+      list: createGameListCallback("/characters", (s) => `${s.name} - Characters`),
     }),
     {
-      description: "All characters in the session",
+      description: "All characters in the game",
       mimeType: "application/json",
     },
     async (uri, variables) => {
-      const sessionId = variables.sessionId as string;
-      const characters = characterTools.listCharacters(sessionId);
+      const gameId = variables.gameId as string;
+      const characters = characterTools.listCharacters(gameId);
       return {
         contents: [
           {
@@ -151,16 +151,16 @@ export function registerMcpResources(server: McpServer) {
   // Session locations
   server.registerResource(
     "session-locations",
-    new ResourceTemplate("dmcp://session/{sessionId}/locations", {
-      list: createSessionListCallback("/locations", (s) => `${s.name} - Locations`),
+    new ResourceTemplate("dmcp://session/{gameId}/locations", {
+      list: createGameListCallback("/locations", (s) => `${s.name} - Locations`),
     }),
     {
-      description: "All locations in the session",
+      description: "All locations in the game",
       mimeType: "application/json",
     },
     async (uri, variables) => {
-      const sessionId = variables.sessionId as string;
-      const locations = worldTools.listLocations(sessionId);
+      const gameId = variables.gameId as string;
+      const locations = worldTools.listLocations(gameId);
       return {
         contents: [
           {
@@ -176,17 +176,17 @@ export function registerMcpResources(server: McpServer) {
   // Session map (JSON data)
   server.registerResource(
     "session-map",
-    new ResourceTemplate("dmcp://session/{sessionId}/map", {
-      list: createSessionListCallback("/map", (s) => `${s.name} - Map`),
+    new ResourceTemplate("dmcp://session/{gameId}/map", {
+      list: createGameListCallback("/map", (s) => `${s.name} - Map`),
     }),
     {
       description: "World map data with location nodes and connections",
       mimeType: "application/json",
     },
     async (uri, variables) => {
-      const sessionId = variables.sessionId as string;
-      const session = sessionTools.loadSession(sessionId);
-      const mapResult = worldTools.renderMap(sessionId, {
+      const gameId = variables.gameId as string;
+      const session = gameTools.loadGame(gameId);
+      const mapResult = worldTools.renderMap(gameId, {
         playerLocationId: session?.currentLocationId || undefined,
       });
       if (!mapResult) {
@@ -215,16 +215,16 @@ export function registerMcpResources(server: McpServer) {
   // Session quests
   server.registerResource(
     "session-quests",
-    new ResourceTemplate("dmcp://session/{sessionId}/quests", {
-      list: createSessionListCallback("/quests", (s) => `${s.name} - Quests`),
+    new ResourceTemplate("dmcp://session/{gameId}/quests", {
+      list: createGameListCallback("/quests", (s) => `${s.name} - Quests`),
     }),
     {
-      description: "All quests in the session",
+      description: "All quests in the game",
       mimeType: "application/json",
     },
     async (uri, variables) => {
-      const sessionId = variables.sessionId as string;
-      const quests = questTools.listQuests(sessionId);
+      const gameId = variables.gameId as string;
+      const quests = questTools.listQuests(gameId);
       return {
         contents: [
           {
@@ -240,16 +240,16 @@ export function registerMcpResources(server: McpServer) {
   // Session history (recent narrative events)
   server.registerResource(
     "session-history",
-    new ResourceTemplate("dmcp://session/{sessionId}/history", {
-      list: createSessionListCallback("/history", (s) => `${s.name} - History`),
+    new ResourceTemplate("dmcp://session/{gameId}/history", {
+      list: createGameListCallback("/history", (s) => `${s.name} - History`),
     }),
     {
       description: "Recent narrative events (last 50)",
       mimeType: "application/json",
     },
     async (uri, variables) => {
-      const sessionId = variables.sessionId as string;
-      const history = narrativeTools.getHistory(sessionId, { limit: 50 });
+      const gameId = variables.gameId as string;
+      const history = narrativeTools.getHistory(gameId, { limit: 50 });
       return {
         contents: [
           {
@@ -265,16 +265,16 @@ export function registerMcpResources(server: McpServer) {
   // Session rules
   server.registerResource(
     "session-rules",
-    new ResourceTemplate("dmcp://session/{sessionId}/rules", {
-      list: createSessionListCallback("/rules", (s) => `${s.name} - Rules`),
+    new ResourceTemplate("dmcp://session/{gameId}/rules", {
+      list: createGameListCallback("/rules", (s) => `${s.name} - Rules`),
     }),
     {
-      description: "Rule system for the session",
+      description: "Rule system for the game",
       mimeType: "application/json",
     },
     async (uri, variables) => {
-      const sessionId = variables.sessionId as string;
-      const rules = rulesTools.getRules(sessionId);
+      const gameId = variables.gameId as string;
+      const rules = rulesTools.getRules(gameId);
       if (!rules) {
         return {
           contents: [

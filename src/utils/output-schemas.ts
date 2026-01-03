@@ -33,10 +33,10 @@ export const listResponseSchema = <T extends z.ZodTypeAny>(itemSchema: T) => ({
 });
 
 // ============================================================================
-// SESSION SCHEMAS
+// GAME SCHEMAS
 // ============================================================================
 
-export const sessionOutputSchema = {
+export const gameOutputSchema = {
   id: z.string(),
   name: z.string(),
   setting: z.string(),
@@ -49,8 +49,8 @@ export const sessionOutputSchema = {
   }).optional(),
 };
 
-export const sessionStateOutputSchema = {
-  session: z.object({
+export const gameStateOutputSchema = {
+  game: z.object({
     id: z.string(),
     name: z.string(),
     setting: z.string(),
@@ -64,7 +64,7 @@ export const sessionStateOutputSchema = {
 
 export const gameMenuOutputSchema = {
   hasExistingGames: z.boolean(),
-  sessions: z.array(z.object({
+  games: z.array(z.object({
     id: z.string(),
     name: z.string(),
     setting: z.string(),
@@ -94,7 +94,7 @@ export const characterStatusSchema = z.object({
 
 export const characterOutputSchema = {
   id: z.string(),
-  sessionId: z.string(),
+  gameId: z.string(),
   name: z.string(),
   isPlayer: z.boolean(),
   attributes: z.record(z.string(), z.number()),
@@ -130,7 +130,7 @@ export const exitSchema = z.object({
 
 export const locationOutputSchema = {
   id: z.string(),
-  sessionId: z.string(),
+  gameId: z.string(),
   name: z.string(),
   description: z.string(),
   properties: z.object({
@@ -162,7 +162,7 @@ export const questObjectiveSchema = z.object({
 
 export const questOutputSchema = {
   id: z.string(),
-  sessionId: z.string(),
+  gameId: z.string(),
   name: z.string(),
   description: z.string(),
   objectives: z.array(questObjectiveSchema),
@@ -182,7 +182,7 @@ export const combatParticipantSchema = z.object({
 
 export const combatOutputSchema = {
   id: z.string(),
-  sessionId: z.string(),
+  gameId: z.string(),
   locationId: z.string(),
   participants: z.array(combatParticipantSchema),
   currentTurn: z.number(),
@@ -224,7 +224,7 @@ export const checkResultOutputSchema = {
 
 export const itemOutputSchema = {
   id: z.string(),
-  sessionId: z.string(),
+  gameId: z.string(),
   ownerId: z.string(),
   ownerType: z.enum(["character", "location"]),
   name: z.string(),
@@ -257,7 +257,7 @@ export const inventoryOutputSchema = {
 
 export const narrativeEventOutputSchema = {
   id: z.string(),
-  sessionId: z.string(),
+  gameId: z.string(),
   eventType: z.string(),
   content: z.string(),
   timestamp: z.string(),
@@ -310,9 +310,9 @@ export const mapOutputSchema = {
 
 export const resourceOutputSchema = {
   id: z.string(),
-  sessionId: z.string(),
+  gameId: z.string(),
   ownerId: z.string().nullable(),
-  ownerType: z.enum(["session", "character"]),
+  ownerType: z.enum(["game", "character"]),
   name: z.string(),
   description: z.string(),
   category: z.string().nullable(),
@@ -362,7 +362,7 @@ export const tagModifyOutputSchema = {
 
 export const storedImageOutputSchema = {
   id: z.string(),
-  sessionId: z.string(),
+  gameId: z.string(),
   entityId: z.string(),
   entityType: z.enum(["character", "location", "item", "scene", "faction"]),
   fileSize: z.number(),

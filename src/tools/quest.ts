@@ -4,7 +4,7 @@ import { safeJsonParse } from "../utils/json.js";
 import type { Quest, QuestObjective } from "../types/index.js";
 
 export function createQuest(params: {
-  sessionId: string;
+  gameId: string;
   name: string;
   description: string;
   objectives: Omit<QuestObjective, "id">[];
@@ -21,13 +21,13 @@ export function createQuest(params: {
   }));
 
   const stmt = db.prepare(`
-    INSERT INTO quests (id, session_id, name, description, objectives, status, rewards)
+    INSERT INTO quests (id, game_id, name, description, objectives, status, rewards)
     VALUES (?, ?, ?, ?, ?, 'active', ?)
   `);
 
   stmt.run(
     id,
-    params.sessionId,
+    params.gameId,
     params.name,
     params.description,
     JSON.stringify(objectives),
@@ -36,7 +36,7 @@ export function createQuest(params: {
 
   return {
     id,
-    sessionId: params.sessionId,
+    gameId: params.gameId,
     name: params.name,
     description: params.description,
     objectives,
@@ -54,7 +54,7 @@ export function getQuest(id: string): Quest | null {
 
   return {
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     name: row.name as string,
     description: row.description as string,
     objectives: safeJsonParse<QuestObjective[]>(row.objectives as string, []),
@@ -166,14 +166,14 @@ export function deleteQuest(id: string): boolean {
 }
 
 export function listQuests(
-  sessionId: string,
+  gameId: string,
   filter?: {
     status?: Quest["status"];
   }
 ): Quest[] {
   const db = getDatabase();
-  let query = `SELECT * FROM quests WHERE session_id = ?`;
-  const params: string[] = [sessionId];
+  let query = `SELECT * FROM quests WHERE game_id = ?`;
+  const params: string[] = [gameId];
 
   if (filter?.status) {
     query += ` AND status = ?`;
@@ -185,7 +185,7 @@ export function listQuests(
 
   return rows.map((row) => ({
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     name: row.name as string,
     description: row.description as string,
     objectives: safeJsonParse<QuestObjective[]>(row.objectives as string, []),
@@ -194,6 +194,6 @@ export function listQuests(
   }));
 }
 
-export function getActiveQuests(sessionId: string): Quest[] {
-  return listQuests(sessionId, { status: "active" });
+export function getActiveQuests(gameId: string): Quest[] {
+  return listQuests(gameId, { status: "active" });
 }

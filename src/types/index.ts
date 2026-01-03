@@ -1,5 +1,5 @@
-// Session types
-export interface Session {
+// Game types
+export interface Game {
   id: string;
   name: string;
   setting: string;
@@ -12,8 +12,8 @@ export interface Session {
   updatedAt: string;
 }
 
-// Lightweight session summary for listing (no rules/preferences)
-export interface SessionSummary {
+// Lightweight game summary for listing (no rules/preferences)
+export interface GameSummary {
   id: string;
   name: string;
   setting: string;
@@ -452,7 +452,7 @@ export interface ProgressionRules {
 // Character types
 export interface Character {
   id: string;
-  sessionId: string;
+  gameId: string;
   name: string;
   isPlayer: boolean;
   attributes: Record<string, number>;
@@ -486,7 +486,7 @@ export interface CharacterStatus {
 // Location types
 export interface Location {
   id: string;
-  sessionId: string;
+  gameId: string;
   name: string;
   description: string;
   properties: LocationProperties;
@@ -511,7 +511,7 @@ export interface Exit {
 // Item types
 export interface Item {
   id: string;
-  sessionId: string;
+  gameId: string;
   ownerId: string;
   ownerType: "character" | "location";
   name: string;
@@ -531,7 +531,7 @@ export interface ItemProperties {
 // Quest types
 export interface Quest {
   id: string;
-  sessionId: string;
+  gameId: string;
   name: string;
   description: string;
   objectives: QuestObjective[];
@@ -549,7 +549,7 @@ export interface QuestObjective {
 // Narrative types
 export interface NarrativeEvent {
   id: string;
-  sessionId: string;
+  gameId: string;
   eventType: string;
   content: string;
   metadata: Record<string, unknown>;
@@ -559,7 +559,7 @@ export interface NarrativeEvent {
 // Combat types
 export interface Combat {
   id: string;
-  sessionId: string;
+  gameId: string;
   locationId: string;
   participants: CombatParticipant[];
   currentTurn: number;
@@ -596,9 +596,9 @@ export interface CheckResult {
 // Resource types (for tracking currency, reputation, counters, etc.)
 export interface Resource {
   id: string;
-  sessionId: string;
-  ownerId: string | null;  // null for session-level resources
-  ownerType: "session" | "character";
+  gameId: string;
+  ownerId: string | null;  // null for game-level resources
+  ownerType: "game" | "character";
   name: string;
   description: string;
   category: string | null;
@@ -637,14 +637,14 @@ export interface CalendarConfig {
 }
 
 export interface GameTime {
-  sessionId: string;
+  gameId: string;
   currentTime: GameDateTime;
   calendarConfig: CalendarConfig;
 }
 
 export interface ScheduledEvent {
   id: string;
-  sessionId: string;
+  gameId: string;
   name: string;
   description: string;
   triggerTime: GameDateTime;
@@ -656,7 +656,7 @@ export interface ScheduledEvent {
 // Timer types
 export interface Timer {
   id: string;
-  sessionId: string;
+  gameId: string;
   name: string;
   description: string;
   timerType: "countdown" | "stopwatch" | "clock";
@@ -682,7 +682,7 @@ export interface TableEntry {
 
 export interface RandomTable {
   id: string;
-  sessionId: string;
+  gameId: string;
   name: string;
   description: string;
   category: string | null;
@@ -702,7 +702,7 @@ export interface TableRollResult {
 // Secret/Knowledge types
 export interface Secret {
   id: string;
-  sessionId: string;
+  gameId: string;
   name: string;
   description: string;
   category: string | null;
@@ -717,7 +717,7 @@ export interface Secret {
 // Relationship types
 export interface Relationship {
   id: string;
-  sessionId: string;
+  gameId: string;
   sourceId: string;
   sourceType: string;
   targetId: string;
@@ -742,7 +742,7 @@ export interface RelationshipChange {
 // Faction types
 export interface Faction {
   id: string;
-  sessionId: string;
+  gameId: string;
   name: string;
   description: string;
   leaderId: string | null;
@@ -757,7 +757,7 @@ export interface Faction {
 // Ability types
 export interface Ability {
   id: string;
-  sessionId: string;
+  gameId: string;
   ownerId: string | null;
   ownerType: "template" | "character";
   name: string;
@@ -775,7 +775,7 @@ export interface Ability {
 // Status effect types
 export interface StatusEffect {
   id: string;
-  sessionId: string;
+  gameId: string;
   targetId: string;
   name: string;
   description: string;
@@ -793,7 +793,7 @@ export interface StatusEffect {
 // Tag types
 export interface Tag {
   id: string;
-  sessionId: string;
+  gameId: string;
   entityId: string;
   entityType: string;
   tag: string;
@@ -805,7 +805,7 @@ export interface Tag {
 // Note types
 export interface Note {
   id: string;
-  sessionId: string;
+  gameId: string;
   title: string;
   content: string;
   category: string | null;
@@ -820,7 +820,7 @@ export interface Note {
 // External update types - enables multi-agent collaboration
 export interface ExternalUpdate {
   id: string;
-  sessionId: string;
+  gameId: string;
 
   // Source identification
   sourceAgent: string;           // ID/name of the agent pushing this update
@@ -851,7 +851,7 @@ export interface ExternalUpdate {
 }
 
 export interface PendingUpdatesResult {
-  sessionId: string;
+  gameId: string;
   pendingCount: number;
   urgentCount: number;
   updates: ExternalUpdate[];
@@ -862,7 +862,7 @@ export interface PendingUpdatesResult {
 // Pause state types - captures agent context for seamless resume
 export interface PauseState {
   id: string;
-  sessionId: string;
+  gameId: string;
 
   // Current scene/moment context
   currentScene: string;                    // Description of where we are in the story
@@ -894,7 +894,7 @@ export interface PauseState {
   // Metadata
   pauseReason: string | null;              // Why was the game paused
   createdAt: string;
-  modelUsed: string | null;                // Which model was running the session
+  modelUsed: string | null;                // Which model was running the game
 }
 
 export interface NarrativeThread {
@@ -918,8 +918,8 @@ export interface ActiveConversation {
 
 // Pause preparation checklist returned by prepare_pause
 export interface PauseChecklist {
-  sessionId: string;
-  sessionName: string;
+  gameId: string;
+  gameName: string;
 
   // Current state summary (for agent reference)
   currentState: {
@@ -931,7 +931,7 @@ export interface PauseChecklist {
     recentEventCount: number;
   };
 
-  // Comprehensive game state audit - everything that exists in the session
+  // Comprehensive game state audit - everything that exists in the game
   gameStateAudit: GameStateAudit;
 
   // Persistence reminders - things the DM should consider updating
@@ -977,7 +977,7 @@ export interface GameStateAudit {
     participantCount: number;
   };
   resources: {
-    sessionLevel: number;
+    gameLevel: number;
     characterLevel: number;
   };
   timers: {
@@ -1057,7 +1057,7 @@ export interface ResumeContext {
 
   // Full game state for quick reference
   gameState: {
-    session: Session;
+    game: Game;
     playerCharacter: Character | null;
     currentLocation: Location | null;
     activeQuests: Quest[];
@@ -1080,7 +1080,7 @@ export interface ResumeContext {
 // Stored image types - for file-based image storage
 export interface StoredImage {
   id: string;
-  sessionId: string;
+  gameId: string;
   entityId: string;
   entityType: "character" | "location" | "item" | "scene" | "faction";
   entityName?: string;  // Populated at runtime for confirmation, not stored in DB
@@ -1108,7 +1108,7 @@ export interface StoredImage {
 }
 
 export interface StoreImageParams {
-  sessionId: string;
+  gameId: string;
   entityId: string;
   entityType: "character" | "location" | "item" | "scene" | "faction";
 

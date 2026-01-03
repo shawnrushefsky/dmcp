@@ -7,13 +7,13 @@ import { roll } from "./dice.js";
 import { getRules } from "./rules.js";
 
 export function startCombat(params: {
-  sessionId: string;
+  gameId: string;
   locationId: string;
   participantIds: string[];
 }): Combat {
   const db = getDatabase();
   const id = uuidv4();
-  const rules = getRules(params.sessionId);
+  const rules = getRules(params.gameId);
 
   // Roll initiative for each participant
   const participants: CombatParticipant[] = params.participantIds.map(
@@ -46,15 +46,15 @@ export function startCombat(params: {
   participants.sort((a, b) => b.initiative - a.initiative);
 
   const stmt = db.prepare(`
-    INSERT INTO combats (id, session_id, location_id, participants, current_turn, round, status, log)
+    INSERT INTO combats (id, game_id, location_id, participants, current_turn, round, status, log)
     VALUES (?, ?, ?, ?, 0, 1, 'active', '[]')
   `);
 
-  stmt.run(id, params.sessionId, params.locationId, JSON.stringify(participants));
+  stmt.run(id, params.gameId, params.locationId, JSON.stringify(participants));
 
   return {
     id,
-    sessionId: params.sessionId,
+    gameId: params.gameId,
     locationId: params.locationId,
     participants,
     currentTurn: 0,
@@ -73,7 +73,7 @@ export function getCombat(id: string): Combat | null {
 
   return {
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     locationId: row.location_id as string,
     participants: safeJsonParse<CombatParticipant[]>(row.participants as string, []),
     currentTurn: row.current_turn as number,
@@ -83,18 +83,18 @@ export function getCombat(id: string): Combat | null {
   };
 }
 
-export function getActiveCombat(sessionId: string): Combat | null {
+export function getActiveCombat(gameId: string): Combat | null {
   const db = getDatabase();
   const stmt = db.prepare(
-    `SELECT * FROM combats WHERE session_id = ? AND status = 'active' LIMIT 1`
+    `SELECT * FROM combats WHERE game_id = ? AND status = 'active' LIMIT 1`
   );
-  const row = stmt.get(sessionId) as Record<string, unknown> | undefined;
+  const row = stmt.get(gameId) as Record<string, unknown> | undefined;
 
   if (!row) return null;
 
   return {
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     locationId: row.location_id as string,
     participants: safeJsonParse<CombatParticipant[]>(row.participants as string, []),
     currentTurn: row.current_turn as number,

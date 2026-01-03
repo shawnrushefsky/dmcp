@@ -34,16 +34,16 @@ export function roll(expression: string): DiceRoll {
 
 // Perform a skill/ability check using session rules
 export function check(params: {
-  sessionId: string;
+  gameId: string;
   characterId: string;
   skill?: string;
   attribute?: string;
   difficulty: number;
   bonusModifier?: number;
 }): CheckResult {
-  const rules = getRules(params.sessionId);
+  const rules = getRules(params.gameId);
   if (!rules) {
-    throw new Error(`No rules set for session ${params.sessionId}`);
+    throw new Error(`No rules set for session ${params.gameId}`);
   }
 
   const character = getCharacter(params.characterId);
@@ -91,7 +91,7 @@ export function check(params: {
 
 // Opposed check between two characters
 export function contest(params: {
-  sessionId: string;
+  gameId: string;
   attackerId: string;
   defenderId: string;
   attackerSkill?: string;
@@ -103,14 +103,14 @@ export function contest(params: {
   defenderResult: CheckResult;
   winner: "attacker" | "defender" | "tie";
 } {
-  const rules = getRules(params.sessionId);
+  const rules = getRules(params.gameId);
   if (!rules) {
-    throw new Error(`No rules set for session ${params.sessionId}`);
+    throw new Error(`No rules set for session ${params.gameId}`);
   }
 
   // Both roll against difficulty 0, we compare totals
   const attackerResult = check({
-    sessionId: params.sessionId,
+    gameId: params.gameId,
     characterId: params.attackerId,
     skill: params.attackerSkill,
     attribute: params.attackerAttribute,
@@ -118,7 +118,7 @@ export function contest(params: {
   });
 
   const defenderResult = check({
-    sessionId: params.sessionId,
+    gameId: params.gameId,
     characterId: params.defenderId,
     skill: params.defenderSkill,
     attribute: params.defenderAttribute,

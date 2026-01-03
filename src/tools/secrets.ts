@@ -4,7 +4,7 @@ import { safeJsonParse } from "../utils/json.js";
 import type { Secret } from "../types/index.js";
 
 export function createSecret(params: {
-  sessionId: string;
+  gameId: string;
   name: string;
   description: string;
   category?: string;
@@ -17,11 +17,11 @@ export function createSecret(params: {
   const now = new Date().toISOString();
 
   db.prepare(`
-    INSERT INTO secrets (id, session_id, name, description, category, related_entity_id, related_entity_type, clues, created_at)
+    INSERT INTO secrets (id, game_id, name, description, category, related_entity_id, related_entity_type, clues, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
-    params.sessionId,
+    params.gameId,
     params.name,
     params.description,
     params.category || null,
@@ -33,7 +33,7 @@ export function createSecret(params: {
 
   return {
     id,
-    sessionId: params.sessionId,
+    gameId: params.gameId,
     name: params.name,
     description: params.description,
     category: params.category || null,
@@ -54,7 +54,7 @@ export function getSecret(id: string): Secret | null {
 
   return {
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     name: row.name as string,
     description: row.description as string,
     category: row.category as string | null,
@@ -110,7 +110,7 @@ export function deleteSecret(id: string): boolean {
 }
 
 export function listSecrets(
-  sessionId: string,
+  gameId: string,
   filter?: {
     category?: string;
     relatedEntityId?: string;
@@ -120,8 +120,8 @@ export function listSecrets(
 ): Secret[] {
   const db = getDatabase();
 
-  let query = `SELECT * FROM secrets WHERE session_id = ?`;
-  const params: (string | number)[] = [sessionId];
+  let query = `SELECT * FROM secrets WHERE game_id = ?`;
+  const params: (string | number)[] = [gameId];
 
   if (filter?.category) {
     query += ` AND category = ?`;
@@ -144,7 +144,7 @@ export function listSecrets(
 
   let secrets = rows.map(row => ({
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     name: row.name as string,
     description: row.description as string,
     category: row.category as string | null,
@@ -242,8 +242,8 @@ export interface CharacterKnowledge {
   cluesFound: Array<{ secret: Secret; clueIndex: number; clue: string }>;
 }
 
-export function getCharacterKnowledge(sessionId: string, characterId: string): CharacterKnowledge {
-  const allSecrets = listSecrets(sessionId);
+export function getCharacterKnowledge(gameId: string, characterId: string): CharacterKnowledge {
+  const allSecrets = listSecrets(gameId);
 
   const knownSecrets = allSecrets.filter(s => s.isPublic || s.revealedTo.includes(characterId));
 

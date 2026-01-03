@@ -5,7 +5,7 @@ import type { RandomTable, TableEntry, TableRollResult, DiceRoll } from "../type
 import { roll } from "./dice.js";
 
 export function createTable(params: {
-  sessionId: string;
+  gameId: string;
   name: string;
   description?: string;
   category?: string;
@@ -20,11 +20,11 @@ export function createTable(params: {
   const rollExpression = params.rollExpression || "1d100";
 
   db.prepare(`
-    INSERT INTO random_tables (id, session_id, name, description, category, entries, roll_expression, created_at)
+    INSERT INTO random_tables (id, game_id, name, description, category, entries, roll_expression, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
-    params.sessionId,
+    params.gameId,
     params.name,
     params.description || "",
     params.category || null,
@@ -35,7 +35,7 @@ export function createTable(params: {
 
   return {
     id,
-    sessionId: params.sessionId,
+    gameId: params.gameId,
     name: params.name,
     description: params.description || "",
     category: params.category || null,
@@ -53,7 +53,7 @@ export function getTable(id: string): RandomTable | null {
 
   return {
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     name: row.name as string,
     description: row.description as string || "",
     category: row.category as string | null,
@@ -105,11 +105,11 @@ export function deleteTable(id: string): boolean {
   return result.changes > 0;
 }
 
-export function listTables(sessionId: string, category?: string): RandomTable[] {
+export function listTables(gameId: string, category?: string): RandomTable[] {
   const db = getDatabase();
 
-  let query = `SELECT * FROM random_tables WHERE session_id = ?`;
-  const params: string[] = [sessionId];
+  let query = `SELECT * FROM random_tables WHERE game_id = ?`;
+  const params: string[] = [gameId];
 
   if (category) {
     query += ` AND category = ?`;
@@ -122,7 +122,7 @@ export function listTables(sessionId: string, category?: string): RandomTable[] 
 
   return rows.map(row => ({
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     name: row.name as string,
     description: row.description as string || "",
     category: row.category as string | null,
@@ -231,7 +231,7 @@ export function modifyTableEntries(
 
 // Helper to create a simple d6 table quickly
 export function createSimpleTable(
-  sessionId: string,
+  gameId: string,
   name: string,
   results: string[],
   category?: string
@@ -244,7 +244,7 @@ export function createSimpleTable(
   }));
 
   return createTable({
-    sessionId,
+    gameId,
     name,
     category,
     entries,

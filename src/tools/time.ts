@@ -69,7 +69,7 @@ function compareDateTime(a: GameDateTime, b: GameDateTime, config: CalendarConfi
   return dateTimeToMinutes(a, config) - dateTimeToMinutes(b, config);
 }
 
-export function setCalendar(sessionId: string, config: Partial<CalendarConfig>, currentTime?: GameDateTime): GameTime {
+export function setCalendar(gameId: string, config: Partial<CalendarConfig>, currentTime?: GameDateTime): GameTime {
   const db = getDatabase();
 
   const calendarConfig: CalendarConfig = {
@@ -86,39 +86,39 @@ export function setCalendar(sessionId: string, config: Partial<CalendarConfig>, 
   };
 
   // Upsert
-  const existing = db.prepare(`SELECT session_id FROM game_time WHERE session_id = ?`).get(sessionId);
+  const existing = db.prepare(`SELECT game_id FROM game_time WHERE game_id = ?`).get(gameId);
 
   if (existing) {
-    db.prepare(`UPDATE game_time SET current_time = ?, calendar_config = ? WHERE session_id = ?`)
-      .run(JSON.stringify(time), JSON.stringify(calendarConfig), sessionId);
+    db.prepare(`UPDATE game_time SET current_time = ?, calendar_config = ? WHERE game_id = ?`)
+      .run(JSON.stringify(time), JSON.stringify(calendarConfig), gameId);
   } else {
-    db.prepare(`INSERT INTO game_time (session_id, current_time, calendar_config) VALUES (?, ?, ?)`)
-      .run(sessionId, JSON.stringify(time), JSON.stringify(calendarConfig));
+    db.prepare(`INSERT INTO game_time (game_id, current_time, calendar_config) VALUES (?, ?, ?)`)
+      .run(gameId, JSON.stringify(time), JSON.stringify(calendarConfig));
   }
 
-  return { sessionId, currentTime: time, calendarConfig };
+  return { gameId, currentTime: time, calendarConfig };
 }
 
-export function getTime(sessionId: string): GameTime | null {
+export function getTime(gameId: string): GameTime | null {
   const db = getDatabase();
-  const row = db.prepare(`SELECT * FROM game_time WHERE session_id = ?`).get(sessionId) as Record<string, unknown> | undefined;
+  const row = db.prepare(`SELECT * FROM game_time WHERE game_id = ?`).get(gameId) as Record<string, unknown> | undefined;
 
   if (!row) return null;
 
   return {
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     currentTime: safeJsonParse<GameDateTime>(row.current_time as string, { year: 1, month: 1, day: 1, hour: 0, minute: 0 }),
     calendarConfig: safeJsonParse<CalendarConfig>(row.calendar_config as string, DEFAULT_CALENDAR),
   };
 }
 
-export function setTime(sessionId: string, time: GameDateTime): GameTime | null {
+export function setTime(gameId: string, time: GameDateTime): GameTime | null {
   const db = getDatabase();
-  const gameTime = getTime(sessionId);
+  const gameTime = getTime(gameId);
   if (!gameTime) return null;
 
-  db.prepare(`UPDATE game_time SET current_time = ? WHERE session_id = ?`)
-    .run(JSON.stringify(time), sessionId);
+  db.prepare(`UPDATE game_time SET current_time = ? WHERE game_id = ?`)
+    .run(JSON.stringify(time), gameId);
 
   return { ...gameTime, currentTime: time };
 }
@@ -130,11 +130,11 @@ export interface AdvanceResult {
 }
 
 export function advanceTime(
-  sessionId: string,
+  gameId: string,
   duration: { days?: number; hours?: number; minutes?: number }
 ): AdvanceResult | null {
   const db = getDatabase();
-  const gameTime = getTime(sessionId);
+  const gameTime = getTime(gameId);
   if (!gameTime) return null;
 
   const { currentTime, calendarConfig } = gameTime;
@@ -149,14 +149,14 @@ export function advanceTime(
   const newTime = minutesToDateTime(totalMinutes, calendarConfig);
 
   // Update time
-  db.prepare(`UPDATE game_time SET current_time = ? WHERE session_id = ?`)
-    .run(JSON.stringify(newTime), sessionId);
+  db.prepare(`UPDATE game_time SET current_time = ? WHERE game_id = ?`)
+    .run(JSON.stringify(newTime), gameId);
 
   // Check for triggered events
   const events = db.prepare(`
     SELECT * FROM scheduled_events
-    WHERE session_id = ? AND triggered = 0
-  `).all(sessionId) as Record<string, unknown>[];
+    WHERE game_id = ? AND triggered = 0
+  `).all(gameId) as Record<string, unknown>[];
 
   const triggeredEvents: ScheduledEvent[] = [];
 
@@ -170,7 +170,7 @@ export function advanceTime(
     ) {
       const event: ScheduledEvent = {
         id: row.id as string,
-        sessionId: row.session_id as string,
+        gameId: row.game_id as string,
         name: row.name as string,
         description: row.description as string || "",
         triggerTime,
@@ -221,7 +221,7 @@ function rescheduleEvent(current: GameDateTime, recurring: string, config: Calen
 }
 
 export function scheduleEvent(params: {
-  sessionId: string;
+  gameId: string;
   name: string;
   description?: string;
   triggerTime: GameDateTime;
@@ -232,11 +232,11 @@ export function scheduleEvent(params: {
   const id = uuidv4();
 
   db.prepare(`
-    INSERT INTO scheduled_events (id, session_id, name, description, trigger_time, recurring, metadata)
+    INSERT INTO scheduled_events (id, game_id, name, description, trigger_time, recurring, metadata)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
-    params.sessionId,
+    params.gameId,
     params.name,
     params.description || "",
     JSON.stringify(params.triggerTime),
@@ -246,7 +246,7 @@ export function scheduleEvent(params: {
 
   return {
     id,
-    sessionId: params.sessionId,
+    gameId: params.gameId,
     name: params.name,
     description: params.description || "",
     triggerTime: params.triggerTime,
@@ -256,20 +256,20 @@ export function scheduleEvent(params: {
   };
 }
 
-export function listScheduledEvents(sessionId: string, includeTriggered = false): ScheduledEvent[] {
+export function listScheduledEvents(gameId: string, includeTriggered = false): ScheduledEvent[] {
   const db = getDatabase();
 
-  let query = `SELECT * FROM scheduled_events WHERE session_id = ?`;
+  let query = `SELECT * FROM scheduled_events WHERE game_id = ?`;
   if (!includeTriggered) {
     query += ` AND triggered = 0`;
   }
   query += ` ORDER BY trigger_time`;
 
-  const rows = db.prepare(query).all(sessionId) as Record<string, unknown>[];
+  const rows = db.prepare(query).all(gameId) as Record<string, unknown>[];
 
   return rows.map(row => ({
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     name: row.name as string,
     description: row.description as string || "",
     triggerTime: safeJsonParse<GameDateTime>(row.trigger_time as string, { year: 1, month: 1, day: 1, hour: 0, minute: 0 }),

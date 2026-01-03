@@ -1,4 +1,4 @@
-export interface Session {
+export interface Game {
   id: string
   name: string
   setting: string
@@ -18,7 +18,7 @@ export interface CharacterStatus {
 
 export interface Character {
   id: string
-  sessionId: string
+  gameId: string
   name: string
   isPlayer: boolean
   locationId: string | null
@@ -45,7 +45,7 @@ export interface LocationProperties {
 
 export interface Location {
   id: string
-  sessionId: string
+  gameId: string
   name: string
   description: string
   properties: LocationProperties
@@ -63,7 +63,7 @@ export interface QuestObjective {
 
 export interface Quest {
   id: string
-  sessionId: string
+  gameId: string
   name: string
   description: string
   status: 'active' | 'completed' | 'failed' | 'abandoned'
@@ -75,7 +75,7 @@ export interface Quest {
 
 export interface NarrativeEvent {
   id: string
-  sessionId: string
+  gameId: string
   eventType: string
   content: string
   timestamp: string
@@ -84,7 +84,7 @@ export interface NarrativeEvent {
 
 export interface Item {
   id: string
-  sessionId: string
+  gameId: string
   name: string
   type?: string
   ownerId: string
@@ -94,7 +94,7 @@ export interface Item {
 
 export interface Faction {
   id: string
-  sessionId: string
+  gameId: string
   name: string
   description?: string
   status: 'active' | 'disbanded' | 'hidden'
@@ -110,8 +110,8 @@ export interface Faction {
 
 export interface Resource {
   id: string
-  sessionId: string
-  ownerType: 'session' | 'character'
+  gameId: string
+  ownerType: 'game' | 'character'
   ownerId?: string
   name: string
   description?: string
@@ -125,7 +125,7 @@ export interface Resource {
 
 export interface Note {
   id: string
-  sessionId: string
+  gameId: string
   title: string
   content: string
   category?: string
@@ -148,7 +148,7 @@ export interface GameTime {
 
 export interface Combat {
   id: string
-  sessionId: string
+  gameId: string
   locationId: string
   status: 'active' | 'ended'
   round: number
@@ -157,7 +157,7 @@ export interface Combat {
 
 export interface StoredImage {
   id: string
-  sessionId: string
+  gameId: string
   entityId: string
   entityType: 'character' | 'location' | 'item' | 'scene'
   label?: string
@@ -191,7 +191,7 @@ export interface CharacterSheet {
   locationName: string
 }
 
-export interface SessionCounts {
+export interface GameCounts {
   characters: number
   locations: number
   quests: number
@@ -207,15 +207,15 @@ export interface SessionCounts {
   events: number
 }
 
-export interface SessionState {
-  session: Session
+export interface GameState {
+  game: Game
   characters: Character[]
   locations: Location[]
   quests: Quest[]
   factions: Faction[]
   resources: Resource[]
   notes: Note[]
-  counts: SessionCounts
+  counts: GameCounts
   activeCombat: Combat | null
   gameTime: GameTime | null
 }
@@ -228,7 +228,7 @@ export interface EntityImages {
 export interface Breadcrumb {
   label: string
   href?: string
-  icon?: 'home' | 'session' | 'character' | 'location' | 'quest' | 'image'
+  icon?: 'home' | 'game' | 'character' | 'location' | 'quest' | 'image'
 }
 
 // Image Generation Preset - a named collection of settings for a specific use case

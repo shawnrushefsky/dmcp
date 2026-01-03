@@ -1,20 +1,20 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
 import { safeJsonParse } from "../utils/json.js";
-import type { Session, RuleSystem, GamePreferences, ImageGenerationPreferences, ImageGenerationPreset, ImagePromptTemplate } from "../types/index.js";
+import type { Game, RuleSystem, GamePreferences, ImageGenerationPreferences, ImageGenerationPreset, ImagePromptTemplate } from "../types/index.js";
 
-export function createSession(params: {
+export function createGame(params: {
   name: string;
   setting: string;
   style: string;
   preferences?: GamePreferences;
-}): Session {
+}): Game {
   const db = getDatabase();
   const id = uuidv4();
   const now = new Date().toISOString();
 
   const stmt = db.prepare(`
-    INSERT INTO sessions (id, name, setting, style, rules, preferences, current_location_id, created_at, updated_at)
+    INSERT INTO games (id, name, setting, style, rules, preferences, current_location_id, created_at, updated_at)
     VALUES (?, ?, ?, ?, NULL, ?, NULL, ?, ?)
   `);
 
@@ -42,9 +42,9 @@ export function createSession(params: {
   };
 }
 
-export function loadSession(id: string): Session | null {
+export function loadGame(id: string): Game | null {
   const db = getDatabase();
-  const stmt = db.prepare(`SELECT * FROM sessions WHERE id = ?`);
+  const stmt = db.prepare(`SELECT * FROM games WHERE id = ?`);
   const row = stmt.get(id) as Record<string, unknown> | undefined;
 
   if (!row) return null;
@@ -63,9 +63,9 @@ export function loadSession(id: string): Session | null {
   };
 }
 
-export function listSessions(): Session[] {
+export function listGames(): Game[] {
   const db = getDatabase();
-  const stmt = db.prepare(`SELECT * FROM sessions ORDER BY updated_at DESC`);
+  const stmt = db.prepare(`SELECT * FROM games ORDER BY updated_at DESC`);
   const rows = stmt.all() as Record<string, unknown>[];
 
   return rows.map((row) => ({
@@ -83,9 +83,9 @@ export function listSessions(): Session[] {
 }
 
 // Lightweight version that omits rules and preferences for listing
-export function listSessionSummaries(): import("../types/index.js").SessionSummary[] {
+export function listGameSummaries(): import("../types/index.js").GameSummary[] {
   const db = getDatabase();
-  const stmt = db.prepare(`SELECT id, name, setting, style, title_image_id, created_at, updated_at FROM sessions ORDER BY updated_at DESC`);
+  const stmt = db.prepare(`SELECT id, name, setting, style, title_image_id, created_at, updated_at FROM games ORDER BY updated_at DESC`);
   const rows = stmt.all() as Record<string, unknown>[];
 
   return rows.map((row) => ({
@@ -99,64 +99,64 @@ export function listSessionSummaries(): import("../types/index.js").SessionSumma
   }));
 }
 
-export function updateSessionPreferences(
-  sessionId: string,
+export function updateGamePreferences(
+  gameId: string,
   preferences: GamePreferences
 ): boolean {
   const db = getDatabase();
   const now = new Date().toISOString();
   const stmt = db.prepare(`
-    UPDATE sessions SET preferences = ?, updated_at = ? WHERE id = ?
+    UPDATE games SET preferences = ?, updated_at = ? WHERE id = ?
   `);
-  const result = stmt.run(JSON.stringify(preferences), now, sessionId);
+  const result = stmt.run(JSON.stringify(preferences), now, gameId);
   return result.changes > 0;
 }
 
-export function getSessionPreferences(sessionId: string): GamePreferences | null {
-  const session = loadSession(sessionId);
-  return session?.preferences || null;
+export function getGamePreferences(gameId: string): GamePreferences | null {
+  const game = loadGame(gameId);
+  return game?.preferences || null;
 }
 
-export function deleteSession(id: string): boolean {
+export function deleteGame(id: string): boolean {
   const db = getDatabase();
-  const stmt = db.prepare(`DELETE FROM sessions WHERE id = ?`);
+  const stmt = db.prepare(`DELETE FROM games WHERE id = ?`);
   const result = stmt.run(id);
   return result.changes > 0;
 }
 
-export function updateSessionLocation(
-  sessionId: string,
+export function updateGameLocation(
+  gameId: string,
   locationId: string | null
 ): boolean {
   const db = getDatabase();
   const now = new Date().toISOString();
   const stmt = db.prepare(`
-    UPDATE sessions SET current_location_id = ?, updated_at = ? WHERE id = ?
+    UPDATE games SET current_location_id = ?, updated_at = ? WHERE id = ?
   `);
-  const result = stmt.run(locationId, now, sessionId);
+  const result = stmt.run(locationId, now, gameId);
   return result.changes > 0;
 }
 
-export function updateSession(
-  sessionId: string,
+export function updateGame(
+  gameId: string,
   updates: { name?: string; setting?: string; style?: string }
-): Session | null {
+): Game | null {
   const db = getDatabase();
-  const session = loadSession(sessionId);
-  if (!session) return null;
+  const game = loadGame(gameId);
+  if (!game) return null;
 
   const now = new Date().toISOString();
-  const newName = updates.name ?? session.name;
-  const newSetting = updates.setting ?? session.setting;
-  const newStyle = updates.style ?? session.style;
+  const newName = updates.name ?? game.name;
+  const newSetting = updates.setting ?? game.setting;
+  const newStyle = updates.style ?? game.style;
 
   const stmt = db.prepare(`
-    UPDATE sessions SET name = ?, setting = ?, style = ?, updated_at = ? WHERE id = ?
+    UPDATE games SET name = ?, setting = ?, style = ?, updated_at = ? WHERE id = ?
   `);
-  stmt.run(newName, newSetting, newStyle, now, sessionId);
+  stmt.run(newName, newSetting, newStyle, now, gameId);
 
   return {
-    ...session,
+    ...game,
     name: newName,
     setting: newSetting,
     style: newStyle,
@@ -165,21 +165,21 @@ export function updateSession(
 }
 
 export function setSessionTitleImage(
-  sessionId: string,
+  gameId: string,
   imageId: string | null
-): Session | null {
+): Game | null {
   const db = getDatabase();
-  const session = loadSession(sessionId);
-  if (!session) return null;
+  const game = loadGame(gameId);
+  if (!game) return null;
 
   const now = new Date().toISOString();
   const stmt = db.prepare(`
-    UPDATE sessions SET title_image_id = ?, updated_at = ? WHERE id = ?
+    UPDATE games SET title_image_id = ?, updated_at = ? WHERE id = ?
   `);
-  stmt.run(imageId, now, sessionId);
+  stmt.run(imageId, now, gameId);
 
   return {
-    ...session,
+    ...game,
     titleImageId: imageId,
     updatedAt: now,
   };
@@ -187,7 +187,7 @@ export function setSessionTitleImage(
 
 export interface GameMenuResult {
   hasExistingGames: boolean;
-  sessions: Array<{
+  games: Array<{
     id: string;
     name: string;
     setting: string;
@@ -202,32 +202,32 @@ export interface GameMenuResult {
 
 export function getGameMenu(): GameMenuResult {
   const db = getDatabase();
-  const sessions = listSessions();
+  const games = listGames();
 
-  if (sessions.length === 0) {
+  if (games.length === 0) {
     return {
       hasExistingGames: false,
-      sessions: [],
+      games: [],
       instruction: "No existing games found. Start the new game interview process directly using get_interview_template.",
       visualizationTip: "Enhance the experience with visuals: use render_map for world maps, and use image generation for character portraits, items, and scene illustrations.",
     };
   }
 
-  // Get additional info for each session
-  const sessionsWithInfo = sessions.map((session) => {
+  // Get additional info for each game
+  const gamesWithInfo = games.map((game) => {
     const charCount = db
-      .prepare(`SELECT COUNT(*) as count FROM characters WHERE session_id = ?`)
-      .get(session.id) as { count: number };
+      .prepare(`SELECT COUNT(*) as count FROM characters WHERE game_id = ?`)
+      .get(game.id) as { count: number };
     const locCount = db
-      .prepare(`SELECT COUNT(*) as count FROM locations WHERE session_id = ?`)
-      .get(session.id) as { count: number };
+      .prepare(`SELECT COUNT(*) as count FROM locations WHERE game_id = ?`)
+      .get(game.id) as { count: number };
 
     return {
-      id: session.id,
-      name: session.name,
-      setting: session.setting,
-      style: session.style,
-      lastPlayed: session.updatedAt,
+      id: game.id,
+      name: game.name,
+      setting: game.setting,
+      style: game.style,
+      lastPlayed: game.updatedAt,
       characterCount: charCount.count,
       locationCount: locCount.count,
     };
@@ -235,14 +235,14 @@ export function getGameMenu(): GameMenuResult {
 
   return {
     hasExistingGames: true,
-    sessions: sessionsWithInfo,
+    games: gamesWithInfo,
     instruction: "Present these existing games as choices (most recent first), with an option to start a new game. Use present_choices or ask the player which game to continue.",
     visualizationTip: "Enhance the experience with visuals: use render_map for world maps, and create ASCII art for character portraits, items, scene illustrations, and combat layouts when image generation isn't available.",
   };
 }
 
-export function getSessionState(sessionId: string): {
-  session: Session;
+export function getGameState(gameId: string): {
+  game: Game;
   characterCount: number;
   locationCount: number;
   activeQuests: number;
@@ -250,28 +250,28 @@ export function getSessionState(sessionId: string): {
 } | null {
   const db = getDatabase();
 
-  const session = loadSession(sessionId);
-  if (!session) return null;
+  const game = loadGame(gameId);
+  if (!game) return null;
 
   const charCount = db
-    .prepare(`SELECT COUNT(*) as count FROM characters WHERE session_id = ?`)
-    .get(sessionId) as { count: number };
+    .prepare(`SELECT COUNT(*) as count FROM characters WHERE game_id = ?`)
+    .get(gameId) as { count: number };
   const locCount = db
-    .prepare(`SELECT COUNT(*) as count FROM locations WHERE session_id = ?`)
-    .get(sessionId) as { count: number };
+    .prepare(`SELECT COUNT(*) as count FROM locations WHERE game_id = ?`)
+    .get(gameId) as { count: number };
   const questCount = db
     .prepare(
-      `SELECT COUNT(*) as count FROM quests WHERE session_id = ? AND status = 'active'`
+      `SELECT COUNT(*) as count FROM quests WHERE game_id = ? AND status = 'active'`
     )
-    .get(sessionId) as { count: number };
+    .get(gameId) as { count: number };
   const combat = db
     .prepare(
-      `SELECT COUNT(*) as count FROM combats WHERE session_id = ? AND status = 'active'`
+      `SELECT COUNT(*) as count FROM combats WHERE game_id = ? AND status = 'active'`
     )
-    .get(sessionId) as { count: number };
+    .get(gameId) as { count: number };
 
   return {
-    session,
+    game,
     characterCount: charCount.count,
     locationCount: locCount.count,
     activeQuests: questCount.count,
@@ -284,24 +284,24 @@ export function getSessionState(sessionId: string): {
 // ============================================================================
 
 export function listImageGenerationPresets(
-  sessionId: string
+  gameId: string
 ): ImageGenerationPreset[] {
-  const preferences = getSessionPreferences(sessionId);
+  const preferences = getGamePreferences(gameId);
   return preferences?.imageGenerationPresets || [];
 }
 
 export function getImageGenerationPreset(
-  sessionId: string,
+  gameId: string,
   presetId: string
 ): ImageGenerationPreset | null {
-  const presets = listImageGenerationPresets(sessionId);
+  const presets = listImageGenerationPresets(gameId);
   return presets.find(p => p.id === presetId) || null;
 }
 
 export function getDefaultImagePreset(
-  sessionId: string
+  gameId: string
 ): ImageGenerationPreset | null {
-  const preferences = getSessionPreferences(sessionId);
+  const preferences = getGamePreferences(gameId);
   const presets = preferences?.imageGenerationPresets || [];
 
   // First try to find by defaultImagePresetId
@@ -319,7 +319,7 @@ export function getDefaultImagePreset(
 }
 
 export function createImageGenerationPreset(
-  sessionId: string,
+  gameId: string,
   params: {
     name: string;
     description?: string;
@@ -328,7 +328,7 @@ export function createImageGenerationPreset(
     config: ImageGenerationPreferences;
   }
 ): ImageGenerationPreset {
-  const currentPrefs = getSessionPreferences(sessionId) || {} as GamePreferences;
+  const currentPrefs = getGamePreferences(gameId) || {} as GamePreferences;
   const presets = currentPrefs.imageGenerationPresets || [];
 
   const now = new Date().toISOString();
@@ -355,12 +355,12 @@ export function createImageGenerationPreset(
     ...(params.isDefault ? { defaultImagePresetId: newPreset.id } : {}),
   };
 
-  updateSessionPreferences(sessionId, updatedPrefs);
+  updateGamePreferences(gameId, updatedPrefs);
   return newPreset;
 }
 
 export function updateImageGenerationPreset(
-  sessionId: string,
+  gameId: string,
   presetId: string,
   updates: {
     name?: string;
@@ -370,7 +370,7 @@ export function updateImageGenerationPreset(
     config?: Partial<ImageGenerationPreferences>;
   }
 ): ImageGenerationPreset | null {
-  const currentPrefs = getSessionPreferences(sessionId) || {} as GamePreferences;
+  const currentPrefs = getGamePreferences(gameId) || {} as GamePreferences;
   const presets = currentPrefs.imageGenerationPresets || [];
 
   const presetIndex = presets.findIndex(p => p.id === presetId);
@@ -408,15 +408,15 @@ export function updateImageGenerationPreset(
     ...(updates.isDefault ? { defaultImagePresetId: presetId } : {}),
   };
 
-  updateSessionPreferences(sessionId, updatedPrefs);
+  updateGamePreferences(gameId, updatedPrefs);
   return updatedPreset;
 }
 
 export function deleteImageGenerationPreset(
-  sessionId: string,
+  gameId: string,
   presetId: string
 ): boolean {
-  const currentPrefs = getSessionPreferences(sessionId) || {} as GamePreferences;
+  const currentPrefs = getGamePreferences(gameId) || {} as GamePreferences;
   const presets = currentPrefs.imageGenerationPresets || [];
 
   const filteredPresets = presets.filter(p => p.id !== presetId);
@@ -429,15 +429,15 @@ export function deleteImageGenerationPreset(
     ...(currentPrefs.defaultImagePresetId === presetId ? { defaultImagePresetId: undefined } : {}),
   };
 
-  updateSessionPreferences(sessionId, updatedPrefs);
+  updateGamePreferences(gameId, updatedPrefs);
   return true;
 }
 
 export function setDefaultImagePreset(
-  sessionId: string,
+  gameId: string,
   presetId: string
 ): boolean {
-  const currentPrefs = getSessionPreferences(sessionId) || {} as GamePreferences;
+  const currentPrefs = getGamePreferences(gameId) || {} as GamePreferences;
   const presets = currentPrefs.imageGenerationPresets || [];
 
   // Verify preset exists
@@ -456,7 +456,7 @@ export function setDefaultImagePreset(
     defaultImagePresetId: presetId,
   };
 
-  updateSessionPreferences(sessionId, updatedPrefs);
+  updateGamePreferences(gameId, updatedPrefs);
   return true;
 }
 
@@ -521,25 +521,25 @@ function deepMergePreferences(
 // ============================================================================
 
 export function listImagePromptTemplates(
-  sessionId: string
+  gameId: string
 ): ImagePromptTemplate[] {
-  const preferences = getSessionPreferences(sessionId);
+  const preferences = getGamePreferences(gameId);
   return preferences?.imagePromptTemplates || [];
 }
 
 export function getImagePromptTemplate(
-  sessionId: string,
+  gameId: string,
   templateId: string
 ): ImagePromptTemplate | null {
-  const templates = listImagePromptTemplates(sessionId);
+  const templates = listImagePromptTemplates(gameId);
   return templates.find(t => t.id === templateId) || null;
 }
 
 export function getDefaultImagePromptTemplate(
-  sessionId: string,
+  gameId: string,
   entityType: "character" | "location" | "item" | "faction"
 ): ImagePromptTemplate | null {
-  const templates = listImagePromptTemplates(sessionId);
+  const templates = listImagePromptTemplates(gameId);
   const entityTemplates = templates.filter(t => t.entityType === entityType);
 
   if (entityTemplates.length === 0) return null;
@@ -553,7 +553,7 @@ export function getDefaultImagePromptTemplate(
 }
 
 export function createImagePromptTemplate(
-  sessionId: string,
+  gameId: string,
   params: {
     name: string;
     description?: string;
@@ -568,7 +568,7 @@ export function createImagePromptTemplate(
     isDefault?: boolean;
   }
 ): ImagePromptTemplate {
-  const currentPrefs = getSessionPreferences(sessionId) || {} as GamePreferences;
+  const currentPrefs = getGamePreferences(gameId) || {} as GamePreferences;
   const templates = currentPrefs.imagePromptTemplates || [];
 
   const now = new Date().toISOString();
@@ -602,12 +602,12 @@ export function createImagePromptTemplate(
     imagePromptTemplates: [...updatedTemplates, newTemplate],
   };
 
-  updateSessionPreferences(sessionId, updatedPrefs);
+  updateGamePreferences(gameId, updatedPrefs);
   return newTemplate;
 }
 
 export function updateImagePromptTemplate(
-  sessionId: string,
+  gameId: string,
   templateId: string,
   updates: {
     name?: string;
@@ -622,7 +622,7 @@ export function updateImagePromptTemplate(
     isDefault?: boolean;
   }
 ): ImagePromptTemplate | null {
-  const currentPrefs = getSessionPreferences(sessionId) || {} as GamePreferences;
+  const currentPrefs = getGamePreferences(gameId) || {} as GamePreferences;
   const templates = currentPrefs.imagePromptTemplates || [];
 
   const templateIndex = templates.findIndex(t => t.id === templateId);
@@ -660,15 +660,15 @@ export function updateImagePromptTemplate(
     imagePromptTemplates: updatedTemplates,
   };
 
-  updateSessionPreferences(sessionId, updatedPrefs);
+  updateGamePreferences(gameId, updatedPrefs);
   return updatedTemplate;
 }
 
 export function deleteImagePromptTemplate(
-  sessionId: string,
+  gameId: string,
   templateId: string
 ): boolean {
-  const currentPrefs = getSessionPreferences(sessionId) || {} as GamePreferences;
+  const currentPrefs = getGamePreferences(gameId) || {} as GamePreferences;
   const templates = currentPrefs.imagePromptTemplates || [];
 
   const filteredTemplates = templates.filter(t => t.id !== templateId);
@@ -679,6 +679,6 @@ export function deleteImagePromptTemplate(
     imagePromptTemplates: filteredTemplates,
   };
 
-  updateSessionPreferences(sessionId, updatedPrefs);
+  updateGamePreferences(gameId, updatedPrefs);
   return true;
 }

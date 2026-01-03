@@ -2,24 +2,24 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
-import type { StoredImage, SessionState } from '../types'
-import SessionTabs from '../components/SessionTabs.vue'
+import type { StoredImage, GameState } from '../types'
+import GameTabs from '../components/GameTabs.vue'
 import ImageCard from '../components/ImageCard.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
 
 const route = useRoute()
-const { getSession, getSessionImages, loading } = useApi()
-const state = ref<SessionState | null>(null)
+const { getGame, getGameImages, loading } = useApi()
+const state = ref<GameState | null>(null)
 const images = ref<StoredImage[]>([])
 
-const sessionId = computed(() => route.params.sessionId as string)
+const gameId = computed(() => route.params.gameId as string)
 
 onMounted(async () => {
-  const [sessionResult, imagesResult] = await Promise.all([
-    getSession(sessionId.value),
-    getSessionImages(sessionId.value),
+  const [gameResult, imagesResult] = await Promise.all([
+    getGame(gameId.value),
+    getGameImages(gameId.value),
   ])
-  state.value = sessionResult
+  state.value = gameResult
   images.value = imagesResult
 })
 </script>
@@ -40,7 +40,7 @@ onMounted(async () => {
   <div v-else-if="state" class="animate-fade-in">
     <h2>Images</h2>
 
-    <SessionTabs :session-id="sessionId" active="images" :counts="state.counts" />
+    <GameTabs :game-id="gameId" active="images" :counts="state.counts" />
 
     <div v-if="images.length" class="image-grid">
       <ImageCard v-for="img in images" :key="img.id" :image="img" />

@@ -215,9 +215,9 @@ function applyTheme(theme: ThemeConfig): void {
 /**
  * Fetch theme from server
  */
-async function fetchTheme(sessionId?: string | null): Promise<ThemeConfig | null> {
+async function fetchTheme(gameId?: string | null): Promise<ThemeConfig | null> {
   try {
-    const url = sessionId ? `/api/sessions/${sessionId}/theme` : '/api/theme'
+    const url = gameId ? `/api/games/${gameId}/theme` : '/api/theme'
     const response = await fetch(url)
     if (response.ok) {
       return await response.json()
@@ -231,15 +231,15 @@ async function fetchTheme(sessionId?: string | null): Promise<ThemeConfig | null
 /**
  * Load and apply theme
  */
-async function loadTheme(sessionId?: string | null): Promise<void> {
-  // Try session-specific theme first, fall back to global
+async function loadTheme(gameId?: string | null): Promise<void> {
+  // Try game-specific theme first, fall back to global
   let serverTheme: ThemeConfig | null = null
 
-  if (sessionId) {
-    serverTheme = await fetchTheme(sessionId)
+  if (gameId) {
+    serverTheme = await fetchTheme(gameId)
   }
 
-  // Fall back to global theme if no session theme
+  // Fall back to global theme if no game theme
   if (!serverTheme) {
     serverTheme = await fetchTheme(null)
   }
@@ -286,12 +286,12 @@ function stopPolling(): void {
 }
 
 /**
- * Set the current session for theme loading
+ * Set the current game for theme loading
  */
-function setSession(sessionId: string | null): void {
-  if (sessionId !== currentSessionId.value) {
-    currentSessionId.value = sessionId
-    loadTheme(sessionId)
+function setSession(gameId: string | null): void {
+  if (gameId !== currentSessionId.value) {
+    currentSessionId.value = gameId
+    loadTheme(gameId)
   }
 }
 
@@ -301,19 +301,19 @@ function setSession(sessionId: string | null): void {
 export function useTheme() {
   const route = useRoute()
 
-  // Computed session ID from route
-  const sessionId = computed(() => {
-    // Get sessionId from route params
-    if (route.params.sessionId) {
-      return route.params.sessionId as string
+  // Computed game ID from route
+  const gameId = computed(() => {
+    // Get gameId from route params
+    if (route.params.gameId) {
+      return route.params.gameId as string
     }
     return null
   })
 
   onMounted(() => {
-    // Initial load with current session
-    currentSessionId.value = sessionId.value
-    loadTheme(sessionId.value)
+    // Initial load with current game
+    currentSessionId.value = gameId.value
+    loadTheme(gameId.value)
     startPolling()
   })
 
@@ -321,8 +321,8 @@ export function useTheme() {
     stopPolling()
   })
 
-  // Watch for session changes
-  watch(sessionId, (newSessionId) => {
+  // Watch for game changes
+  watch(gameId, (newSessionId) => {
     setSession(newSessionId)
   })
 
@@ -340,6 +340,6 @@ export function useTheme() {
     stopPolling,
     defaultConfig,
     loadedFonts,
-    sessionId,
+    gameId,
   }
 }

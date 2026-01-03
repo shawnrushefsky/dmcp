@@ -13,7 +13,7 @@ export function registerSecretTools(server: McpServer) {
     {
       description: "Create a secret that can be revealed to specific characters. Call this whenever you introduce plot-relevant hidden information - NPC backstories, hidden motives, location history, quest twists. Even if revealed immediately, secrets should be tracked.",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         name: z.string().min(1).max(LIMITS.NAME_MAX).describe("Secret name (for DM reference)"),
         description: z.string().max(LIMITS.DESCRIPTION_MAX).describe("The actual secret information"),
         category: z.string().max(100).optional().describe("Category (e.g., 'plot', 'character', 'location', 'item')"),
@@ -117,7 +117,7 @@ export function registerSecretTools(server: McpServer) {
     {
       description: "List secrets with optional filters",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         category: z.string().max(100).optional().describe("Filter by category"),
         relatedEntityId: z.string().max(100).optional().describe("Filter by related entity"),
         isPublic: z.boolean().optional().describe("Filter by public status"),
@@ -125,8 +125,8 @@ export function registerSecretTools(server: McpServer) {
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId, ...filter }) => {
-      const secrets = secretTools.listSecrets(sessionId, filter);
+    async ({ gameId, ...filter }) => {
+      const secrets = secretTools.listSecrets(gameId, filter);
       return {
         content: [{ type: "text", text: JSON.stringify(secrets, null, 2) }],
       };
@@ -203,13 +203,13 @@ export function registerSecretTools(server: McpServer) {
     {
       description: "Get all secrets and clues known by a character",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         characterId: z.string().max(100).describe("The character ID"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId, characterId }) => {
-      const knowledge = secretTools.getCharacterKnowledge(sessionId, characterId);
+    async ({ gameId, characterId }) => {
+      const knowledge = secretTools.getCharacterKnowledge(gameId, characterId);
       return {
         content: [{ type: "text", text: JSON.stringify(knowledge, null, 2) }],
       };

@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { Session } from '../types'
+import type { Game } from '../types'
 
 defineProps<{
-  session: Session
+  game: Game
 }>()
 
 function formatDate(dateStr: string): string {
@@ -15,33 +15,33 @@ function truncate(text: string, maxLen: number): string {
 </script>
 
 <template>
-  <div class="card session-card">
+  <div class="card game-card">
     <img
-      v-if="session.titleImageId"
-      :src="`/images/${session.titleImageId}/file?width=400`"
-      :alt="session.name"
-      class="session-title-image"
+      v-if="game.titleImageId"
+      :src="`/images/${game.titleImageId}/file?width=400`"
+      :alt="game.name"
+      class="game-title-image"
     />
     <h3>
-      <router-link :to="`/sessions/${session.id}`">{{ session.name }}</router-link>
+      <router-link :to="`/games/${game.id}`">{{ game.name }}</router-link>
     </h3>
-    <p class="muted">{{ truncate(session.setting, 150) }}</p>
+    <p class="muted">{{ truncate(game.setting, 150) }}</p>
     <div class="stat">
       <span class="stat-label">Style</span>
-      <span>{{ session.style }}</span>
+      <span>{{ game.style }}</span>
     </div>
     <div class="stat">
       <span class="stat-label">Created</span>
-      <span>{{ formatDate(session.createdAt) }}</span>
+      <span>{{ formatDate(game.createdAt) }}</span>
     </div>
   </div>
 </template>
 
 <style scoped>
-.session-card {
+.game-card {
   overflow: hidden;
 }
-.session-title-image {
+.game-title-image {
   width: 100%;
   height: 150px;
   object-fit: cover;

@@ -500,11 +500,11 @@ export function setVisualStyle(style: {
  * Get display configuration for a specific session
  * Falls back to global config if no session theme exists
  */
-export function getSessionDisplayConfig(sessionId: string): DisplayConfig {
+export function getGameDisplayConfig(gameId: string): DisplayConfig {
   const db = getDatabase();
   const row = db
-    .prepare("SELECT config FROM session_themes WHERE session_id = ?")
-    .get(sessionId) as { config: string } | undefined;
+    .prepare("SELECT config FROM session_themes WHERE game_id = ?")
+    .get(gameId) as { config: string } | undefined;
 
   if (row) {
     return { ...defaultConfig, ...JSON.parse(row.config) };
@@ -518,22 +518,22 @@ export function getSessionDisplayConfig(sessionId: string): DisplayConfig {
  * Set display configuration for a specific session
  */
 export function setSessionDisplayConfig(
-  sessionId: string,
+  gameId: string,
   config: Partial<DisplayConfig>
 ): DisplayConfig {
   const db = getDatabase();
-  const current = getSessionDisplayConfig(sessionId);
+  const current = getGameDisplayConfig(gameId);
   const updated = { ...current, ...config };
 
   db.prepare(
     `
-    INSERT INTO session_themes (session_id, config, updated_at)
+    INSERT INTO session_themes (game_id, config, updated_at)
     VALUES (?, ?, datetime('now'))
-    ON CONFLICT(session_id) DO UPDATE SET
+    ON CONFLICT(game_id) DO UPDATE SET
       config = excluded.config,
       updated_at = excluded.updated_at
   `
-  ).run(sessionId, JSON.stringify(updated));
+  ).run(gameId, JSON.stringify(updated));
 
   return updated;
 }
@@ -542,32 +542,32 @@ export function setSessionDisplayConfig(
  * Apply a preset theme to a specific session
  */
 export function applySessionThemePreset(
-  sessionId: string,
+  gameId: string,
   presetName: string
 ): DisplayConfig | null {
   const preset = themePresets[presetName];
   if (!preset) {
     return null;
   }
-  return setSessionDisplayConfig(sessionId, preset);
+  return setSessionDisplayConfig(gameId, preset);
 }
 
 /**
  * Reset session theme (removes session-specific config, falls back to global)
  */
-export function resetSessionTheme(sessionId: string): void {
+export function resetSessionTheme(gameId: string): void {
   const db = getDatabase();
-  db.prepare("DELETE FROM session_themes WHERE session_id = ?").run(sessionId);
+  db.prepare("DELETE FROM session_themes WHERE game_id = ?").run(gameId);
 }
 
 /**
- * Check if a session has a custom theme
+ * Check if a game has a custom theme
  */
-export function hasSessionTheme(sessionId: string): boolean {
+export function hasSessionTheme(gameId: string): boolean {
   const db = getDatabase();
   const row = db
-    .prepare("SELECT 1 FROM session_themes WHERE session_id = ?")
-    .get(sessionId);
+    .prepare("SELECT 1 FROM session_themes WHERE game_id = ?")
+    .get(gameId);
   return !!row;
 }
 
@@ -575,7 +575,7 @@ export function hasSessionTheme(sessionId: string): boolean {
  * Infer and apply theme based on game genre/setting
  */
 export function inferAndApplyTheme(
-  sessionId: string,
+  gameId: string,
   genre: string,
   setting?: string
 ): DisplayConfig {
@@ -668,7 +668,7 @@ export function inferAndApplyTheme(
   }
 
   if (presetName) {
-    return applySessionThemePreset(sessionId, presetName) || getDisplayConfig();
+    return applySessionThemePreset(gameId, presetName) || getDisplayConfig();
   }
 
   // No match - use default

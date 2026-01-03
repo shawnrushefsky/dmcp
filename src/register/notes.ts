@@ -8,9 +8,9 @@ export function registerNoteTools(server: McpServer) {
   server.registerTool(
     "create_note",
     {
-      description: "Create a session note",
+      description: "Create a game note",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         title: z.string().min(1).max(LIMITS.NAME_MAX).describe("Note title"),
         content: z.string().max(LIMITS.CONTENT_MAX).describe("Note content (supports markdown)"),
         category: z.string().max(100).optional().describe("Category (e.g., 'plot', 'npc', 'location', 'idea', 'recap')"),
@@ -104,7 +104,7 @@ export function registerNoteTools(server: McpServer) {
     {
       description: "List notes with optional filters",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         category: z.string().max(100).optional().describe("Filter by category"),
         pinned: z.boolean().optional().describe("Filter by pinned status"),
         tag: z.string().max(LIMITS.NAME_MAX).optional().describe("Filter by tag"),
@@ -112,8 +112,8 @@ export function registerNoteTools(server: McpServer) {
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId, ...filter }) => {
-      const notes = noteTools.listNotes(sessionId, filter);
+    async ({ gameId, ...filter }) => {
+      const notes = noteTools.listNotes(gameId, filter);
       return {
         content: [{ type: "text", text: JSON.stringify(notes, null, 2) }],
       };
@@ -125,13 +125,13 @@ export function registerNoteTools(server: McpServer) {
     {
       description: "Search notes by title or content",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         query: z.string().max(LIMITS.NAME_MAX).describe("Search query"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId, query }) => {
-      const notes = noteTools.searchNotes(sessionId, query);
+    async ({ gameId, query }) => {
+      const notes = noteTools.searchNotes(gameId, query);
       return {
         content: [{ type: "text", text: JSON.stringify(notes, null, 2) }],
       };
@@ -201,15 +201,15 @@ export function registerNoteTools(server: McpServer) {
   server.registerTool(
     "generate_recap",
     {
-      description: "Auto-generate a session recap note from recent narrative events",
+      description: "Auto-generate a game recap note from recent narrative events",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         eventLimit: z.number().optional().describe("Maximum events to include (default: 20)"),
       },
       annotations: ANNOTATIONS.CREATE,
     },
-    async ({ sessionId, eventLimit }) => {
-      const note = noteTools.generateRecap(sessionId, eventLimit);
+    async ({ gameId, eventLimit }) => {
+      const note = noteTools.generateRecap(gameId, eventLimit);
       return {
         content: [{ type: "text", text: JSON.stringify(note, null, 2) }],
       };

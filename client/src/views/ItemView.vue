@@ -4,17 +4,17 @@ import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
 import { useEntityLinker } from '../composables/useEntityLinker'
 import { useTheme } from '../composables/useTheme'
-import type { Item, Breadcrumb, SessionState, EntityImages, Character, Location } from '../types'
+import type { Item, Breadcrumb, GameState, EntityImages, Character, Location } from '../types'
 import Breadcrumbs from '../components/Breadcrumbs.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
 
 const route = useRoute()
-const { getItem, getSession, getEntityImages, getCharacter, getLocation, loading } = useApi()
-const { linkText, setSessionState } = useEntityLinker()
+const { getItem, getGame, getEntityImages, getCharacter, getLocation, loading } = useApi()
+const { linkText, setGameState } = useEntityLinker()
 const { setSession } = useTheme()
 
 const item = ref<Item | null>(null)
-const sessionState = ref<SessionState | null>(null)
+const gameState = ref<GameState | null>(null)
 const images = ref<EntityImages>({ images: [], primaryImage: null })
 const owner = ref<Character | Location | null>(null)
 
@@ -24,7 +24,7 @@ const breadcrumbs = computed<Breadcrumb[]>(() => {
   if (!item.value) return []
   return [
     { label: 'Games', href: '/' },
-    { label: sessionState.value?.session.name || 'Loading...', href: `/sessions/${item.value.sessionId}` },
+    { label: gameState.value?.game.name || 'Loading...', href: `/games/${item.value.gameId}` },
     { label: item.value.name },
   ]
 })
@@ -46,26 +46,26 @@ const displayProperties = computed(() => {
   const props = { ...item.value.properties }
   // Remove any properties that are just IDs or internal markers
   delete props.id
-  delete props.sessionId
+  delete props.gameId
   delete props.ownerId
   delete props.ownerType
   return props
 })
 
-// Update entity linker when session state changes
-watch(sessionState, (newState) => setSessionState(newState))
+// Update entity linker when game state changes
+watch(gameState, (newState) => setGameState(newState))
 
 onMounted(async () => {
   const i = await getItem(itemId.value)
   item.value = i
 
   if (i) {
-    setSession(i.sessionId)
+    setSession(i.gameId)
     const [state, imgs] = await Promise.all([
-      getSession(i.sessionId),
+      getGame(i.gameId),
       getEntityImages(itemId.value, 'item'),
     ])
-    sessionState.value = state
+    gameState.value = state
     images.value = imgs
 
     // Fetch owner

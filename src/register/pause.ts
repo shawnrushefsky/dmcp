@@ -36,7 +36,7 @@ export function registerPauseTools(server: McpServer) {
     {
       description: `Prepare to pause the game. Returns a checklist of context to save and current game state.
 
-WHEN TO CALL: Before ending a session or when the player says they need to stop.
+WHEN TO CALL: Before ending a game or when the player says they need to stop.
 
 This tool returns:
 - Current game state summary
@@ -46,15 +46,15 @@ This tool returns:
 
 After calling this, use save_pause_state to persist your context.`,
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId }) => {
-      const checklist = pauseTools.preparePause(sessionId);
+    async ({ gameId }) => {
+      const checklist = pauseTools.preparePause(gameId);
       if (!checklist) {
         return {
-          content: [{ type: "text", text: `Session ${sessionId} not found` }],
+          content: [{ type: "text", text: `Session ${gameId} not found` }],
           isError: true,
         };
       }
@@ -71,7 +71,7 @@ After calling this, use save_pause_state to persist your context.`,
   server.registerTool(
     "save_pause_state",
     {
-      description: `Save your context for seamless game resumption. Call this before ending a session.
+      description: `Save your context for seamless game resumption. Call this before ending a game.
 
 REQUIRED FIELDS:
 - currentScene: Where we are in the story
@@ -80,9 +80,9 @@ REQUIRED FIELDS:
 The more detail you provide, the smoother the resume will be for the next DM
 (which might be you in a new context window, or a different model entirely).
 
-Write as if briefing a replacement DM who's taking over mid-session.`,
+Write as if briefing a replacement DM who's taking over mid-game.`,
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
 
         // Required
         currentScene: z
@@ -234,14 +234,14 @@ Write as if briefing a replacement DM who's taking over mid-session.`,
   server.registerTool(
     "get_pause_state",
     {
-      description: "Get the saved pause state for a session (if any). Use this to check what context was preserved.",
+      description: "Get the saved pause state for a game (if any). Use this to check what context was preserved.",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId }) => {
-      const pauseState = pauseTools.getPauseState(sessionId);
+    async ({ gameId }) => {
+      const pauseState = pauseTools.getPauseState(gameId);
       if (!pauseState) {
         return {
           content: [
@@ -250,7 +250,7 @@ Write as if briefing a replacement DM who's taking over mid-session.`,
               text: JSON.stringify({
                 hasPauseState: false,
                 message:
-                  "No pause state saved for this session. If resuming, rely on narrative_events and game state.",
+                  "No pause state saved for this game. If resuming, rely on narrative_events and game state.",
               }),
             },
           ],
@@ -271,7 +271,7 @@ Write as if briefing a replacement DM who's taking over mid-session.`,
     {
       description: `Get everything needed to resume a paused game seamlessly.
 
-WHEN TO CALL: At the start of a session when continuing a paused game.
+WHEN TO CALL: At the start of a game when continuing a paused game.
 
 Returns:
 - Full pause state (DM context, scene, plans)
@@ -282,18 +282,18 @@ Returns:
 
 Use this to get up to speed quickly and resume exactly where the game left off.`,
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId }) => {
-      const context = pauseTools.getResumeContext(sessionId);
+    async ({ gameId }) => {
+      const context = pauseTools.getResumeContext(gameId);
       if (!context) {
         return {
           content: [
             {
               type: "text",
-              text: `No pause state found for session ${sessionId}. Use load_session and get_history instead.`,
+              text: `No pause state found for session ${gameId}. Use load_game and get_history instead.`,
             },
           ],
           isError: true,
@@ -345,7 +345,7 @@ CRITICAL: Call this regularly to prevent context loss:
 This is faster than full save_pause_state but captures essential state.
 For end-of-session, use prepare_pause + save_pause_state instead.`,
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         situation: z
           .string()
           .max(LIMITS.DESCRIPTION_MAX)
@@ -384,12 +384,12 @@ For end-of-session, use prepare_pause + save_pause_state instead.`,
 
 IMPORTANT: Call this every 5-10 narrative turns to ensure context is being preserved. If stale, immediately call save_context_snapshot.`,
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId }) => {
-      const result = pauseTools.checkContextFreshness(sessionId);
+    async ({ gameId }) => {
+      const result = pauseTools.checkContextFreshness(gameId);
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };
@@ -403,20 +403,20 @@ IMPORTANT: Call this every 5-10 narrative turns to ensure context is being prese
   server.registerTool(
     "clear_pause_state",
     {
-      description: "Clear the saved pause state for a session. Use after successfully resuming to start fresh.",
+      description: "Clear the saved pause state for a game. Use after successfully resuming to start fresh.",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
       },
       annotations: ANNOTATIONS.DESTRUCTIVE,
     },
-    async ({ sessionId }) => {
-      const deleted = pauseTools.deletePauseState(sessionId);
+    async ({ gameId }) => {
+      const deleted = pauseTools.deletePauseState(gameId);
       return {
         content: [
           {
             type: "text",
             text: deleted
-              ? "Pause state cleared. The session can now accumulate fresh context."
+              ? "Pause state cleared. The game can now accumulate fresh context."
               : "No pause state to clear.",
           },
         ],
@@ -431,7 +431,7 @@ IMPORTANT: Call this every 5-10 narrative turns to ensure context is being prese
   server.registerTool(
     "push_external_update",
     {
-      description: `Push an update from an external agent into the game session.
+      description: `Push an update from an external agent into the game game.
 
 USE CASE: External agents (research agents, worldbuilders, lore generators, etc.)
 can push updates that the primary DM agent will receive and incorporate.
@@ -444,7 +444,7 @@ EXAMPLES:
 
 The DM agent should periodically check for pending updates via get_pending_updates.`,
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         sourceAgent: z.string().max(LIMITS.NAME_MAX).describe("ID/name of the agent pushing this update"),
         sourceDescription: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("Description of what this agent does"),
         updateType: z
@@ -510,12 +510,12 @@ WHEN TO CALL:
 Returns all pending updates, prioritized by urgency.
 Use acknowledge_update, apply_update, or reject_update to process them.`,
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId }) => {
-      const result = pauseTools.getPendingUpdates(sessionId);
+    async ({ gameId }) => {
+      const result = pauseTools.getPendingUpdates(gameId);
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };
@@ -630,9 +630,9 @@ Use acknowledge_update, apply_update, or reject_update to process them.`,
   server.registerTool(
     "list_external_updates",
     {
-      description: "List all external updates for a session with optional status filter.",
+      description: "List all external updates for a game with optional status filter.",
       inputSchema: {
-        sessionId: z.string().max(100).describe("The session ID"),
+        gameId: z.string().max(100).describe("The game ID"),
         status: z
           .enum(["pending", "acknowledged", "applied", "rejected"])
           .optional()
@@ -640,8 +640,8 @@ Use acknowledge_update, apply_update, or reject_update to process them.`,
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ sessionId, status }) => {
-      const updates = pauseTools.listExternalUpdates(sessionId, status);
+    async ({ gameId, status }) => {
+      const updates = pauseTools.listExternalUpdates(gameId, status);
       return {
         content: [
           {

@@ -30,7 +30,7 @@ src/
 │   ├── connection.ts  # SQLite connection singleton
 │   └── schema.ts      # Database schema and migrations
 ├── tools/             # Tool implementations
-│   ├── session.ts     # Game session management
+│   ├── game.ts        # Game management
 │   ├── rules.ts       # Rule system storage
 │   ├── world.ts       # Locations and connections
 │   ├── character.ts   # Characters (PCs and NPCs)
@@ -55,11 +55,11 @@ DMCP includes a built-in HTTP server that runs alongside the MCP server. This pr
 ### Available Routes
 
 **HTML Pages:**
-- `/` - Home page with list of all game sessions
-- `/sessions/:sessionId` - Session overview with characters, locations, quests
-- `/sessions/:sessionId/map` - ASCII world map view
-- `/sessions/:sessionId/images` - Image gallery
-- `/sessions/:sessionId/history` - Narrative event history
+- `/` - Home page with list of all games
+- `/games/:gameId` - Game overview with characters, locations, quests
+- `/games/:gameId/map` - ASCII world map view
+- `/games/:gameId/images` - Image gallery
+- `/games/:gameId/history` - Narrative event history
 - `/characters/:characterId` - Character sheet with stats, inventory, images
 - `/locations/:locationId` - Location details with exits, characters, items
 - `/quests/:questId` - Quest objectives and progress
@@ -67,16 +67,16 @@ DMCP includes a built-in HTTP server that runs alongside the MCP server. This pr
 - `/images/:imageId/file` - Raw image file (supports resize: `?width=200&height=200`)
 
 **JSON API:**
-- `GET /api/sessions` - List all sessions
-- `GET /api/sessions/:sessionId` - Full session state (characters, locations, quests)
-- `GET /api/sessions/:sessionId/map` - Map data structure
+- `GET /api/games` - List all games
+- `GET /api/games/:gameId` - Full game state (characters, locations, quests)
+- `GET /api/games/:gameId/map` - Map data structure
 - `GET /api/characters/:characterId` - Character data
 - `GET /api/characters/:characterId/sheet` - Character sheet with ASCII art
 - `GET /api/locations/:locationId` - Location data
 
 ## Key Design Decisions
 
-1. **Dynamic Rules** - Rules are stored as JSON, designed by the DM agent at session start
+1. **Dynamic Rules** - Rules are stored as JSON, designed by the DM agent at game start
 2. **Voice Descriptions** - NPCs can have voice metadata for TTS integration
 3. **Image Generation** - Entities store structured visual descriptions adaptable to any image generator
 4. **Player Delegation** - Players can delegate game decisions to the DM with "you decide"

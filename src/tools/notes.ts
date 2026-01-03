@@ -5,7 +5,7 @@ import type { Note } from "../types/index.js";
 import { getHistory } from "./narrative.js";
 
 export function createNote(params: {
-  sessionId: string;
+  gameId: string;
   title: string;
   content: string;
   category?: string;
@@ -19,11 +19,11 @@ export function createNote(params: {
   const now = new Date().toISOString();
 
   db.prepare(`
-    INSERT INTO notes (id, session_id, title, content, category, pinned, related_entity_id, related_entity_type, tags, created_at, updated_at)
+    INSERT INTO notes (id, game_id, title, content, category, pinned, related_entity_id, related_entity_type, tags, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
-    params.sessionId,
+    params.gameId,
     params.title,
     params.content,
     params.category || null,
@@ -37,7 +37,7 @@ export function createNote(params: {
 
   return {
     id,
-    sessionId: params.sessionId,
+    gameId: params.gameId,
     title: params.title,
     content: params.content,
     category: params.category || null,
@@ -58,7 +58,7 @@ export function getNote(id: string): Note | null {
 
   return {
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     title: row.title as string,
     content: row.content as string,
     category: row.category as string | null,
@@ -119,7 +119,7 @@ export function deleteNote(id: string): boolean {
 }
 
 export function listNotes(
-  sessionId: string,
+  gameId: string,
   filter?: {
     category?: string;
     pinned?: boolean;
@@ -129,8 +129,8 @@ export function listNotes(
 ): Note[] {
   const db = getDatabase();
 
-  let query = `SELECT * FROM notes WHERE session_id = ?`;
-  const params: (string | number)[] = [sessionId];
+  let query = `SELECT * FROM notes WHERE game_id = ?`;
+  const params: (string | number)[] = [gameId];
 
   if (filter?.category) {
     query += ` AND category = ?`;
@@ -161,7 +161,7 @@ export function listNotes(
 
   return rows.map(row => ({
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     title: row.title as string,
     content: row.content as string,
     category: row.category as string | null,
@@ -174,19 +174,19 @@ export function listNotes(
   }));
 }
 
-export function searchNotes(sessionId: string, query: string): Note[] {
+export function searchNotes(gameId: string, query: string): Note[] {
   const db = getDatabase();
   const searchPattern = `%${query}%`;
 
   const rows = db.prepare(`
     SELECT * FROM notes
-    WHERE session_id = ? AND (title LIKE ? OR content LIKE ?)
+    WHERE game_id = ? AND (title LIKE ? OR content LIKE ?)
     ORDER BY pinned DESC, updated_at DESC
-  `).all(sessionId, searchPattern, searchPattern) as Record<string, unknown>[];
+  `).all(gameId, searchPattern, searchPattern) as Record<string, unknown>[];
 
   return rows.map(row => ({
     id: row.id as string,
-    sessionId: row.session_id as string,
+    gameId: row.game_id as string,
     title: row.title as string,
     content: row.content as string,
     category: row.category as string | null,
@@ -254,9 +254,9 @@ export function modifyNoteTags(
   return { note: { ...note, tags, updatedAt: now }, added, removed };
 }
 
-export function generateRecap(sessionId: string, eventLimit = 20): Note {
+export function generateRecap(gameId: string, eventLimit = 20): Note {
   // Get recent narrative events
-  const events = getHistory(sessionId, { limit: eventLimit });
+  const events = getHistory(gameId, { limit: eventLimit });
 
   // Group by type for summary
   const byType: Record<string, string[]> = {};
@@ -284,7 +284,7 @@ export function generateRecap(sessionId: string, eventLimit = 20): Note {
 
   // Create the note
   return createNote({
-    sessionId,
+    gameId,
     title: `Session Recap - ${new Date().toLocaleDateString()}`,
     content,
     category: "recap",
