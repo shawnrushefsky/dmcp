@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
 import { safeJsonParse } from "../utils/json.js";
+import { validateGameExists } from "./game.js";
 import type { Secret } from "../types/index.js";
 
 export function createSecret(params: {
@@ -12,6 +13,9 @@ export function createSecret(params: {
   relatedEntityType?: string;
   clues?: string[];
 }): Secret {
+  // Validate game exists to prevent orphaned records
+  validateGameExists(params.gameId);
+
   const db = getDatabase();
   const id = uuidv4();
   const now = new Date().toISOString();
@@ -158,7 +162,8 @@ export function listSecrets(
 
   // Filter by knownBy if specified
   if (filter?.knownBy) {
-    secrets = secrets.filter(s => s.isPublic || s.revealedTo.includes(filter.knownBy!));
+    const characterId = filter.knownBy;
+    secrets = secrets.filter(s => s.isPublic || s.revealedTo.includes(characterId));
   }
 
   return secrets;

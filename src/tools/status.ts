@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
 import { safeJsonParse } from "../utils/json.js";
+import { validateGameExists } from "./game.js";
 import type { StatusEffect } from "../types/index.js";
 
 export function applyStatusEffect(params: {
@@ -17,6 +18,9 @@ export function applyStatusEffect(params: {
   sourceType?: string;
   expiresAt?: string;
 }): StatusEffect {
+  // Validate game exists to prevent orphaned records
+  validateGameExists(params.gameId);
+
   const db = getDatabase();
   const now = new Date().toISOString();
 
@@ -26,11 +30,11 @@ export function applyStatusEffect(params: {
   `).get(params.gameId, params.targetId, params.name) as Record<string, unknown> | undefined;
 
   if (existing) {
-    // Stack the effect
+    // Stack the effect - use existing maxStacks (can't change stack limit after creation)
     const currentStacks = existing.stacks as number;
-    const maxStacks = params.maxStacks ?? existing.max_stacks as number | null;
-    const newStacks = maxStacks !== null
-      ? Math.min(currentStacks + (params.stacks ?? 1), maxStacks)
+    const existingMaxStacks = existing.max_stacks as number | null;
+    const newStacks = existingMaxStacks !== null
+      ? Math.min(currentStacks + (params.stacks ?? 1), existingMaxStacks)
       : currentStacks + (params.stacks ?? 1);
 
     // Refresh duration if provided
@@ -40,7 +44,11 @@ export function applyStatusEffect(params: {
       UPDATE status_effects SET stacks = ?, duration = ? WHERE id = ?
     `).run(newStacks, newDuration, existing.id);
 
-    return getStatusEffect(existing.id as string)!;
+    const updated = getStatusEffect(existing.id as string);
+    if (!updated) {
+      throw new Error(`Failed to retrieve updated status effect '${existing.id}'`);
+    }
+    return updated;
   }
 
   // Create new effect

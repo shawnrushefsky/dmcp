@@ -3,6 +3,33 @@ import { getDatabase } from "../db/connection.js";
 import { safeJsonParse } from "../utils/json.js";
 import type { Game, RuleSystem, GamePreferences, ImageGenerationPreferences, ImageGenerationPreset, ImagePromptTemplate } from "../types/index.js";
 
+/**
+ * Validates that a game exists and returns it, or throws an error if not found.
+ * Use this in create operations to prevent orphaned records.
+ */
+export function validateGameExists(gameId: string): Game {
+  const db = getDatabase();
+  const row = db.prepare(`SELECT * FROM games WHERE id = ?`).get(gameId) as Record<string, unknown> | undefined;
+
+  if (!row) {
+    throw new Error(`Game '${gameId}' not found. Cannot create entities for a non-existent game.`);
+  }
+
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    setting: row.setting as string,
+    style: row.style as string,
+    rules: row.rules ? safeJsonParse<RuleSystem>(row.rules as string, null as unknown as RuleSystem) : null,
+    preferences: row.preferences ? safeJsonParse<GamePreferences>(row.preferences as string, null as unknown as GamePreferences) : null,
+    currentLocationId: row.current_location_id as string | null,
+    titleImageId: row.title_image_id as string | null,
+    faviconImageId: row.favicon_image_id as string | null,
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
+  };
+}
+
 export function createGame(params: {
   name: string;
   setting: string;

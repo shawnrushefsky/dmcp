@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
 import { safeJsonParse } from "../utils/json.js";
 import { gameEvents } from "../events/emitter.js";
+import { validateGameExists } from "./game.js";
 import type { NarrativeEvent, QuestObjective } from "../types/index.js";
 
 export function logEvent(params: {
@@ -10,6 +11,9 @@ export function logEvent(params: {
   content: string;
   metadata?: Record<string, unknown>;
 }): NarrativeEvent {
+  // Validate game exists to prevent orphaned records
+  validateGameExists(params.gameId);
+
   const db = getDatabase();
   const id = uuidv4();
   const timestamp = new Date().toISOString();

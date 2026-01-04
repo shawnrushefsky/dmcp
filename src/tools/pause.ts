@@ -335,14 +335,14 @@ export function preparePause(gameId: string): PauseChecklist | null {
   const persistenceReminders: PersistenceReminder[] = [];
 
   // CRITICAL: Active combat must be resolved or saved
-  if (gameStateAudit.combat.active) {
+  if (gameStateAudit.combat.active && gameStateAudit.combat.combatId) {
     persistenceReminders.push({
       category: "critical",
       entityType: "combat",
       tool: "end_combat OR get_combat",
       reminder: "ACTIVE COMBAT IN PROGRESS",
       reason: `Combat is active (Round ${gameStateAudit.combat.round}). Either resolve it before pausing or ensure the full combat state is captured in your pause notes.`,
-      entityIds: [gameStateAudit.combat.combatId!],
+      entityIds: [gameStateAudit.combat.combatId],
     });
   }
 

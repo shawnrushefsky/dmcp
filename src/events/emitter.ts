@@ -16,10 +16,12 @@ class GameEventEmitter {
   private keepAliveIntervals: Map<SSEClient, NodeJS.Timeout> = new Map();
 
   subscribe(gameId: string, res: SSEClient): void {
-    if (!this.clients.has(gameId)) {
-      this.clients.set(gameId, new Set());
+    let clients = this.clients.get(gameId);
+    if (!clients) {
+      clients = new Set();
+      this.clients.set(gameId, clients);
     }
-    this.clients.get(gameId)!.add(res);
+    clients.add(res);
 
     // Send initial connection event
     this.sendToClient(res, {

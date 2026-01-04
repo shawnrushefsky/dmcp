@@ -22,11 +22,16 @@ export function addTag(params: {
 
   if (existing) {
     // Update existing tag
+    const existingId = (existing as { id: string }).id;
     db.prepare(`
       UPDATE tags SET color = ?, notes = ? WHERE id = ?
-    `).run(params.color || null, params.notes || "", (existing as { id: string }).id);
+    `).run(params.color || null, params.notes || "", existingId);
 
-    return getTag((existing as { id: string }).id)!;
+    const updated = getTag(existingId);
+    if (!updated) {
+      throw new Error(`Failed to retrieve updated tag '${existingId}'`);
+    }
+    return updated;
   }
 
   db.prepare(`

@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
 import { safeJsonParse } from "../utils/json.js";
+import { validateGameExists } from "./game.js";
 import type { RandomTable, TableEntry, TableRollResult } from "../types/index.js";
 import { roll } from "./dice.js";
 
@@ -12,6 +13,9 @@ export function createTable(params: {
   entries?: TableEntry[];
   rollExpression?: string;
 }): RandomTable {
+  // Validate game exists to prevent orphaned records
+  validateGameExists(params.gameId);
+
   const db = getDatabase();
   const id = uuidv4();
   const now = new Date().toISOString();
@@ -154,21 +158,29 @@ export function rollTable(tableId: string, modifier = 0): TableRollResult | null
     const weightedEntries = table.entries.filter(e => e.weight !== undefined && e.weight > 0);
     if (weightedEntries.length > 0) {
       const totalWeight = weightedEntries.reduce((sum, e) => sum + (e.weight || 0), 0);
-      let random = Math.random() * totalWeight;
+      // Use cumulative comparison to avoid floating-point precision issues
+      const target = Math.random() * totalWeight;
+      let cumulative = 0;
 
       for (const entry of weightedEntries) {
-        random -= entry.weight || 0;
-        if (random <= 0) {
+        cumulative += entry.weight || 0;
+        if (target < cumulative) {
           matchedEntry = entry;
           break;
         }
       }
+      // Handle edge case where target equals totalWeight due to floating-point
+      if (!matchedEntry && weightedEntries.length > 0) {
+        matchedEntry = weightedEntries[weightedEntries.length - 1];
+      }
     }
   }
 
-  // Fallback to first entry if still no match
+  // If still no match, this indicates a table configuration error
   if (!matchedEntry) {
-    matchedEntry = table.entries[0];
+    throw new Error(
+      `Table '${table.name}' (${tableId}) has no entry matching roll ${rollTotal} and no weighted entries. Check table configuration.`
+    );
   }
 
   const result: TableRollResult = {
@@ -198,16 +210,26 @@ export function modifyTableEntries(
     add?: TableEntry[];
     remove?: number[]; // indices to remove
   }
-): { table: RandomTable; added: number; removed: number } | null {
+): { table: RandomTable; added: number; removed: number; invalidIndices?: number[] } | null {
   const table = getTable(tableId);
   if (!table) return null;
 
   let entries = [...table.entries];
   let removedCount = 0;
+  const invalidIndices: number[] = [];
 
   // Remove entries first (process in reverse order to maintain indices)
   if (params.remove && params.remove.length > 0) {
-    const indicesToRemove = [...new Set(params.remove)]
+    const uniqueIndices = [...new Set(params.remove)];
+
+    // Track invalid indices
+    for (const idx of uniqueIndices) {
+      if (idx < 0 || idx >= entries.length) {
+        invalidIndices.push(idx);
+      }
+    }
+
+    const indicesToRemove = uniqueIndices
       .filter(i => i >= 0 && i < entries.length)
       .sort((a, b) => b - a); // Sort descending
 
@@ -226,7 +248,17 @@ export function modifyTableEntries(
   const updated = updateTable(tableId, { entries });
   if (!updated) return null;
 
-  return { table: updated, added: addedCount, removed: removedCount };
+  const result: { table: RandomTable; added: number; removed: number; invalidIndices?: number[] } = {
+    table: updated,
+    added: addedCount,
+    removed: removedCount,
+  };
+
+  if (invalidIndices.length > 0) {
+    result.invalidIndices = invalidIndices;
+  }
+
+  return result;
 }
 
 // Helper to create a simple d6 table quickly

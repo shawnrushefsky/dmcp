@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
 import { safeJsonParse } from "../utils/json.js";
 import { gameEvents } from "../events/emitter.js";
+import { validateGameExists } from "./game.js";
 import type { Location, LocationProperties, Exit, ImageGeneration } from "../types/index.js";
 
 export function createLocation(params: {
@@ -11,6 +12,9 @@ export function createLocation(params: {
   properties?: Partial<LocationProperties>;
   imageGen?: ImageGeneration;
 }): Location {
+  // Validate game exists to prevent orphaned records
+  validateGameExists(params.gameId);
+
   const db = getDatabase();
   const id = uuidv4();
 
@@ -346,7 +350,8 @@ export function renderMap(
   const maxRadius = options?.radius ?? Infinity;
 
   while (queue.length > 0) {
-    const current = queue.shift()!;
+    const current = queue.shift();
+    if (!current) break;
     const location = locationMap.get(current.id);
     if (!location) continue;
 
@@ -381,7 +386,8 @@ export function renderMap(
   const connectionSet = new Set<string>();
 
   for (const [id, pos] of placed) {
-    const location = locationMap.get(id)!;
+    const location = locationMap.get(id);
+    if (!location) continue;
     const exits = location.properties.exits
       .filter((e) => placed.has(e.destinationId))
       .map((e) => ({ direction: e.direction, toId: e.destinationId }));

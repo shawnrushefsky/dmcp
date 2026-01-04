@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
 import { safeJsonParse } from "../utils/json.js";
 import { gameEvents } from "../events/emitter.js";
+import { validateGameExists } from "./game.js";
 import type { Item, ItemProperties, ImageGeneration } from "../types/index.js";
 
 export function createItem(params: {
@@ -12,6 +13,9 @@ export function createItem(params: {
   properties?: Partial<ItemProperties>;
   imageGen?: ImageGeneration;
 }): Item {
+  // Validate game exists to prevent orphaned records
+  validateGameExists(params.gameId);
+
   const db = getDatabase();
   const id = uuidv4();
 

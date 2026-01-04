@@ -2,6 +2,10 @@ import type { DiceRoll, CheckResult } from "../types/index.js";
 import { getRules } from "./rules.js";
 import { getCharacter } from "./character.js";
 
+// Maximum limits to prevent DoS attacks
+const MAX_DICE_COUNT = 100;
+const MAX_DICE_SIDES = 1000;
+
 // Parse and roll dice expressions like "2d6+3", "1d20-2", "3d8"
 export function roll(expression: string): DiceRoll {
   const regex = /^(\d+)?d(\d+)([+-]\d+)?$/i;
@@ -16,6 +20,18 @@ export function roll(expression: string): DiceRoll {
   const count = match[1] ? parseInt(match[1], 10) : 1;
   const sides = parseInt(match[2], 10);
   const modifier = match[3] ? parseInt(match[3], 10) : 0;
+
+  // Validate bounds to prevent DoS
+  if (count < 1 || count > MAX_DICE_COUNT) {
+    throw new Error(
+      `Dice count must be between 1 and ${MAX_DICE_COUNT}, got: ${count}`
+    );
+  }
+  if (sides < 1 || sides > MAX_DICE_SIDES) {
+    throw new Error(
+      `Dice sides must be between 1 and ${MAX_DICE_SIDES}, got: ${sides}`
+    );
+  }
 
   const rolls: number[] = [];
   for (let i = 0; i < count; i++) {

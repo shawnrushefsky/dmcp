@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
+import { validateGameExists } from "./game.js";
 import type { Relationship, RelationshipChange } from "../types/index.js";
 
 export function createRelationship(params: {
@@ -13,6 +14,9 @@ export function createRelationship(params: {
   label?: string;
   notes?: string;
 }): Relationship {
+  // Validate game exists to prevent orphaned records
+  validateGameExists(params.gameId);
+
   const db = getDatabase();
   const id = uuidv4();
   const now = new Date().toISOString();
@@ -182,10 +186,15 @@ export function modifyRelationship(params: {
   const relationship = getRelationship(params.relationshipId);
   if (!relationship) return null;
 
+  // Validate bounds if both are provided
+  if (params.minValue !== undefined && params.maxValue !== undefined && params.minValue > params.maxValue) {
+    throw new Error(`Invalid bounds: minValue (${params.minValue}) cannot be greater than maxValue (${params.maxValue})`);
+  }
+
   const previousValue = relationship.value;
   let newValue = previousValue + params.delta;
 
-  // Apply bounds
+  // Apply bounds (clamp to min first, then max to ensure max takes precedence)
   if (params.minValue !== undefined) {
     newValue = Math.max(newValue, params.minValue);
   }
@@ -319,6 +328,11 @@ export function updateRelationshipValue(params: {
   const relationship = getRelationship(params.relationshipId);
   if (!relationship) return null;
 
+  // Validate bounds if both are provided
+  if (params.minValue !== undefined && params.maxValue !== undefined && params.minValue > params.maxValue) {
+    throw new Error(`Invalid bounds: minValue (${params.minValue}) cannot be greater than maxValue (${params.maxValue})`);
+  }
+
   const previousValue = relationship.value;
   let newValue: number;
 
@@ -328,7 +342,7 @@ export function updateRelationshipValue(params: {
     newValue = params.value;
   }
 
-  // Apply bounds
+  // Apply bounds (clamp to min first, then max to ensure max takes precedence)
   if (params.minValue !== undefined) {
     newValue = Math.max(newValue, params.minValue);
   }

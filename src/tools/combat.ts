@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
 import { safeJsonParse } from "../utils/json.js";
 import { gameEvents } from "../events/emitter.js";
+import { validateGameExists } from "./game.js";
 import type { Combat, CombatParticipant } from "../types/index.js";
 import { getCharacter } from "./character.js";
 import { roll } from "./dice.js";
@@ -12,17 +13,28 @@ export function startCombat(params: {
   locationId: string;
   participantIds: string[];
 }): Combat {
+  // Validate game exists to prevent orphaned records
+  validateGameExists(params.gameId);
+
   const db = getDatabase();
   const id = uuidv4();
   const rules = getRules(params.gameId);
 
-  // Roll initiative for each participant
-  const participants: CombatParticipant[] = params.participantIds.map(
-    (charId) => {
-      const character = getCharacter(charId);
+  // Validate all participants exist before processing (prevents race conditions)
+  const characters = params.participantIds.map((charId) => {
+    const character = getCharacter(charId);
+    if (!character) {
+      throw new Error(`Character '${charId}' not found. Cannot start combat with missing participants.`);
+    }
+    return { charId, character };
+  });
+
+  // Roll initiative for each validated participant
+  const participants: CombatParticipant[] = characters.map(
+    ({ charId, character }) => {
       let initiative = 0;
 
-      if (rules && character) {
+      if (rules) {
         // Simple initiative based on a d20 roll
         // The DM can configure this in combat rules
         const initRoll = roll("1d20");

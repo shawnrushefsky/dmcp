@@ -50,6 +50,37 @@ export function registerBatchTools(server: McpServer) {
       const created: Character[] = [];
       const errors: Array<{ name: string; error: string }> = [];
 
+      // Check for duplicate names within the batch
+      const nameCount = new Map<string, number>();
+      for (const npc of npcs) {
+        const lowerName = npc.name.toLowerCase();
+        nameCount.set(lowerName, (nameCount.get(lowerName) || 0) + 1);
+      }
+      const duplicates = Array.from(nameCount.entries())
+        .filter(([, count]) => count > 1)
+        .map(([name]) => name);
+
+      if (duplicates.length > 0) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  isError: true,
+                  errorCode: "DUPLICATE_NAMES_IN_BATCH",
+                  message: `Duplicate NPC names in batch: ${duplicates.join(", ")}`,
+                  suggestions: ["Ensure all NPC names in the batch are unique"],
+                },
+                null,
+                2
+              ),
+            },
+          ],
+          isError: true,
+        };
+      }
+
       for (const npc of npcs) {
         try {
           const character = characterTools.createCharacter({

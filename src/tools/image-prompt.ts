@@ -472,11 +472,13 @@ export function buildImagePrompt(
   if (preset?.config?.defaultStyle) {
     source.fromPreset = true;
     const style = preset.config.defaultStyle;
-    if (style.artisticStyle && !promptParts.some(p => p.includes(style.artisticStyle!))) {
-      promptParts.push(style.artisticStyle);
+    const artisticStyle = style.artisticStyle;
+    const mood = style.mood;
+    if (artisticStyle && !promptParts.some(p => p.includes(artisticStyle))) {
+      promptParts.push(artisticStyle);
     }
-    if (style.mood && !promptParts.some(p => p.includes(style.mood!))) {
-      promptParts.push(`${style.mood} mood`);
+    if (mood && !promptParts.some(p => p.includes(mood))) {
+      promptParts.push(`${mood} mood`);
     }
     if (style.qualityTags?.length) {
       const newTags = style.qualityTags.filter(t => !promptParts.some(p => p.includes(t)));

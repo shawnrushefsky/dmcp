@@ -113,7 +113,13 @@ export function registerTimeTools(server: McpServer) {
           isError: true,
         };
       }
-      const gameTime = timeTools.getTime(gameId)!;
+      const gameTime = timeTools.getTime(gameId);
+      if (!gameTime) {
+        return {
+          content: [{ type: "text", text: "Failed to get time after advancing" }],
+          isError: true,
+        };
+      }
       const formatted = timeTools.formatDateTime(result.newTime, gameTime.calendarConfig);
       return {
         content: [{

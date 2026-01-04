@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
 import { safeJsonParse } from "../utils/json.js";
 import { gameEvents } from "../events/emitter.js";
+import { validateGameExists } from "./game.js";
 import type { Quest, QuestObjective } from "../types/index.js";
 
 export function createQuest(params: {
@@ -11,6 +12,9 @@ export function createQuest(params: {
   objectives: Omit<QuestObjective, "id">[];
   rewards?: string;
 }): Quest {
+  // Validate game exists to prevent orphaned records
+  validateGameExists(params.gameId);
+
   const db = getDatabase();
   const id = uuidv4();
 
@@ -152,21 +156,31 @@ export function modifyObjectives(
     }
   }
 
-  const stmt = db.prepare(`UPDATE quests SET objectives = ? WHERE id = ?`);
-  stmt.run(JSON.stringify(objectives), questId);
-
   // Check if all required objectives are complete
   const requiredComplete = objectives
     .filter((o) => !o.optional)
     .every((o) => o.completed);
 
-  let finalQuest: Quest;
-  if (requiredComplete && quest.status === "active") {
-    updateQuest(questId, { status: "completed" });
-    finalQuest = { ...quest, objectives, status: "completed" };
-  } else {
-    finalQuest = { ...quest, objectives };
+  const shouldComplete = requiredComplete && quest.status === "active";
+  const newStatus = shouldComplete ? "completed" : quest.status;
+
+  // Update objectives and status atomically in a single statement
+  const stmt = db.prepare(`UPDATE quests SET objectives = ?, status = ? WHERE id = ?`);
+  stmt.run(JSON.stringify(objectives), newStatus, questId);
+
+  // Emit event if quest was completed
+  if (shouldComplete) {
+    gameEvents.emit({
+      type: "quest:updated",
+      gameId: quest.gameId,
+      entityId: questId,
+      entityType: "quest",
+      timestamp: new Date().toISOString(),
+      data: { name: quest.name, status: "completed" },
+    });
   }
+
+  const finalQuest: Quest = { ...quest, objectives, status: newStatus };
 
   return { quest: finalQuest, added, completed };
 }

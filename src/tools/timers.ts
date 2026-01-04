@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
+import { validateGameExists } from "./game.js";
 import type { Timer } from "../types/index.js";
 
 export function createTimer(params: {
@@ -14,6 +15,9 @@ export function createTimer(params: {
   unit?: string;
   visibleToPlayers?: boolean;
 }): Timer {
+  // Validate game exists to prevent orphaned records
+  validateGameExists(params.gameId);
+
   const db = getDatabase();
   const id = uuidv4();
   const now = new Date().toISOString();
