@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDatabase } from "../db/connection.js";
 import { safeJsonParse } from "../utils/json.js";
-import type { RandomTable, TableEntry, TableRollResult, DiceRoll } from "../types/index.js";
+import type { RandomTable, TableEntry, TableRollResult } from "../types/index.js";
 import { roll } from "./dice.js";
 
 export function createTable(params: {

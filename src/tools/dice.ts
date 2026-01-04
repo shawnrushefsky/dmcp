@@ -1,4 +1,4 @@
-import type { DiceRoll, CheckResult, CheckMechanics } from "../types/index.js";
+import type { DiceRoll, CheckResult } from "../types/index.js";
 import { getRules } from "./rules.js";
 import { getCharacter } from "./character.js";
 

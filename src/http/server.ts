@@ -33,7 +33,7 @@ import { listRelationships } from "../tools/relationship.js";
 import { listAbilities, getAbility } from "../tools/ability.js";
 import { listTimers, getTimer } from "../tools/timers.js";
 import { listSecrets } from "../tools/secrets.js";
-import { getTime, listScheduledEvents } from "../tools/time.js";
+import { getTime } from "../tools/time.js";
 import { getActiveCombat } from "../tools/combat.js";
 import { gameEvents } from "../events/emitter.js";
 import type { Character, Location, Faction, Quest, Resource, Note, Item } from "../types/index.js";
@@ -44,7 +44,7 @@ const __dirname = dirname(__filename);
 // Path to Vue app build
 const CLIENT_DIST = join(__dirname, "..", "..", "client", "dist");
 
-export function createHttpServer(port: number = 3456): express.Application {
+export function createHttpServer(_port: number = 3456): express.Application {
   const app = express();
 
   app.use(express.json());

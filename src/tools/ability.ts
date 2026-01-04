@@ -246,7 +246,7 @@ export interface UseAbilityResult {
   costsPaid?: Record<string, number>;
 }
 
-export function useAbility(abilityId: string, characterId: string): UseAbilityResult {
+export function useAbility(abilityId: string, _characterId: string): UseAbilityResult {
   const db = getDatabase();
   const ability = getAbility(abilityId);
 
