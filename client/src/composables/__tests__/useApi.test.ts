@@ -3,7 +3,7 @@ import { useApi } from '../useApi'
 
 // Mock fetch globally
 const mockFetch = vi.fn()
-global.fetch = mockFetch
+vi.stubGlobal('fetch', mockFetch)
 
 describe('useApi', () => {
   beforeEach(() => {
@@ -121,7 +121,7 @@ describe('useApi', () => {
     it('should return empty results on error without setting error state', async () => {
       mockFetch.mockRejectedValueOnce(new Error('Failed'))
 
-      const { search, error } = useApi()
+      const { search } = useApi()
       const result = await search('game1', 'query')
 
       // search() intentionally doesn't set error state (non-blocking)
