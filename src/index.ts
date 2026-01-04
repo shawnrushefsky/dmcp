@@ -28,6 +28,7 @@ import { registerNoteTools } from "./register/notes.js";
 import { registerPauseTools } from "./register/pause.js";
 import { registerImageTools } from "./register/images.js";
 import { registerDisplayTools } from "./register/display.js";
+import { registerBatchTools } from "./register/batch.js";
 import { registerMcpResources } from "./register/mcp-resources.js";
 import { registerMcpPrompts } from "./register/mcp-prompts.js";
 
@@ -61,6 +62,7 @@ registerNoteTools(server);           // Game Notes
 registerPauseTools(server);          // Pause/Resume, Context Snapshots, External Updates
 registerImageTools(server);          // Stored Images
 registerDisplayTools(server);        // Display/Theme Configuration
+registerBatchTools(server);          // Batch Operations (multi-entity, workflows)
 
 // Register MCP Resources and Prompts
 registerMcpResources(server);        // Read-only data access via URI

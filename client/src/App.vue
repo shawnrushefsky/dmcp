@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import AppHeader from './components/AppHeader.vue'
 import AppFooter from './components/AppFooter.vue'
 import CommandPalette from './components/CommandPalette.vue'
+import ToastContainer from './components/ToastContainer.vue'
 import { useTheme } from './composables/useTheme'
 import { useFavicon } from './composables/useFavicon'
 import { useKeyboardShortcuts, isCommandPaletteOpen } from './composables/useKeyboardShortcuts'
@@ -50,6 +51,7 @@ function openSearch() {
 
     <!-- Global Components -->
     <CommandPalette />
+    <ToastContainer />
   </div>
 </template>
 

@@ -9,6 +9,7 @@ import {
   characterStatusSchema,
   conditionModifyOutputSchema,
 } from "../utils/output-schemas.js";
+import { verbositySchema, applyVerbosity, type VerbosityLevel } from "../utils/verbosity.js";
 
 export function registerCharacterTools(server: McpServer) {
   // ============================================================================
@@ -113,33 +114,35 @@ export function registerCharacterTools(server: McpServer) {
   );
 
   // ============================================================================
-  // LIST CHARACTERS - read-only
+  // LIST CHARACTERS - read-only with verbosity control
   // ============================================================================
   server.registerTool(
     "list_characters",
     {
-      description: "List characters in a game",
+      description: "List characters in a game. Use verbosity to control response size: 'minimal' for quick lookups (id/name only), 'standard' for common fields, 'full' for all details.",
       inputSchema: {
         gameId: z.string().describe("The game ID"),
         isPlayer: z.boolean().optional().describe("Filter by player/NPC"),
         locationId: z.string().optional().describe("Filter by location"),
+        verbosity: verbositySchema,
       },
       outputSchema: {
         characters: z.array(z.object({
           id: z.string(),
           name: z.string(),
-          isPlayer: z.boolean(),
-          status: characterStatusSchema,
-          locationId: z.string().nullable(),
+          isPlayer: z.boolean().optional(),
+          status: characterStatusSchema.optional(),
+          locationId: z.string().nullable().optional(),
         })),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
-    async ({ gameId, isPlayer, locationId }) => {
+    async ({ gameId, isPlayer, locationId, verbosity = 'standard' }) => {
       const characters = characterTools.listCharacters(gameId, { isPlayer, locationId });
-      const output = { characters };
+      const filtered = applyVerbosity(characters, 'character', verbosity as VerbosityLevel);
+      const output = { characters: filtered };
       return {
-        content: [{ type: "text", text: JSON.stringify(characters, null, 2) }],
+        content: [{ type: "text", text: JSON.stringify(filtered, null, 2) }],
         structuredContent: output as unknown as Record<string, unknown>,
       };
     }

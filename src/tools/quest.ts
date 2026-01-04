@@ -123,7 +123,7 @@ export function modifyObjectives(
   const quest = getQuest(questId);
   if (!quest) return null;
 
-  let objectives = [...quest.objectives];
+  const objectives = [...quest.objectives];
   const added: QuestObjective[] = [];
   const completed: string[] = [];
 

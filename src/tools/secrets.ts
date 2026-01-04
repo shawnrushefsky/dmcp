@@ -175,7 +175,7 @@ export function modifySecretVisibility(
   const secret = getSecret(secretId);
   if (!secret) return null;
 
-  let revealedTo = [...secret.revealedTo];
+  const revealedTo = [...secret.revealedTo];
   const revealedToNew: string[] = [];
   let madePublic = false;
   let isPublic = secret.isPublic;

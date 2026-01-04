@@ -309,7 +309,7 @@ export function modifyFactionGoals(
   const faction = getFaction(factionId);
   if (!faction) return null;
 
-  let newGoals = [...faction.goals];
+  const newGoals = [...faction.goals];
   const added: string[] = [];
   const completed: string[] = [];
 

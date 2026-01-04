@@ -32,278 +32,106 @@ export function useApi() {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  async function getGames(): Promise<Game[]> {
+  /**
+   * Generic request wrapper that handles loading state, errors, and fallbacks
+   */
+  async function request<T>(url: string, fallback: T): Promise<T> {
     loading.value = true
     error.value = null
     try {
-      return await fetchJson<Game[]>(`${API_BASE}/games`)
+      return await fetchJson<T>(url)
     } catch (e) {
       error.value = (e as Error).message
-      return []
+      return fallback
     } finally {
       loading.value = false
     }
   }
 
-  async function getGame(gameId: string): Promise<GameState | null> {
-    loading.value = true
-    error.value = null
+  /**
+   * Silent request that doesn't affect loading/error state (for background operations)
+   */
+  async function silentRequest<T>(url: string, fallback: T): Promise<T> {
     try {
-      return await fetchJson<GameState>(`${API_BASE}/games/${gameId}`)
-    } catch (e) {
-      error.value = (e as Error).message
-      return null
-    } finally {
-      loading.value = false
-    }
-  }
-
-  async function getMap(gameId: string): Promise<MapData | null> {
-    loading.value = true
-    error.value = null
-    try {
-      return await fetchJson<MapData>(`${API_BASE}/games/${gameId}/map`)
-    } catch (e) {
-      error.value = (e as Error).message
-      return null
-    } finally {
-      loading.value = false
-    }
-  }
-
-  async function getCharacter(characterId: string): Promise<Character | null> {
-    loading.value = true
-    error.value = null
-    try {
-      return await fetchJson<Character>(`${API_BASE}/characters/${characterId}`)
-    } catch (e) {
-      error.value = (e as Error).message
-      return null
-    } finally {
-      loading.value = false
-    }
-  }
-
-  async function getCharacterSheet(characterId: string): Promise<CharacterSheet | null> {
-    loading.value = true
-    error.value = null
-    try {
-      return await fetchJson<CharacterSheet>(`${API_BASE}/characters/${characterId}/sheet`)
-    } catch (e) {
-      error.value = (e as Error).message
-      return null
-    } finally {
-      loading.value = false
-    }
-  }
-
-  async function getLocation(locationId: string): Promise<Location | null> {
-    loading.value = true
-    error.value = null
-    try {
-      return await fetchJson<Location>(`${API_BASE}/locations/${locationId}`)
-    } catch (e) {
-      error.value = (e as Error).message
-      return null
-    } finally {
-      loading.value = false
-    }
-  }
-
-  async function getQuest(questId: string): Promise<Quest | null> {
-    loading.value = true
-    error.value = null
-    try {
-      return await fetchJson<Quest>(`${API_BASE}/quests/${questId}`)
-    } catch (e) {
-      error.value = (e as Error).message
-      return null
-    } finally {
-      loading.value = false
-    }
-  }
-
-  async function getFaction(factionId: string): Promise<Faction | null> {
-    loading.value = true
-    error.value = null
-    try {
-      return await fetchJson<Faction>(`${API_BASE}/factions/${factionId}`)
-    } catch (e) {
-      error.value = (e as Error).message
-      return null
-    } finally {
-      loading.value = false
-    }
-  }
-
-  async function getItem(itemId: string): Promise<Item | null> {
-    loading.value = true
-    error.value = null
-    try {
-      return await fetchJson<Item>(`${API_BASE}/items/${itemId}`)
-    } catch (e) {
-      error.value = (e as Error).message
-      return null
-    } finally {
-      loading.value = false
-    }
-  }
-
-  async function getHistory(gameId: string, limit = 50): Promise<NarrativeEvent[]> {
-    loading.value = true
-    error.value = null
-    try {
-      return await fetchJson<NarrativeEvent[]>(
-        `${API_BASE}/games/${gameId}/history?limit=${limit}`
-      )
-    } catch (e) {
-      error.value = (e as Error).message
-      return []
-    } finally {
-      loading.value = false
-    }
-  }
-
-  async function getGameImages(gameId: string): Promise<StoredImage[]> {
-    loading.value = true
-    error.value = null
-    try {
-      return await fetchJson<StoredImage[]>(`${API_BASE}/games/${gameId}/images`)
-    } catch (e) {
-      error.value = (e as Error).message
-      return []
-    } finally {
-      loading.value = false
-    }
-  }
-
-  async function getImage(imageId: string): Promise<StoredImage | null> {
-    loading.value = true
-    error.value = null
-    try {
-      return await fetchJson<StoredImage>(`${API_BASE}/images/${imageId}`)
-    } catch (e) {
-      error.value = (e as Error).message
-      return null
-    } finally {
-      loading.value = false
-    }
-  }
-
-  async function getEntityImages(
-    entityId: string,
-    entityType: string
-  ): Promise<EntityImages> {
-    loading.value = true
-    error.value = null
-    try {
-      return await fetchJson<EntityImages>(
-        `${API_BASE}/entities/${entityType}/${entityId}/images`
-      )
-    } catch (e) {
-      error.value = (e as Error).message
-      return { images: [], primaryImage: null }
-    } finally {
-      loading.value = false
-    }
-  }
-
-  async function getInventory(
-    ownerId: string,
-    ownerType: 'character' | 'location'
-  ): Promise<Item[]> {
-    loading.value = true
-    error.value = null
-    try {
-      return await fetchJson<Item[]>(
-        `${API_BASE}/inventory/${ownerType}/${ownerId}`
-      )
-    } catch (e) {
-      error.value = (e as Error).message
-      return []
-    } finally {
-      loading.value = false
-    }
-  }
-
-  async function getCharactersAtLocation(
-    gameId: string,
-    locationId: string
-  ): Promise<Character[]> {
-    loading.value = true
-    error.value = null
-    try {
-      return await fetchJson<Character[]>(
-        `${API_BASE}/games/${gameId}/characters?locationId=${locationId}`
-      )
-    } catch (e) {
-      error.value = (e as Error).message
-      return []
-    } finally {
-      loading.value = false
-    }
-  }
-
-  async function search(gameId: string, query: string): Promise<SearchResults> {
-    // Don't set loading for search (it's non-blocking)
-    try {
-      return await fetchJson<SearchResults>(
-        `${API_BASE}/games/${gameId}/search?q=${encodeURIComponent(query)}`
-      )
+      return await fetchJson<T>(url)
     } catch {
-      return { characters: [], locations: [], quests: [], items: [], factions: [], notes: [], events: [] }
+      return fallback
     }
   }
 
-  async function getImageGenerationPresets(
-    gameId: string
-  ): Promise<ImagePresetsResponse> {
-    loading.value = true
-    error.value = null
-    try {
-      return await fetchJson<ImagePresetsResponse>(
-        `${API_BASE}/games/${gameId}/image-presets`
-      )
-    } catch (e) {
-      error.value = (e as Error).message
-      return { presets: [], defaultPresetId: null }
-    } finally {
-      loading.value = false
-    }
-  }
+  // Game endpoints
+  const getGames = () => request<Game[]>(`${API_BASE}/games`, [])
 
-  async function getImageGenerationPreset(
-    gameId: string,
-    presetId: string
-  ): Promise<ImageGenerationPreset | null> {
-    loading.value = true
-    error.value = null
-    try {
-      return await fetchJson<ImageGenerationPreset>(
-        `${API_BASE}/games/${gameId}/image-presets/${presetId}`
-      )
-    } catch (e) {
-      error.value = (e as Error).message
-      return null
-    } finally {
-      loading.value = false
-    }
-  }
+  const getGame = (gameId: string) =>
+    request<GameState | null>(`${API_BASE}/games/${gameId}`, null)
 
-  async function getRelationships(gameId: string): Promise<Relationship[]> {
-    loading.value = true
-    error.value = null
-    try {
-      return await fetchJson<Relationship[]>(
-        `${API_BASE}/games/${gameId}/relationships`
-      )
-    } catch (e) {
-      error.value = (e as Error).message
-      return []
-    } finally {
-      loading.value = false
-    }
-  }
+  const getMap = (gameId: string) =>
+    request<MapData | null>(`${API_BASE}/games/${gameId}/map`, null)
+
+  const getHistory = (gameId: string, limit = 50) =>
+    request<NarrativeEvent[]>(`${API_BASE}/games/${gameId}/history?limit=${limit}`, [])
+
+  const getGameImages = (gameId: string) =>
+    request<StoredImage[]>(`${API_BASE}/games/${gameId}/images`, [])
+
+  const getRelationships = (gameId: string) =>
+    request<Relationship[]>(`${API_BASE}/games/${gameId}/relationships`, [])
+
+  const getImageGenerationPresets = (gameId: string) =>
+    request<ImagePresetsResponse>(`${API_BASE}/games/${gameId}/image-presets`, {
+      presets: [],
+      defaultPresetId: null,
+    })
+
+  const getImageGenerationPreset = (gameId: string, presetId: string) =>
+    request<ImageGenerationPreset | null>(
+      `${API_BASE}/games/${gameId}/image-presets/${presetId}`,
+      null
+    )
+
+  const getCharactersAtLocation = (gameId: string, locationId: string) =>
+    request<Character[]>(
+      `${API_BASE}/games/${gameId}/characters?locationId=${locationId}`,
+      []
+    )
+
+  // Entity endpoints
+  const getCharacter = (characterId: string) =>
+    request<Character | null>(`${API_BASE}/characters/${characterId}`, null)
+
+  const getCharacterSheet = (characterId: string) =>
+    request<CharacterSheet | null>(`${API_BASE}/characters/${characterId}/sheet`, null)
+
+  const getLocation = (locationId: string) =>
+    request<Location | null>(`${API_BASE}/locations/${locationId}`, null)
+
+  const getQuest = (questId: string) =>
+    request<Quest | null>(`${API_BASE}/quests/${questId}`, null)
+
+  const getFaction = (factionId: string) =>
+    request<Faction | null>(`${API_BASE}/factions/${factionId}`, null)
+
+  const getItem = (itemId: string) =>
+    request<Item | null>(`${API_BASE}/items/${itemId}`, null)
+
+  const getImage = (imageId: string) =>
+    request<StoredImage | null>(`${API_BASE}/images/${imageId}`, null)
+
+  const getEntityImages = (entityId: string, entityType: string) =>
+    request<EntityImages>(`${API_BASE}/entities/${entityType}/${entityId}/images`, {
+      images: [],
+      primaryImage: null,
+    })
+
+  const getInventory = (ownerId: string, ownerType: 'character' | 'location') =>
+    request<Item[]>(`${API_BASE}/inventory/${ownerType}/${ownerId}`, [])
+
+  // Search (non-blocking, doesn't affect loading state)
+  const search = (gameId: string, query: string) =>
+    silentRequest<SearchResults>(
+      `${API_BASE}/games/${gameId}/search?q=${encodeURIComponent(query)}`,
+      { characters: [], locations: [], quests: [], items: [], factions: [], notes: [], events: [] }
+    )
 
   return {
     loading,

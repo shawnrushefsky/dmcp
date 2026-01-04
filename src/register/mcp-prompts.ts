@@ -634,8 +634,8 @@ export function registerMcpPrompts(server: McpServer) {
       const recentEvents = narrativeTools.getHistory(gameId, { limit: 20 });
 
       // Build character and location name lists for reference
-      const characterNames = characters.map(c => c.name.toLowerCase());
-      const locationNames = locations.map(l => l.name.toLowerCase());
+      const _characterNames = characters.map(c => c.name.toLowerCase());
+      const _locationNames = locations.map(l => l.name.toLowerCase());
 
       let promptText = `# Save Game Checklist: ${game.name}\n\n`;
       promptText += `Before pausing the game, work through this checklist to ensure all game state is properly persisted.\n\n`;
@@ -702,7 +702,7 @@ export function registerMcpPrompts(server: McpServer) {
       // ========================================
       promptText += `## 4. Quest & Objective Tracking\n\n`;
       const activeQuests = quests.filter(q => q.status === "active");
-      const completedQuests = quests.filter(q => q.status === "completed");
+      const _completedQuests = quests.filter(q => q.status === "completed");
 
       promptText += `**Active Quests (${activeQuests.length}):**\n`;
       for (const quest of activeQuests) {

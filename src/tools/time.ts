@@ -45,7 +45,6 @@ function minutesToDateTime(totalMinutes: number, config: CalendarConfig): GameDa
   remaining = remaining % minutesPerYear;
 
   let month = 0;
-  let daysSoFar = 0;
   for (let m = 0; m < config.daysPerMonth.length; m++) {
     const monthMinutes = config.daysPerMonth[m] * minutesPerDay;
     if (remaining < monthMinutes) {
@@ -53,7 +52,6 @@ function minutesToDateTime(totalMinutes: number, config: CalendarConfig): GameDa
       break;
     }
     remaining -= monthMinutes;
-    daysSoFar += config.daysPerMonth[m];
   }
 
   const day = Math.floor(remaining / minutesPerDay);
