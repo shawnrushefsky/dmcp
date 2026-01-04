@@ -36,7 +36,7 @@ import { listSecrets } from "../tools/secrets.js";
 import { getTime, listScheduledEvents } from "../tools/time.js";
 import { getActiveCombat } from "../tools/combat.js";
 import { gameEvents } from "../events/emitter.js";
-import type { Character, Location, Faction } from "../types/index.js";
+import type { Character, Location, Faction, Quest, Resource, Note, Item } from "../types/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -125,14 +125,41 @@ export function createHttpServer(port: number = 3456): express.Application {
       const primary = result.primaryImage || result.images[0];
       return { ...f, primaryImageId: primary?.id || null };
     });
+
+    // Add primary image IDs to quests
+    const questsWithImages = quests.map((q: Quest) => {
+      const result = listEntityImages(q.id, "quest");
+      const primary = result.primaryImage || result.images[0];
+      return { ...q, primaryImageId: primary?.id || null };
+    });
+
     const resources = listResources(gameId);
+    // Add primary image IDs to resources
+    const resourcesWithImages = resources.map((r: Resource) => {
+      const result = listEntityImages(r.id, "resource");
+      const primary = result.primaryImage || result.images[0];
+      return { ...r, primaryImageId: primary?.id || null };
+    });
+
     const notes = listNotes(gameId);
+    // Add primary image IDs to notes
+    const notesWithImages = notes.map((n: Note) => {
+      const result = listEntityImages(n.id, "note");
+      const primary = result.primaryImage || result.images[0];
+      return { ...n, primaryImageId: primary?.id || null };
+    });
     const relationships = listRelationships(gameId);
     const abilities = listAbilities(gameId);
     const timers = listTimers(gameId);
     const secrets = listSecrets(gameId);
     const images = listGameImages(gameId);
     const items = listGameItems(gameId);
+    // Add primary image IDs to items
+    const itemsWithImages = items.map((i: Item) => {
+      const result = listEntityImages(i.id, "item");
+      const primary = result.primaryImage || result.images[0];
+      return { ...i, primaryImageId: primary?.id || null };
+    });
     const events = getHistory(gameId, { limit: 1 });
     const activeCombat = getActiveCombat(gameId);
     const gameTime = getTime(gameId);
@@ -141,12 +168,12 @@ export function createHttpServer(port: number = 3456): express.Application {
       game,
       characters: charactersWithImages,
       locations: locationsWithImages,
-      quests,
+      quests: questsWithImages,
       // Include full data for populated entity types
       factions: factionsWithImages,
-      resources,
-      notes,
-      items,
+      resources: resourcesWithImages,
+      notes: notesWithImages,
+      items: itemsWithImages,
       // Include counts for UI tab visibility
       counts: {
         characters: characters.length,
@@ -457,12 +484,15 @@ export function createHttpServer(port: number = 3456): express.Application {
       .filter((q: QuestType) => matches(q.name) || matches(q.description))
       .slice(0, 5)
       .map((q: QuestType) => {
+        const result = listEntityImages(q.id, "quest");
+        const primary = result.primaryImage || result.images[0];
         const matchField = matches(q.name) ? "name" : "description";
         return {
           id: q.id,
           name: q.name,
           type: "quest" as const,
           status: q.status,
+          primaryImageId: primary?.id || null,
           matchField,
           snippet: matchField === "description" ? getSnippet(q.description || "") : null,
         };
@@ -512,12 +542,15 @@ export function createHttpServer(port: number = 3456): express.Application {
       .filter((n: NoteType) => matches(n.title) || matches(n.content))
       .slice(0, 5)
       .map((n: NoteType) => {
+        const result = listEntityImages(n.id, "note");
+        const primary = result.primaryImage || result.images[0];
         const matchField = matches(n.title) ? "title" : "content";
         return {
           id: n.id,
           name: n.title,
           type: "note" as const,
           category: n.category || undefined,
+          primaryImageId: primary?.id || null,
           matchField,
           snippet: matchField === "content" ? getSnippet(n.content) : null,
         };

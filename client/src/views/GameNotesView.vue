@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
 import { useEntityLinker } from '../composables/useEntityLinker'
 import { useGameEvents } from '../composables/useGameEvents'
+import { useTheme } from '../composables/useTheme'
 import type { GameState, Note, Breadcrumb } from '../types'
 import GameTabs from '../components/GameTabs.vue'
 import Breadcrumbs from '../components/Breadcrumbs.vue'
@@ -12,6 +13,7 @@ import SkeletonLoader from '../components/SkeletonLoader.vue'
 const route = useRoute()
 const { getGame, loading } = useApi()
 const { linkText, setGameState } = useEntityLinker()
+const { config } = useTheme()
 const state = ref<GameState | null>(null)
 
 const gameId = computed(() => route.params.gameId as string)
@@ -87,6 +89,13 @@ onMounted(async () => {
       <h3>Pinned Notes</h3>
       <div class="notes-grid">
         <div v-for="note in pinnedNotes" :key="note.id" class="card note-card pinned">
+          <img
+            v-if="note.primaryImageId && config.showImages"
+            :src="`/images/${note.primaryImageId}/file?width=300`"
+            :alt="note.title"
+            class="note-image"
+            loading="lazy"
+          />
           <div class="note-header">
             <span class="pin-icon">📌</span>
             <h4>{{ note.title }}</h4>
@@ -110,6 +119,13 @@ onMounted(async () => {
       </h3>
       <div class="notes-grid">
         <div v-for="note in notes" :key="note.id" class="card note-card">
+          <img
+            v-if="note.primaryImageId && config.showImages"
+            :src="`/images/${note.primaryImageId}/file?width=300`"
+            :alt="note.title"
+            class="note-image"
+            loading="lazy"
+          />
           <div class="note-header">
             <h4>{{ note.title }}</h4>
           </div>
@@ -142,6 +158,14 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+}
+
+.note-image {
+  width: 100%;
+  max-height: 150px;
+  object-fit: cover;
+  border-radius: 4px;
+  margin-bottom: var(--space-2);
 }
 
 .note-card.pinned {

@@ -96,6 +96,7 @@ export interface Quest {
   status: 'active' | 'completed' | 'failed' | 'abandoned'
   objectives: QuestObjective[]
   rewards?: string
+  primaryImageId?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -147,6 +148,7 @@ export interface Resource {
   value: number
   minValue?: number
   maxValue?: number
+  primaryImageId?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -161,6 +163,7 @@ export interface Note {
   pinned: boolean
   relatedEntityType?: string
   relatedEntityId?: string
+  primaryImageId?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -187,7 +190,7 @@ export interface StoredImage {
   id: string
   gameId: string
   entityId: string
-  entityType: 'character' | 'location' | 'item' | 'scene'
+  entityType: string  // character, location, item, scene, faction, quest, note, resource, etc.
   label?: string
   description?: string
   fileSize: number
@@ -304,6 +307,7 @@ export interface LocationSearchResult extends BaseSearchResult {
 export interface QuestSearchResult extends BaseSearchResult {
   type: 'quest'
   status: string
+  primaryImageId: string | null
 }
 
 export interface ItemSearchResult extends BaseSearchResult {
@@ -320,6 +324,7 @@ export interface FactionSearchResult extends BaseSearchResult {
 export interface NoteSearchResult extends BaseSearchResult {
   type: 'note'
   category?: string
+  primaryImageId: string | null
 }
 
 export interface EventSearchResult extends BaseSearchResult {
@@ -352,7 +357,7 @@ export interface ImageGenerationPreset {
   id: string
   name: string
   description?: string
-  entityTypes?: ('character' | 'location' | 'item' | 'scene')[]
+  entityTypes?: string[]  // character, location, item, scene, faction, quest, note, etc.
   isDefault?: boolean
   config: ImageGenerationPreferences
   createdAt?: string

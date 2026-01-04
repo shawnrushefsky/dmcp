@@ -82,7 +82,7 @@ export interface ImageGenerationPreset {
   id: string;                              // Unique identifier
   name: string;                            // Human-readable name (e.g., "Character Portraits", "Location Art")
   description?: string;                    // What this preset is for
-  entityTypes?: ("character" | "location" | "item" | "scene" | "faction")[]; // Which entity types this preset is best for
+  entityTypes?: string[]; // Which entity types this preset is best for (e.g., character, location, item, scene, faction)
   isDefault?: boolean;                     // Whether this is the default preset
   config: ImageGenerationPreferences;      // The actual settings
   createdAt?: string;
@@ -94,7 +94,7 @@ export interface ImagePromptTemplate {
   id: string;
   name: string;                              // Human-readable name (e.g., "Fantasy Character Portrait")
   description?: string;                      // What this template is for
-  entityType: "character" | "location" | "item" | "faction"; // Which entity type this template handles
+  entityType: string; // Which entity type this template handles (e.g., character, location, item, faction)
 
   // Template strings with placeholders
   // Placeholders use mustache-like syntax: {{field.path}} or {{field.path|"default"}}
@@ -1084,7 +1084,7 @@ export interface StoredImage {
   id: string;
   gameId: string;
   entityId: string;
-  entityType: "character" | "location" | "item" | "scene" | "faction";
+  entityType: string;  // Flexible: character, location, item, scene, faction, quest, ability, etc.
   entityName?: string;  // Populated at runtime for confirmation, not stored in DB
 
   // File information
@@ -1112,7 +1112,7 @@ export interface StoredImage {
 export interface StoreImageParams {
   gameId: string;
   entityId: string;
-  entityType: "character" | "location" | "item" | "scene" | "faction";
+  entityType: string;  // Flexible: character, location, item, scene, faction, quest, ability, etc.
 
   // Image data (one required)
   base64?: string;            // Base64-encoded image data

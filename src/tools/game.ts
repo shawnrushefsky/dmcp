@@ -348,7 +348,7 @@ export function createImageGenerationPreset(
   params: {
     name: string;
     description?: string;
-    entityTypes?: ("character" | "location" | "item" | "scene" | "faction")[];
+    entityTypes?: string[];
     isDefault?: boolean;
     config: ImageGenerationPreferences;
   }
@@ -390,7 +390,7 @@ export function updateImageGenerationPreset(
   updates: {
     name?: string;
     description?: string;
-    entityTypes?: ("character" | "location" | "item" | "scene" | "faction")[];
+    entityTypes?: string[];
     isDefault?: boolean;
     config?: Partial<ImageGenerationPreferences>;
   }
@@ -562,7 +562,7 @@ export function getImagePromptTemplate(
 
 export function getDefaultImagePromptTemplate(
   gameId: string,
-  entityType: "character" | "location" | "item" | "faction"
+  entityType: string
 ): ImagePromptTemplate | null {
   const templates = listImagePromptTemplates(gameId);
   const entityTemplates = templates.filter(t => t.entityType === entityType);
@@ -582,7 +582,7 @@ export function createImagePromptTemplate(
   params: {
     name: string;
     description?: string;
-    entityType: "character" | "location" | "item" | "faction";
+    entityType: string;
     promptTemplate: string;
     negativePromptTemplate?: string;
     promptPrefix?: string;

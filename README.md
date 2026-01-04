@@ -794,7 +794,7 @@ create_character({
 })
 ```
 
-The `imageGen` field can be attached to characters, locations, and items. The structured format can be adapted to any image generation tool - the DM agent can generate tool-specific prompts as needed.
+The `imageGen` field can be attached to any entity (characters, locations, items, factions, quests, notes, etc.). Images can be stored for any entity type and displayed in the web UI. The structured format can be adapted to any image generation tool - the DM agent can generate tool-specific prompts as needed.
 
 ### Story Export Workflow
 

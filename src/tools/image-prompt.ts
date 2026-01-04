@@ -8,7 +8,7 @@ import type { ImageGeneration, ImageGenerationPreferences, ImagePromptTemplate, 
 
 export interface PromptBuilderResult {
   entityId: string;
-  entityType: "character" | "location" | "item" | "faction";
+  entityType: string;
   entityName: string;
   prompt: string;
   negativePrompt: string;
@@ -114,7 +114,7 @@ function cleanFilledTemplate(text: string): string {
  */
 function buildTemplateContext(
   entity: Character | Location | Item | Faction,
-  entityType: "character" | "location" | "item" | "faction",
+  entityType: string,
   imageGen: ImageGeneration | null,
   notes: string
 ): Record<string, unknown> {
@@ -161,7 +161,7 @@ function buildTemplateContext(
 export function buildPromptFromTemplate(
   template: ImagePromptTemplate,
   entity: Character | Location | Item | Faction,
-  entityType: "character" | "location" | "item" | "faction",
+  entityType: string,
   imageGen: ImageGeneration | null,
   notes: string
 ): { prompt: string; negativePrompt: string } {
@@ -211,7 +211,7 @@ export function buildPromptFromTemplate(
  */
 export function buildImagePrompt(
   entityId: string,
-  entityType: "character" | "location" | "item" | "faction",
+  entityType: string,
   gameId?: string,
   templateId?: string
 ): PromptBuilderResult | null {

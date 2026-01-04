@@ -15,10 +15,11 @@ export function registerImageTools(server: McpServer) {
         entityId: z
           .string()
           .max(100)
-          .describe("ID of the entity (character, location, item)"),
+          .describe("ID of the entity (character, location, item, etc.)"),
         entityType: z
-          .enum(["character", "location", "item", "scene", "faction"])
-          .describe("Type of entity"),
+          .string()
+          .max(50)
+          .describe("Type of entity (e.g., character, location, item, scene, faction, quest, ability)"),
         base64: z
           .string()
           .optional()
@@ -162,8 +163,9 @@ export function registerImageTools(server: McpServer) {
       inputSchema: {
         entityId: z.string().max(100).describe("ID of the entity"),
         entityType: z
-          .enum(["character", "location", "item", "scene", "faction"])
-          .describe("Type of entity"),
+          .string()
+          .max(50)
+          .describe("Type of entity (e.g., character, location, item, scene, faction, quest, ability)"),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
@@ -182,9 +184,10 @@ export function registerImageTools(server: McpServer) {
       inputSchema: {
         gameId: z.string().max(100).describe("The game ID"),
         entityType: z
-          .enum(["character", "location", "item", "faction"])
+          .string()
+          .max(50)
           .optional()
-          .describe("Filter by entity type (optional, returns all types if not specified)"),
+          .describe("Filter by entity type (optional, returns all types if not specified). Common types: character, location, item, faction."),
       },
       annotations: ANNOTATIONS.READ_ONLY,
     },
@@ -251,7 +254,7 @@ export function registerImageTools(server: McpServer) {
         label: z.string().max(LIMITS.NAME_MAX).optional().describe("New label"),
         description: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("New description"),
         entityId: z.string().max(100).optional().describe("New entity ID to associate the image with"),
-        entityType: z.enum(["character", "location", "item", "scene", "faction"]).optional().describe("New entity type (required if changing to a different type of entity)"),
+        entityType: z.string().max(50).optional().describe("New entity type (required if changing to a different type of entity)"),
       },
       annotations: ANNOTATIONS.UPDATE,
     },
@@ -289,14 +292,14 @@ export function registerImageTools(server: McpServer) {
     {
       description: "Build an image generation prompt from an entity's structured imageGen data. If a template exists for the entity type (or a specific templateId is provided), uses template-based building. Otherwise combines imageGen schema, notes/description, and preset defaults.",
       inputSchema: {
-        entityId: z.string().max(100).describe("The entity ID (character, location, item, or faction)"),
-        entityType: z.enum(["character", "location", "item", "faction"]).describe("Type of entity"),
+        entityId: z.string().max(100).describe("The entity ID"),
+        entityType: z.string().max(50).describe("Type of entity (e.g., character, location, item, faction)"),
         gameId: z.string().max(100).optional().describe("Game ID (optional, inferred from entity if not provided)"),
         templateId: z.string().max(100).optional().describe("Specific template ID to use (optional, uses default for entity type if not provided)"),
       },
       outputSchema: {
         entityId: z.string(),
-        entityType: z.enum(["character", "location", "item", "faction"]),
+        entityType: z.string(),
         entityName: z.string(),
         prompt: z.string().describe("The constructed positive prompt"),
         negativePrompt: z.string().describe("The constructed negative prompt"),
@@ -398,7 +401,7 @@ Available fields include: name, notes, subject.primaryDescription, subject.physi
       inputSchema: {
         gameId: z.string().max(100).describe("The game ID"),
         name: z.string().min(1).max(LIMITS.NAME_MAX).describe("Template name"),
-        entityType: z.enum(["character", "location", "item", "faction"]).describe("Which entity type this template handles"),
+        entityType: z.string().max(50).describe("Which entity type this template handles (e.g., character, location, item, faction)"),
         promptTemplate: z.string().max(LIMITS.CONTENT_MAX).describe("Main prompt template with placeholders"),
         description: z.string().max(LIMITS.DESCRIPTION_MAX).optional().describe("What this template is for"),
         negativePromptTemplate: z.string().max(LIMITS.CONTENT_MAX).optional().describe("Negative prompt template"),

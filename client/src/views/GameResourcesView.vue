@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
 import { useGameEvents } from '../composables/useGameEvents'
+import { useTheme } from '../composables/useTheme'
 import type { GameState, Resource, Breadcrumb } from '../types'
 import GameTabs from '../components/GameTabs.vue'
 import Breadcrumbs from '../components/Breadcrumbs.vue'
@@ -10,6 +11,7 @@ import SkeletonLoader from '../components/SkeletonLoader.vue'
 
 const route = useRoute()
 const { getGame, loading } = useApi()
+const { config } = useTheme()
 const state = ref<GameState | null>(null)
 
 const gameId = computed(() => route.params.gameId as string)
@@ -80,6 +82,13 @@ onMounted(async () => {
     <h3>Party Resources ({{ gameResources.length }})</h3>
     <div v-if="gameResources.length" class="resource-grid">
       <div v-for="resource in gameResources" :key="resource.id" class="card resource-card">
+        <img
+          v-if="resource.primaryImageId && config.showImages"
+          :src="`/images/${resource.primaryImageId}/file?width=250`"
+          :alt="resource.name"
+          class="resource-image"
+          loading="lazy"
+        />
         <div class="resource-header">
           <h4>{{ resource.name }}</h4>
           <span v-if="resource.category" class="resource-category">{{ resource.category }}</span>
@@ -112,6 +121,13 @@ onMounted(async () => {
       <h3 class="mt-30">Character Resources ({{ characterResources.length }})</h3>
       <div class="resource-grid">
         <div v-for="resource in characterResources" :key="resource.id" class="card resource-card">
+          <img
+            v-if="resource.primaryImageId && config.showImages"
+            :src="`/images/${resource.primaryImageId}/file?width=250`"
+            :alt="resource.name"
+            class="resource-image"
+            loading="lazy"
+          />
           <div class="resource-header">
             <h4>{{ resource.name }}</h4>
             <span v-if="resource.category" class="resource-category">{{ resource.category }}</span>
@@ -151,6 +167,14 @@ onMounted(async () => {
 
 .resource-card {
   padding: var(--space-4);
+}
+
+.resource-image {
+  width: 100%;
+  max-height: 120px;
+  object-fit: cover;
+  border-radius: 4px;
+  margin-bottom: var(--space-2);
 }
 
 .resource-header {

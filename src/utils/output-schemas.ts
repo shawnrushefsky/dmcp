@@ -364,7 +364,7 @@ export const storedImageOutputSchema = {
   id: z.string(),
   gameId: z.string(),
   entityId: z.string(),
-  entityType: z.enum(["character", "location", "item", "scene", "faction"]),
+  entityType: z.string(),  // Flexible: character, location, item, scene, faction, quest, ability, etc.
   fileSize: z.number(),
   mimeType: z.string(),
   width: z.number().nullable(),

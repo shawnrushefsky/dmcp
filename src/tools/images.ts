@@ -26,9 +26,11 @@ const __dirname = dirname(__filename);
 const IMAGES_DIR = join(__dirname, "..", "..", "data", "images");
 
 // Helper: Validate entity exists and return its name
+// For known entity types (character, location, item, faction), validates the entity exists
+// For other types (scene, quest, ability, etc.), skips validation and returns capitalized type name
 function validateEntityAndGetName(
   entityId: string,
-  entityType: "character" | "location" | "item" | "scene" | "faction"
+  entityType: string
 ): string {
   let entity = null;
   switch (entityType) {
@@ -44,9 +46,10 @@ function validateEntityAndGetName(
     case "faction":
       entity = getFaction(entityId);
       break;
-    case "scene":
-      // Scenes don't have a dedicated table - they're ad-hoc, so skip validation
-      return "Scene";
+    default:
+      // For other entity types (scene, quest, ability, note, etc.), skip validation
+      // These may not have dedicated tables or the caller knows the entity exists
+      return entityType.charAt(0).toUpperCase() + entityType.slice(1);
   }
   if (!entity) {
     throw new Error(`${entityType} not found: ${entityId}`);
@@ -57,7 +60,7 @@ function validateEntityAndGetName(
 // Helper: Validate entity exists (legacy wrapper)
 function validateEntityExists(
   entityId: string,
-  entityType: "character" | "location" | "item" | "scene" | "faction"
+  entityType: string
 ): void {
   validateEntityAndGetName(entityId, entityType);
 }
@@ -108,7 +111,7 @@ function mapRowToStoredImage(row: Record<string, unknown>): StoredImage {
     id: row.id as string,
     gameId: row.game_id as string,
     entityId: row.entity_id as string,
-    entityType: row.entity_type as "character" | "location" | "item" | "scene" | "faction",
+    entityType: row.entity_type as string,
     filePath: row.file_path as string,
     fileSize: row.file_size as number,
     mimeType: row.mime_type as string,
@@ -349,7 +352,7 @@ export async function getImageData(
 
 export function listEntityImages(
   entityId: string,
-  entityType: "character" | "location" | "item" | "scene" | "faction"
+  entityType: string
 ): ImageListResult {
   const db = getDatabase();
   const rows = db
@@ -371,7 +374,7 @@ export function listEntityImages(
 export interface EntityMissingImage {
   id: string;
   name: string;
-  entityType: "character" | "location" | "item" | "faction";
+  entityType: string;  // character, location, item, faction, quest, etc.
   hasImageGen: boolean;
   isPlayer?: boolean;  // For characters
 }
@@ -390,7 +393,7 @@ export interface EntitiesMissingImagesResult {
 
 export function listEntitiesMissingImages(
   gameId: string,
-  entityType?: "character" | "location" | "item" | "faction"
+  entityType?: string
 ): EntitiesMissingImagesResult {
   const db = getDatabase();
   const result: EntitiesMissingImagesResult = {
@@ -532,7 +535,7 @@ export function updateImageMetadata(
     label?: string;
     description?: string;
     entityId?: string;
-    entityType?: "character" | "location" | "item" | "scene" | "faction";
+    entityType?: string;
   }
 ): StoredImage | null {
   const db = getDatabase();
@@ -617,7 +620,7 @@ export function deleteGameImages(gameId: string): number {
 // Get primary image for an entity
 export function getPrimaryImage(
   entityId: string,
-  entityType: "character" | "location" | "item" | "scene" | "faction"
+  entityType: string
 ): StoredImage | null {
   const db = getDatabase();
   const row = db

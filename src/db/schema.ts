@@ -534,12 +534,13 @@ export function initializeSchema(): void {
   `);
 
   // Stored images table - file-based image storage
+  // entity_type is flexible to support any entity (character, location, item, scene, faction, quest, ability, etc.)
   db.exec(`
     CREATE TABLE IF NOT EXISTS stored_images (
       id TEXT PRIMARY KEY,
       game_id TEXT NOT NULL,
       entity_id TEXT NOT NULL,
-      entity_type TEXT NOT NULL CHECK (entity_type IN ('character', 'location', 'item', 'scene')),
+      entity_type TEXT NOT NULL,
 
       -- File information
       file_path TEXT NOT NULL,
@@ -565,6 +566,40 @@ export function initializeSchema(): void {
       FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE
     )
   `);
+
+  // Migration: Remove entity_type CHECK constraint to allow any entity type
+  // SQLite doesn't support ALTER CHECK, so we need to recreate the table
+  const storedImagesInfo = db.prepare(
+    "SELECT sql FROM sqlite_master WHERE type='table' AND name='stored_images'"
+  ).get() as { sql: string } | undefined;
+
+  if (storedImagesInfo && storedImagesInfo.sql.includes("entity_type IN")) {
+    db.exec(`
+      CREATE TABLE stored_images_new (
+        id TEXT PRIMARY KEY,
+        game_id TEXT NOT NULL,
+        entity_id TEXT NOT NULL,
+        entity_type TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        file_size INTEGER NOT NULL,
+        mime_type TEXT NOT NULL,
+        width INTEGER,
+        height INTEGER,
+        label TEXT,
+        description TEXT,
+        source TEXT NOT NULL CHECK (source IN ('generated', 'uploaded', 'url')),
+        source_url TEXT,
+        generation_tool TEXT,
+        generation_prompt TEXT,
+        is_primary INTEGER DEFAULT 0,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE
+      );
+      INSERT INTO stored_images_new SELECT * FROM stored_images;
+      DROP TABLE stored_images;
+      ALTER TABLE stored_images_new RENAME TO stored_images;
+    `);
+  }
 
   // Display configuration table (global, one row)
   db.exec(`

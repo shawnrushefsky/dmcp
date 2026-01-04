@@ -925,8 +925,8 @@ export function registerCoreTools(server: McpServer) {
         gameId: z.string().describe("The game ID"),
         name: z.string().describe("Human-readable preset name (e.g., 'Character Portraits', 'Location Art', 'Items with Text')"),
         description: z.string().optional().describe("What this preset is for"),
-        entityTypes: z.array(z.enum(["character", "location", "item", "scene", "faction"])).optional()
-          .describe("Which entity types this preset is best suited for"),
+        entityTypes: z.array(z.string().max(50)).optional()
+          .describe("Which entity types this preset is best suited for (e.g., character, location, item, scene, faction)"),
         isDefault: z.boolean().optional().describe("Make this the default preset"),
         config: imageGenerationConfigSchema.describe("The image generation configuration"),
       },
@@ -968,8 +968,8 @@ export function registerCoreTools(server: McpServer) {
         presetId: z.string().describe("The preset ID to update"),
         name: z.string().optional().describe("New preset name"),
         description: z.string().optional().describe("New description"),
-        entityTypes: z.array(z.enum(["character", "location", "item", "scene", "faction"])).optional()
-          .describe("Update which entity types this preset is for"),
+        entityTypes: z.array(z.string().max(50)).optional()
+          .describe("Update which entity types this preset is for (e.g., character, location, item, scene, faction)"),
         isDefault: z.boolean().optional().describe("Make this the default preset"),
         config: imageGenerationConfigSchema.partial().optional().describe("Partial config updates (deep merged)"),
       },
